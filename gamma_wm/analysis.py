@@ -3,16 +3,17 @@ burst detection (Lundqvist et al. 2016) and memory read-out."""
 import numpy as np
 from scipy.signal import butter, filtfilt, hilbert
 
-from .network import NS, A, B, INH
+from .network import NGROUPS
 
 
 def pop_rates(res, net, bin_ms=1.0):
-    """Population rates (Hz) per group [NS, A, B, INH] in bins of bin_ms."""
+    """Population rates (Hz) per group [NS, A, B, INH, IA, IB] in bins of bin_ms."""
     k = int(round(bin_ms / res['dt']))
     pop = res['pop']
     n = pop.shape[0] // k * k
-    sizes = np.maximum(np.bincount(net.group, minlength=4), 1)
-    return pop[:n].reshape(-1, k, 4).sum(1) / sizes / (bin_ms * 1e-3)
+    ng = pop.shape[1]
+    sizes = np.maximum(np.bincount(net.group, minlength=ng), 1)
+    return pop[:n].reshape(-1, k, ng).sum(1) / sizes / (bin_ms * 1e-3)
 
 
 def lfp_proxy(res, net, bin_ms=1.0):
@@ -21,9 +22,9 @@ def lfp_proxy(res, net, bin_ms=1.0):
     (E spikes weighted by J, I spikes by g*J). Equivalent to summed |PSP| input."""
     p = net.p
     r = pop_rates(res, net, bin_ms)
-    sizes = np.bincount(net.group, minlength=4)
+    sizes = np.bincount(net.group, minlength=r.shape[1])
     e = r[:, :3] @ sizes[:3]
-    i = r[:, 3] * sizes[3]
+    i = r[:, 3:] @ sizes[3:]
     return p.J * e + p.g * p.J * i
 
 

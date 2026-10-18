@@ -16,7 +16,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from gamma_wm.config import TASK, default_params  # noqa: E402
-from gamma_wm.network import A, B, NS, build_network  # noqa: E402
+from gamma_wm.network import A, B, IA, IB, NS, build_network  # noqa: E402
 from gamma_wm.task import run_trial  # noqa: E402
 from gamma_wm import analysis as an  # noqa: E402
 
@@ -30,9 +30,11 @@ def main():
     ap.add_argument('--n-vrec', type=int, default=50, help='V traces recorded per pool')
     for k in ['g', 'nu_ext_ratio', 'D', 'f', 'beta']:
         ap.add_argument('--' + k, type=float, default=None)
+    ap.add_argument('--set', default='{}', help='JSON dict of further Params overrides')
     args = ap.parse_args()
     over = {k: getattr(args, k) for k in ['g', 'nu_ext_ratio', 'D', 'f', 'beta']
             if getattr(args, k) is not None}
+    over.update(json.loads(args.set))
     p = default_params(seed=args.net_seed, **over)
     net = build_network(p)
     rng = np.random.default_rng(1000 + args.session)
@@ -55,8 +57,8 @@ def main():
                             spk_i=r['i'], V=Vr.astype(np.float16))
         d = slice(int(r['t_delay_on']) + 500, int(r['T']))
         print(f'session {args.session} trial {k} cue {cue}: delay A {pc[d, A].mean():.1f} '
-              f'B {pc[d, B].mean():.1f} NS {pc[d, NS].mean():.1f} Hz ({time.time() - t0:.0f}s)',
-              flush=True)
+              f'B {pc[d, B].mean():.1f} NS {pc[d, NS].mean():.1f} I_A {pc[d, IA].mean():.1f} '
+              f'I_B {pc[d, IB].mean():.1f} Hz ({time.time() - t0:.0f}s)', flush=True)
 
 
 if __name__ == '__main__':

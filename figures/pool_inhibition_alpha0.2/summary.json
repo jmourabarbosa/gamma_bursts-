@@ -1,0 +1,72 @@
+{
+ "n_trials": 20,
+ "params": {
+  "N_E": 10000,
+  "N_I": 2500,
+  "eps": 0.1,
+  "J": 0.1,
+  "g": 8.0,
+  "nu_ext_ratio": 1.4,
+  "D": 4.0,
+  "D_spread": 0.0,
+  "tau": 20.0,
+  "theta": 20.0,
+  "V_r": 10.0,
+  "t_ref": 2.0,
+  "dt": 0.1,
+  "tau_ampa": 0.0,
+  "tau_nmda": 0.0,
+  "tau_gaba": 0.0,
+  "q_nmda": 0.0,
+  "f": 0.1,
+  "beta": 1.0,
+  "f_I": 0.1,
+  "beta_ie": 0.3,
+  "beta_ei": 0.3,
+  "alpha": 0.2,
+  "alpha_ie": 0.0,
+  "alpha_ei": 0.0,
+  "seed": 0
+ },
+ "memory_correct_end": 1.0,
+ "memory_correct_whole_delay": 1.0,
+ "rates_delay": {
+  "cued": 24.707101821899414,
+  "uncued": 2.409900188446045,
+  "I_cued": 12.299333572387695,
+  "I_uncued": 4.663066864013672,
+  "NS": 8.030954360961914
+ },
+ "n_trials_held": 20,
+ "bursts_cued_site": {
+  "n": 33,
+  "per_s": 1.1,
+  "dur_mean": 56.36363636363637,
+  "dur_sd": 20.432917858969752,
+  "f_mean": 78.18181818181819,
+  "width_mean": 39.09090909090909,
+  "frac_time": 0.06103333333333334,
+  "cv2_ibi": 1.2141299553467608
+ },
+ "bursts_uncued_site": {
+  "n": 7,
+  "per_s": 0.23333333333333334,
+  "dur_mean": 70.42857142857143,
+  "dur_sd": 41.80176736816328,
+  "f_mean": 80.85714285714286,
+  "width_mean": 40.285714285714285,
+  "frac_time": 0.018233333333333334,
+  "cv2_ibi": NaN
+ },
+ "cued_rate_in_bursts": 26.635717391967773,
+ "cued_rate_out_bursts": 24.58173942565918,
+ "selectivity_in": 24.410158157348633,
+ "selectivity_out": 22.15985679626465,
+ "cued_off_epochs": {
+  "per_s": 1.6,
+  "mean_ms": 4.520833333333333,
+  "p95_ms": 9.649999999999999,
+  "max_ms": 11.0
+ },
+ "cv_isi_cued": 0.5422998666763306
+}

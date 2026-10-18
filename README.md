@@ -133,6 +133,45 @@ So far, a self-sustaining memory and long natural silences have been mutually ex
 in this network. The memory state itself is what keeps the network out of the quiescent
 regime.
 
+## Follow-up: pool-specific inhibition
+
+Inhibitory partner pools I_A and I_B (`f_I` = 10% of I cells each) carry ξ = ±1, so the
+E→I and I→E blocks get their own low-rank terms. Every block is scaled as
+w_ij·(1 + α|ξ_i||ξ_j| + β ξ_i ξ_j): within-pool connections by 1 + α + β, between-pool
+connections by 1 + α − β (Dale's law requires 1 + α − β ≥ 0). The model uses delta
+synapses with no NMDA, at the same working point as above (g = 8, ν_ext = 1.4·ν_thr,
+D = 4 ms).
+
+Exploratory scans (1–2 trials per setting) found three regimes:
+- **Pure rank-one E↔I structure** (α = 0): local inhibition caps the pools and removes
+  the competition between them, so the memory is lost. Cued and uncued pools fire at
+  the same rate.
+- **Strong local inhibition or large α:** both pools are active together. Each pool's
+  gamma then switches on and off by itself: Off epochs of 20–40 ms (maximum ~55 ms),
+  envelope CV 0.3–0.45, gamma tracking the pool's rate (r ≈ 0.6–0.8). But no memory
+  is stored.
+- **Intermediate** (local β_ie = β_ei = 0.3, α = 0.2–0.25): the memory holds, and gamma
+  is local to the cued pool.
+
+Sessions at the intermediate setting (`scripts/analyze_pools.py`, 20 trials each, each
+pool treated as a recording site; figures in `figures/pool_inhibition_alpha*`):
+
+| | α = 0.2 | α = 0.25 |
+|---|---|---|
+| memory correct over the whole delay | 20/20 | 20/20 |
+| delay rate, cued / uncued pool (Hz) | 24.7 / 2.4 | 33.6 / 1.5 |
+| gamma bursts (2 SD criterion), cued site / uncued site (per s) | 1.1 / 0.23 | 0.93 / 0.30 |
+| fraction of delay time in a burst, cued / uncued | 6.1% / 1.8% | 6.5% / 2.3% |
+| cued-pool rate inside / outside bursts (Hz) | 26.6 / 24.6 | 32.5 / 33.7 |
+| cued-pool Off epochs (rate below half its mean, 20 ms smoothing) | max 11 ms | max 9 ms |
+| CV(ISI), cued pool | 0.54 | 0.48 |
+
+So pool-specific inhibition makes gamma **site-specific**: it is strong where the item
+is held and weak elsewhere, which is Lundqvist's "gamma at informative sites". But at the
+cued site it is **sustained**, not bursty. The cued pool never switches off, and detected
+bursts are rare, broadband and barely change the spike rate. The intermittent regime
+only appears once the competition between pools, and with it the memory, is gone.
+
 ## What would probably be needed (not implemented)
 
 - **Pool-specific inhibition.** Add a rank-one E↔I component so each memory pool has its

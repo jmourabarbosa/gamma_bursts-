@@ -1,13 +1,13 @@
 """Binary delayed-response task: a brief cue to pool A or B, followed by a delay."""
 import numpy as np
 
-from .network import NS, A, B, INH, simulate
+from .network import A, B, NGROUPS, simulate
 
 
 def cue_profile(p, T, cue=None, t_cue=1000.0, cue_dur=150.0, cue_strength=0.1):
-    """External-rate table (1 ms rows, columns NS/A/B/INH). The cue multiplies the
+    """External-rate table (1 ms rows, columns NS/A/B/INH/IA/IB). The cue multiplies the
     external rate onto the cued pool by (1 + cue_strength) during [t_cue, t_cue+cue_dur)."""
-    ext = np.full((int(np.ceil(T)) + 1, 4), p.nu_ext)
+    ext = np.full((int(np.ceil(T)) + 1, NGROUPS), p.nu_ext)
     if cue is not None:
         col = {'A': A, 'B': B}[cue]
         ext[int(t_cue):int(t_cue + cue_dur), col] *= 1.0 + cue_strength

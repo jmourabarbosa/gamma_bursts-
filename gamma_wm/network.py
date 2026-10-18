@@ -12,6 +12,8 @@ over [D - D_spread, D + D_spread]).
 Memory structure
 ----------------
 Excitatory neurons carry a pattern xi_i in {+1 (pop A), -1 (pop B), 0 (non-selective)}.
+(Optionally, inhibitory partner pools I_A / I_B carry +1 / -1 and the E->I and I->E
+blocks get their own low-rank terms; see Params.)
 Existing E->E synapses are rescaled as
 
     J_ij = J * (1 + beta * xi_i * xi_j),
@@ -27,7 +29,8 @@ import numpy as np
 from numba import njit
 
 # group ids
-NS, A, B, INH = 0, 1, 2, 3
+NS, A, B, INH, IA, IB = 0, 1, 2, 3, 4, 5   # IA/IB: inhibitory partners of pools A/B
+NGROUPS = 6
 
 
 @dataclass
@@ -54,7 +57,17 @@ class Params:
     q_nmda: float = 0.0       # fraction of recurrent E charge carried by NMDA
     # memory structure
     f: float = 0.0            # fraction of E neurons in each selective pool (A and B)
-    beta: float = 0.0         # strength of the rank-one perturbation
+    beta: float = 0.0         # strength of the rank-one perturbation (E->E block)
+    # pool-specific inhibition: fraction of I neurons in each partner pool (I_A, I_B) and
+    # strength of the rank-one perturbation of the E->I and I->E blocks
+    f_I: float = 0.0
+    beta_ie: float = 0.0      # E -> I
+    beta_ei: float = 0.0      # I -> E
+    # optional uniform boost of all pool-to-pool synapses in each block (second low-rank
+    # term |xi||xi|^T): within-pool factor 1 + alpha + beta, between-pool 1 + alpha - beta
+    alpha: float = 0.0        # E -> E
+    alpha_ie: float = 0.0     # E -> I
+    alpha_ei: float = 0.0     # I -> E
     seed: int = 0
 
     @property
@@ -102,18 +115,30 @@ def build_network(p: Params) -> Network:
     perm = rng.permutation(p.N_E)
     group[perm[:n_sel]] = A
     group[perm[n_sel:2 * n_sel]] = B
+    n_sel_I = int(round(p.f_I * p.N_I))
+    perm_I = p.N_E + rng.permutation(p.N_I)
+    group[perm_I[:n_sel_I]] = IA
+    group[perm_I[n_sel_I:2 * n_sel_I]] = IB
     xi = np.zeros(N)
-    xi[group == A] = 1.0
-    xi[group == B] = -1.0
+    xi[(group == A) | (group == IA)] = 1.0
+    xi[(group == B) | (group == IB)] = -1.0
 
     # fixed in-degree: for each postsynaptic neuron choose C_E E and C_I I presynaptic cells
     pre = _fixed_indegree(N, p.N_E, p.N_I, C_E, C_I, p.seed)
     post = np.repeat(np.arange(N), C_E + C_I)
 
     w = np.where(pre < p.N_E, p.J, -p.g * p.J)
-    # rank-one perturbation on E->E synapses
-    ee = (pre < p.N_E) & (post < p.N_E)
-    w[ee] *= 1.0 + p.beta * xi[post[ee]] * xi[pre[ee]]
+    # low-rank perturbation of each block:
+    # w_ij *= 1 + alpha_block * |xi_i||xi_j| + beta_block * xi_i * xi_j
+    pre_E, post_E = pre < p.N_E, post < p.N_E
+    for blk, a, b in (((pre_E & post_E), p.alpha, p.beta),
+                      ((pre_E & ~post_E), p.alpha_ie, p.beta_ie),
+                      ((~pre_E & post_E), p.alpha_ei, p.beta_ei)):
+        if a != 0 or b != 0:
+            xpo, xpr = xi[post[blk]], xi[pre[blk]]
+            fac = 1.0 + a * np.abs(xpo * xpr) + b * xpo * xpr
+            assert fac.min() >= 0, 'Dale violation: between-pool factor 1 + alpha - beta < 0'
+            w[blk] *= fac
 
     order = np.argsort(pre, kind="stable")
     targets = post[order].astype(np.int32)
@@ -165,8 +190,7 @@ def _simulate(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
     spk_t = np.empty(max_spikes, dtype=np.int32)
     spk_i = np.empty(max_spikes, dtype=np.int32)
     n_spk = 0
-    n_groups = 4
-    pop_count = np.zeros((n_steps, n_groups), dtype=np.int32)
+    pop_count = np.zeros((n_steps, ext_lambda.shape[1]), dtype=np.int32)
     n_rec = rec_V_idx.shape[0]
     V_rec = np.zeros((n_steps, n_rec), dtype=np.float32)
     for t in range(n_steps):
@@ -226,7 +250,7 @@ def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
     spk_t = np.empty(max_spikes, dtype=np.int32)
     spk_i = np.empty(max_spikes, dtype=np.int32)
     n_spk = 0
-    pop_count = np.zeros((n_steps, 4), dtype=np.int32)
+    pop_count = np.zeros((n_steps, ext_lambda.shape[1]), dtype=np.int32)
     n_rec = rec_V_idx.shape[0]
     V_rec = np.zeros((n_steps, n_rec), dtype=np.float32)
     for t in range(n_steps):
@@ -282,8 +306,8 @@ def simulate(net: Network, T: float, ext_profile=None, seed=None, V0=None,
              rec_V_idx=None, ext_res_ms=1.0, max_spikes=None):
     """Simulate for T ms.
 
-    ext_profile: optional array (n_bins, 4) of external rates (Hz per external
-    synapse) for groups [NS, A, B, INH], one row per `ext_res_ms` ms. Defaults to the
+    ext_profile: optional array (n_bins, NGROUPS) of external rates (Hz per external
+    synapse) for groups [NS, A, B, INH, IA, IB], one row per `ext_res_ms` ms. Defaults to the
     constant p.nu_ext for all groups.
     Returns dict with spike times (ms), spike indices, population counts per step,
     final V and recorded membrane potentials.
@@ -292,9 +316,9 @@ def simulate(net: Network, T: float, ext_profile=None, seed=None, V0=None,
     n_steps = int(round(T / p.dt))
     ext_res = int(round(ext_res_ms / p.dt))
     if ext_profile is None:
-        ext_profile = np.full((n_steps // ext_res + 1, 4), p.nu_ext)
+        ext_profile = np.full((n_steps // ext_res + 1, NGROUPS), p.nu_ext)
     ext_profile = np.asarray(ext_profile, dtype=np.float64)
-    assert ext_profile.shape[0] * ext_res >= n_steps
+    assert ext_profile.shape[0] * ext_res >= n_steps and ext_profile.shape[1] == NGROUPS
     ext_lambda = ext_profile * p.C_E * p.dt * 1e-3  # expected external spikes per step
     N = p.N_E + p.N_I
     if V0 is None:
