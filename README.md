@@ -172,6 +172,29 @@ cued site it is **sustained**, not bursty. The cued pool never switches off, and
 bursts are rare, broadband and barely change the spike rate. The intermittent regime
 only appears once the competition between pools, and with it the memory, is gone.
 
+### Pool inhibition + NMDA
+
+The fast dynamics are unchanged (delta AMPA/GABA, D = 4 ms), plus an NMDA component
+(τ = 100 ms) carrying a fraction q of the recurrent excitatory charge. Local inhibition
+β_ie = β_ei = 0.3, f_I = 0.1, β = 1. Exploratory, 2 trials per setting.
+
+| α | q_NMDA | cued / uncued (Hz) | readout correct | gamma envelope CV | longest cued-pool Off epoch |
+|---|---|---|---|---|---|
+| 0.1 | 0 | 10.3 / 7.6 | 0.69 | 0.42 | 126 ms |
+| 0.1 | 0.05–0.1 | 10.5–10.8 / 7.0–7.2 | 0.59–0.69 | 0.33–0.34 | 32–36 ms |
+| 0.05 | 0.1–0.2 | 10.0–10.6 / 6.0–6.3 | 0.81–0.83 | 0.26 | 8–12 ms |
+| 0 | 0.3 | 10.6 / 5.4 | 0.97 | 0.17 | 8 ms |
+| 0.1 | 0.2–0.4 | 14.9–20.0 / 2.9–4.3 | 1.00 | 0.10–0.18 | ≤ 4 ms |
+
+Starting from regimes where both pools are active and switch on and off by themselves
+(stronger local inhibition, f_I = 0.2), NMDA did not create a memory (readout correct
+29–71% of the time) and also made the gamma steadier. In no setting did both pools go
+quiet together for 20 ms or more.
+
+NMDA traces out a single trade-off curve. Every increase in memory reliability comes with
+less intermittency, because slow excitation smooths and stabilizes the active state.
+No setting has both a reliable memory and Lundqvist/Panichello-like intermittency.
+
 ## What would probably be needed (not implemented)
 
 - **Pool-specific inhibition.** Add a rank-one E↔I component so each memory pool has its
