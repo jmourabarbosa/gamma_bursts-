@@ -221,38 +221,73 @@ def loo_confidence_dual(counts, y, lam=1.0, shuffle_rng=None, n_iter=30):
     """Leave-one-trial-out L2 logistic decoder, one per time bin, fitted in the span of
     the training trials (w = X^T a; representer theorem), which is exact for the L2
     penalty and fast when n_trials << n_neurons. Same inputs/outputs as loo_confidence."""
+    yy = y if shuffle_rng is None else shuffle_rng.permutation(y)
+    return _loo_dual_nb(np.ascontiguousarray(counts, dtype=np.float64), np.asarray(y, np.float64),
+                        np.asarray(yy, np.float64), float(lam), int(n_iter))
+
+
+from numba import njit  # noqa: E402
+
+
+@njit(cache=True)
+def _loo_dual_nb(counts, y, yy, lam, n_iter):
     n_tr, n_neu, n_b = counts.shape
     conf = np.empty((n_tr, n_b))
-    yy = y if shuffle_rng is None else shuffle_rng.permutation(y)
+    m = n_tr - 1
     for b in range(n_b):
         X = counts[:, :, b]
         for k in range(n_tr):
-            tr = np.ones(n_tr, bool)
-            tr[k] = False
-            mu = X[tr].mean(0)
-            sd = X[tr].std(0) + 1e-6
-            Xt = (X[tr] - mu) / sd
+            idx = np.empty(m, np.int64)
+            j = 0
+            for i in range(n_tr):
+                if i != k:
+                    idx[j] = i
+                    j += 1
+            Xt = X[idx]
+            mu = np.zeros(n_neu)
+            for i in range(m):
+                mu += Xt[i]
+            mu /= m
+            sd = np.zeros(n_neu)
+            for i in range(m):
+                sd += (Xt[i] - mu) ** 2
+            sd = np.sqrt(sd / m) + 1e-6
+            for i in range(m):
+                Xt[i] = (Xt[i] - mu) / sd
             xk = (X[k] - mu) / sd
             K = Xt @ Xt.T
-            m = len(Xt)
+            yt = yy[idx]
             a = np.zeros(m)
             c = 0.0
-            yt = yy[tr].astype(float)
+            H = np.zeros((m + 1, m + 1))
+            g = np.zeros(m + 1)
             for _ in range(n_iter):
-                z = np.clip(K @ a + c, -30, 30)
-                p = 1 / (1 + np.exp(-z))
+                z = K @ a + c
+                p = np.empty(m)
+                for i in range(m):
+                    zi = min(30.0, max(-30.0, z[i]))
+                    p[i] = 1.0 / (1.0 + np.exp(-zi))
                 W = p * (1 - p)
-                # gradient wrt (a, c) of NLL + lam/2 a^T K a
-                ga = K @ (p - yt) + lam * K @ a
-                gc = np.sum(p - yt)
-                Haa = K @ (W[:, None] * K) + lam * K + 1e-8 * np.eye(m)
+                r = p - yt
+                ga = K @ r + lam * (K @ a)
+                KW = K * W.reshape(1, m)
+                Haa = KW @ K + lam * K
+                for i in range(m):
+                    Haa[i, i] += 1e-8
                 Hac = K @ W
-                H = np.block([[Haa, Hac[:, None]], [Hac[None, :], np.array([[W.sum() + 1e-8]])]])
-                step = np.linalg.solve(H, np.r_[ga, gc])
-                a -= step[:m]
-                c -= step[m]
-                if np.max(np.abs(step)) < 1e-6:
+                H[:m, :m] = Haa
+                H[:m, m] = Hac
+                H[m, :m] = Hac
+                H[m, m] = W.sum() + 1e-8
+                g[:m] = ga
+                g[m] = r.sum()
+                st = np.linalg.solve(H, g)
+                a -= st[:m]
+                c -= st[m]
+                if np.max(np.abs(st)) < 1e-6:
                     break
-            pk = 1 / (1 + np.exp(-np.clip(xk @ (Xt.T @ a) + c, -30, 30)))
+            zk = xk @ (Xt.T @ a) + c
+            zk = min(30.0, max(-30.0, zk))
+            pk = 1.0 / (1.0 + np.exp(-zk))
             conf[k, b] = pk if y[k] == 1 else 1 - pk
     return conf
