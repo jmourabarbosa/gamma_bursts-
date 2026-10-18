@@ -45,6 +45,13 @@ class Params:
     V_r: float = 10.0         # reset, mV
     t_ref: float = 2.0        # refractory period, ms
     dt: float = 0.1           # integration step, ms
+    # synaptic kinetics (exponential currents; tau = 0 means Brunel's delta synapse).
+    # Each spike delivers the same total charge as the delta synapse (PSP integral J),
+    # E charge split into AMPA (1 - q_nmda) and NMDA (q_nmda). NMDA is linear (no Mg block).
+    tau_ampa: float = 0.0     # ms
+    tau_nmda: float = 0.0     # ms
+    tau_gaba: float = 0.0     # ms
+    q_nmda: float = 0.0       # fraction of recurrent E charge carried by NMDA
     # memory structure
     f: float = 0.0            # fraction of E neurons in each selective pool (A and B)
     beta: float = 0.0         # strength of the rank-one perturbation
@@ -66,6 +73,10 @@ class Params:
     @property
     def nu_ext(self):
         return self.nu_ext_ratio * self.nu_thr
+
+    @property
+    def has_kinetics(self):
+        return self.tau_ampa > 0 or self.tau_gaba > 0 or (self.tau_nmda > 0 and self.q_nmda > 0)
 
 
 @dataclass
@@ -185,6 +196,88 @@ def _simulate(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
     return spk_t[:n_spk], spk_i[:n_spk], pop_count, V, V_rec
 
 
+@njit(cache=True)
+def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
+                  indptr, targets, weights, delays, group, N_E, J_ext, ext_lambda, ext_res,
+                  V0, seed, max_spikes, rec_V_idx, tau_a, tau_n, tau_g, q):
+    """As _simulate, with exponentially decaying synaptic currents. x_c (mV/ms) obeys
+    dx_c/dt = -x_c/tau_c; a spike of efficacy w adds w*(1 - exp(-dt/tau_c))/dt (= w/tau_c
+    for tau_c >> dt), so the summed input of one spike is exactly w, as for the delta
+    synapse. Channels with tau_c = 0
+    act as delta synapses. Synaptic currents keep evolving during refractoriness."""
+    np.random.seed(seed)
+    N = V0.shape[0]
+    L = max_delay + 1
+    bufE = np.zeros((L, N), dtype=np.float32)
+    bufI = np.zeros((L, N), dtype=np.float32)
+    xa = np.zeros(N)
+    xn = np.zeros(N)
+    xg = np.zeros(N)
+    V = V0.copy()
+    ref = np.zeros(N, dtype=np.int64)
+    decay = np.exp(-dt / tau)
+    da = np.exp(-dt / tau_a) if tau_a > 0 else 0.0
+    dn = np.exp(-dt / tau_n) if tau_n > 0 else 0.0
+    dg = np.exp(-dt / tau_g) if tau_g > 0 else 0.0
+    # increment per unit efficacy such that sum_k dt * x_k = w exactly in discrete time
+    ka = (1.0 - da) / dt
+    kn = (1.0 - dn) / dt
+    kg = (1.0 - dg) / dt
+    spk_t = np.empty(max_spikes, dtype=np.int32)
+    spk_i = np.empty(max_spikes, dtype=np.int32)
+    n_spk = 0
+    pop_count = np.zeros((n_steps, 4), dtype=np.int32)
+    n_rec = rec_V_idx.shape[0]
+    V_rec = np.zeros((n_steps, n_rec), dtype=np.float32)
+    for t in range(n_steps):
+        slot = t % L
+        lam_row = t // ext_res
+        for i in range(N):
+            inE = bufE[slot, i]
+            inI = bufI[slot, i]
+            bufE[slot, i] = 0.0
+            bufI[slot, i] = 0.0
+            jump = 0.0
+            # AMPA
+            if tau_a > 0:
+                xa[i] = xa[i] * da + (1.0 - q) * inE * ka
+            else:
+                jump += (1.0 - q) * inE
+            # NMDA
+            if tau_n > 0:
+                xn[i] = xn[i] * dn + q * inE * kn
+            else:
+                jump += q * inE
+            # GABA
+            if tau_g > 0:
+                xg[i] = xg[i] * dg + inI * kg
+            else:
+                jump += inI
+            if ref[i] > 0:
+                ref[i] -= 1
+                continue
+            lam = ext_lambda[lam_row, group[i]]
+            n_ext = np.random.poisson(lam) if lam > 0 else 0
+            V[i] = V[i] * decay + dt * (xa[i] + xn[i] + xg[i]) + jump + J_ext * n_ext
+            if V[i] >= theta:
+                V[i] = V_r
+                ref[i] = ref_steps
+                if n_spk < max_spikes:
+                    spk_t[n_spk] = t
+                    spk_i[n_spk] = i
+                    n_spk += 1
+                pop_count[t, group[i]] += 1
+                if i < N_E:
+                    for k in range(indptr[i], indptr[i + 1]):
+                        bufE[(t + delays[k]) % L, targets[k]] += weights[k]
+                else:
+                    for k in range(indptr[i], indptr[i + 1]):
+                        bufI[(t + delays[k]) % L, targets[k]] += weights[k]
+        for r in range(n_rec):
+            V_rec[t, r] = V[rec_V_idx[r]]
+    return spk_t[:n_spk], spk_i[:n_spk], pop_count, V, V_rec
+
+
 def simulate(net: Network, T: float, ext_profile=None, seed=None, V0=None,
              rec_V_idx=None, ext_res_ms=1.0, max_spikes=None):
     """Simulate for T ms.
@@ -211,10 +304,13 @@ def simulate(net: Network, T: float, ext_profile=None, seed=None, V0=None,
         rec_V_idx = np.zeros(0, dtype=np.int64)
     if max_spikes is None:
         max_spikes = int(N * T * 1e-3 * 200)
-    st, si, pop, Vf, Vrec = _simulate(
-        n_steps, p.dt, p.tau, p.theta, p.V_r, int(round(p.t_ref / p.dt)),
-        int(net.delays.max()), net.indptr, net.targets, net.weights, net.delays, net.group,
-        p.J, ext_lambda, ext_res, V0.astype(np.float64),
-        np.random.randint(2**31 - 1) if seed is None else seed, max_spikes,
-        np.asarray(rec_V_idx, dtype=np.int64))
+    common = (n_steps, p.dt, p.tau, p.theta, p.V_r, int(round(p.t_ref / p.dt)),
+              int(net.delays.max()), net.indptr, net.targets, net.weights, net.delays, net.group)
+    tail = (V0.astype(np.float64), np.random.randint(2**31 - 1) if seed is None else seed,
+            max_spikes, np.asarray(rec_V_idx, dtype=np.int64))
+    if p.has_kinetics:
+        st, si, pop, Vf, Vrec = _simulate_syn(*common, p.N_E, p.J, ext_lambda, ext_res, *tail,
+                                              p.tau_ampa, p.tau_nmda, p.tau_gaba, p.q_nmda)
+    else:
+        st, si, pop, Vf, Vrec = _simulate(*common, p.J, ext_lambda, ext_res, *tail)
     return dict(t=st * p.dt, i=si, pop=pop, V=Vf, V_rec=Vrec, T=T, dt=p.dt)

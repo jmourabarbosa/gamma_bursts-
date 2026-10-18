@@ -100,6 +100,39 @@ Key numbers:
 3. **Spread delays as an "AI control"** (uniform in 0.5–7.5 ms) did not remove the
    rhythm at g = 8.
 
+## Follow-up: synaptic kinetics and NMDA, with silences that arise on their own
+
+`Params` now accepts exponential AMPA, NMDA and GABA_A currents (`tau_ampa`,
+`tau_nmda`, `tau_gaba`, and `q_nmda`, the fraction of E charge carried by NMDA; NMDA is
+linear, with no Mg²⁺ block). Each spike delivers the same total charge J as in the delta
+model, which is recovered when all time constants are 0. With τ = 0.1 ms the rate is
+36.8 Hz vs 37.4 Hz for the delta model. No silences are imposed: they come only from
+finite-size noise and recurrent inhibition. The scans below are exploratory, with 1–2
+trials per setting, run with scratch scripts that are not in the repo.
+
+Settings: τ_AMPA = 2 ms, τ_GABA = 5 ms, τ_NMDA = 100 ms, D = 1.5 ms.
+
+- **Unstructured network.** Long, irregular silences occur only at the edge of the
+  quiescent state.
+  - Example: ν_ext = 0.88·ν_thr, g = 7, q_NMDA = 0.4. Silence lasts 51 ms on average
+    (95th percentile 191 ms, maximum 358 ms), with a CV of durations of 1.17 and a CV of
+    intervals of 1.1. But the network is silent 92% of the time and fires at 0.7 Hz.
+  - Moving away from that edge makes the silences clock-like: CV < 0.5 and periodic at
+    6–15 Hz.
+- **With the memory pools,** two things trade off:
+  - A strong memory (g = 6, β = 0.9: cued pool 12.4 Hz vs 0.2 Hz, readout correct
+    98% of the time) keeps the network active. Silences drop to 21% of the time, with a
+    maximum of 37 ms.
+  - Weaker memories (β = 0.75–0.85) keep silences of up to ~100–135 ms. But the cued
+    pool fires at only 1–4 Hz, the readout is correct only 54–69% of the time, and after
+    silences of 30 ms or more the cued pool restarts first in only 36–72% of cases
+    (chance is 50%). The NMDA trace scales with the cued pool's rate before the silence,
+    which is too low here to bias the restart.
+
+So far, a self-sustaining memory and long natural silences have been mutually exclusive
+in this network. The memory state itself is what keeps the network out of the quiescent
+regime.
+
 ## What would probably be needed (not implemented)
 
 - **Pool-specific inhibition.** Add a rank-one E↔I component so each memory pool has its
