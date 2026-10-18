@@ -21,6 +21,12 @@ cycle (well under τ_m = 20 ms). To get the 50–150 ms bursts and Off states se
 data, something slow has to push the network in and out of the oscillatory regime.
 In this homogeneous network, nothing does (see *Negative results* below).
 
+
+> **Latest: decoder Off states without plasticity.** See [`REPORT.md`](REPORT.md). Model 1
+> reproduces Panichello et al.'s Off-state counts, chance decoding during Off and their
+> two-state test from small recorded samples, while the memory is never lost. NMDA bridges
+> spontaneous silences of up to ~200 ms. The held-out tuning loss is not reproduced.
+
 ## Model
 
 `gamma_wm/network.py`: Brunel (2000) model A, simulated with numba.
