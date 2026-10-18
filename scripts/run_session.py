@@ -31,10 +31,13 @@ def main():
     for k in ['g', 'nu_ext_ratio', 'D', 'f', 'beta']:
         ap.add_argument('--' + k, type=float, default=None)
     ap.add_argument('--set', default='{}', help='JSON dict of further Params overrides')
+    ap.add_argument('--task', default='{}', help='JSON dict of task-timing overrides')
     args = ap.parse_args()
     over = {k: getattr(args, k) for k in ['g', 'nu_ext_ratio', 'D', 'f', 'beta']
             if getattr(args, k) is not None}
     over.update(json.loads(args.set))
+    task = dict(TASK)
+    task.update(json.loads(args.task))
     p = default_params(seed=args.net_seed, **over)
     net = build_network(p)
     rng = np.random.default_rng(1000 + args.session)
@@ -42,12 +45,12 @@ def main():
     rec = np.r_[np.where(net.group == A)[0][:args.n_vrec], np.where(net.group == B)[0][:args.n_vrec]]
     out = f'{args.out}{args.session:02d}'
     os.makedirs(out, exist_ok=True)
-    json.dump(dict(params=p.__dict__, task=TASK, cues=list(cues)), open(f'{out}/meta.json', 'w'), indent=1)
+    json.dump(dict(params=p.__dict__, task=task, cues=list(cues)), open(f'{out}/meta.json', 'w'), indent=1)
     np.savez_compressed(f'{out}/net.npz', group=net.group, xi=net.xi, vrec_idx=rec)
     V0 = None
     for k, cue in enumerate(cues):
         t0 = time.time()
-        r = run_trial(net, cue, seed=10000 * args.session + k, V0=V0, rec_V_idx=rec, **TASK)
+        r = run_trial(net, cue, seed=10000 * args.session + k, V0=V0, rec_V_idx=rec, **task)
         V0 = r['V']
         pc = an.pop_rates(r, net)
         lfp = an.lfp_proxy(r, net)

@@ -68,6 +68,10 @@ class Params:
     alpha: float = 0.0        # E -> E
     alpha_ie: float = 0.0     # E -> I
     alpha_ei: float = 0.0     # I -> E
+    # if True, every neuron receives exactly round(C_x * size_g / N_x) inputs from each
+    # source group g (NS, A, B within E; INH, IA, IB within I), removing quenched
+    # differences between pools in their mean recurrent input
+    fixed_group_indegree: bool = False
     seed: int = 0
 
     @property
@@ -124,7 +128,20 @@ def build_network(p: Params) -> Network:
     xi[(group == B) | (group == IB)] = -1.0
 
     # fixed in-degree: for each postsynaptic neuron choose C_E E and C_I I presynaptic cells
-    pre = _fixed_indegree(N, p.N_E, p.N_I, C_E, C_I, p.seed)
+    if p.fixed_group_indegree:
+        pools, counts = [], []
+        for gs, C_x, N_x in (((NS, A, B), C_E, p.N_E), ((INH, IA, IB), C_I, p.N_I)):
+            sizes = [int((group == g_).sum()) for g_ in gs]
+            cnt = [int(round(C_x * s_ / N_x)) for s_ in sizes]
+            cnt[0] = C_x - sum(cnt[1:])           # keep the total in-degree exact
+            for g_, c_ in zip(gs, cnt):
+                pools.append(np.where(group == g_)[0])
+                counts.append(c_)
+        offsets = np.r_[0, np.cumsum([len(x) for x in pools])].astype(np.int64)
+        pre = _fixed_indegree_groups(N, np.concatenate(pools).astype(np.int64), offsets,
+                                     np.array(counts, dtype=np.int64), p.seed)
+    else:
+        pre = _fixed_indegree(N, p.N_E, p.N_I, C_E, C_I, p.seed)
     post = np.repeat(np.arange(N), C_E + C_I)
 
     w = np.where(pre < p.N_E, p.J, -p.g * p.J)
@@ -173,6 +190,27 @@ def _fixed_indegree(N, N_E, N_I, C_E, C_I, seed):
             poolI[j], poolI[r] = poolI[r], poolI[j]
             pre[k] = poolI[j]
             k += 1
+    return pre
+
+
+@njit(cache=True)
+def _fixed_indegree_groups(N, pool_ids, offsets, counts, seed):
+    """For each neuron draw counts[k] distinct presynaptic cells from group k
+    (pool_ids[offsets[k]:offsets[k+1]])."""
+    np.random.seed(seed)
+    total = counts.sum()
+    pre = np.empty(N * total, dtype=np.int64)
+    work = pool_ids.copy()
+    k = 0
+    for i in range(N):
+        for gi in range(len(counts)):
+            o = offsets[gi]
+            n = offsets[gi + 1] - o
+            for j in range(counts[gi]):
+                r = j + np.random.randint(n - j)
+                work[o + j], work[o + r] = work[o + r], work[o + j]
+                pre[k] = work[o + j]
+                k += 1
     return pre
 
 
