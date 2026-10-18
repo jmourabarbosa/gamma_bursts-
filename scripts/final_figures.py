@@ -77,6 +77,8 @@ def main():
     ap.add_argument('--lam', type=float, default=10.0)
     ap.add_argument('--label', default='')
     ap.add_argument('--seed', type=int, default=3)
+    ap.add_argument('--frac-selective', type=float, default=None,
+                    help='draw this fraction of the sample from the memory pools (Panichello: 0.44)')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     meta, group, trials = load(args.data)
@@ -170,7 +172,13 @@ def main():
 
     # ------------------------------------------------------------ decoding
     rng = np.random.default_rng(args.seed)
-    sample = np.sort(rng.choice(len(group), args.K, replace=False))
+    if args.frac_selective is None:
+        sample = np.sort(rng.choice(len(group), args.K, replace=False))
+    else:
+        sel_c = np.where(np.isin(group, [A, B]))[0]
+        oth = np.where(~np.isin(group, [A, B]))[0]
+        ns_ = int(round(args.frac_selective * args.K))
+        sample = np.sort(np.r_[rng.choice(sel_c, ns_, replace=False), rng.choice(oth, args.K - ns_, replace=False)])
     res = pa.run(trials, sample, y, n_t, t_cue, delay_start=t_don + 500, count_window=(t_cue, t_cue + 1500),
                  n_shuffle=args.n_shuffle, seed=args.seed, lam=args.lam, split_half=False)
     conf, state, t = res['conf'], res['state'], res['t']
