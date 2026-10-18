@@ -76,6 +76,10 @@ class Params:
     # source group g (NS, A, B within E; INH, IA, IB within I), removing quenched
     # differences between pools in their mean recurrent input
     fixed_group_indegree: bool = False
+    # if True (with fixed_group_indegree), the exact per-group in-degree is applied only to
+    # cells of the memory pools and their inhibitory partners; all other cells draw their
+    # inputs at random (Brunel's fixed total in-degree), giving them weak mixed selectivity
+    fixed_group_indegree_pools_only: bool = False
     seed: int = 0
 
     @property
@@ -145,6 +149,11 @@ def build_network(p: Params) -> Network:
         offsets = np.r_[0, np.cumsum([len(x) for x in pools])].astype(np.int64)
         pre = _fixed_indegree_groups(N, np.concatenate(pools).astype(np.int64), offsets,
                                      np.array(counts, dtype=np.int64), p.seed)
+        if p.fixed_group_indegree_pools_only:
+            pre_rand = _fixed_indegree(N, p.N_E, p.N_I, C_E, C_I, p.seed + 1)
+            other = ~np.isin(group, [A, B, IA, IB])
+            rows = np.repeat(other, C_E + C_I)
+            pre = np.where(rows, pre_rand, pre)
     else:
         pre = _fixed_indegree(N, p.N_E, p.N_I, C_E, C_I, p.seed)
     post = np.repeat(np.arange(N), C_E + C_I)
