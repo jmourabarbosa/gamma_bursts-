@@ -109,6 +109,27 @@ gives the same picture (`figures/subsampling_nmda080/`). At 25 cells: 2.6–6.1 
 per trial, 77–96 ms, memory correct in 100% of Off bins, no held-out effect. NMDA does
 not lengthen decoder Off states.
 
+
+**Cross-validated held-out tuning curves** (Panichello Fig. 4d/e style;
+`scripts/heldout_tuning.py`; figures `figures/heldout_model1.png` and
+`figures/heldout_nmda.png`). States are labelled with one half of the recorded sample.
+The plotted values are the held-out half's delay activity, z-scored across trials and
+corrected with shuffled cue labels, for the preferred vs non-preferred cue.
+
+| Recorded cells | Model 1: tuning (pref − non), On / Off | Model 1 + NMDA: On / Off |
+|---|---|---|
+| 25 | 0.23 / 0.26 (no loss) | 0.20 / 0.21 (no loss) |
+| 100 | 0.27 / 0.16 (0.6×) | 0.17 / 0.14 (0.8×) |
+| 400 | 0.22 / 0.09 (0.4×) | 0.17 / 0.09 (0.5×) |
+
+With small samples the Off states are pure sampling noise, and the held-out cells keep
+their full tuning in Off. With larger samples the rarer Off states increasingly coincide
+with real dips in the memory, and held-out tuning falls to 0.4–0.5× of On. Panichello
+report it nearly gone (about 12× in variance, roughly 3.5× in this difference measure).
+Held-out rates in Off are close to the pre-cue level, as in their data. Here, though, the
+pre-cue period already holds the previous trial's memory, so this baseline is not a clean
+"spontaneous" level.
+
 ## 3. NMDA bridges spontaneous network-wide silences (no plasticity)
 
 This network sits below threshold drive (ν_ext = 0.86·ν_thr, g = 7) and goes silent on its
