@@ -42,6 +42,9 @@ def main():
     ap.add_argument('--n-draws', type=int, default=2)
     ap.add_argument('--n-shuffle', type=int, default=20)
     ap.add_argument('--lam', type=float, default=10.0, help='L2 penalty of the decoder')
+    ap.add_argument('--frac-selective', type=float, default=None,
+                    help='if set, draw this fraction of each sample from the memory pools '
+                         '(the rest from non-selective E and I cells), e.g. 0.44 as in Panichello')
     ap.add_argument('--pool', default='all', choices=['all', 'E'], help='cells to sample from')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
@@ -63,7 +66,14 @@ def main():
     rows = []
     for K in args.sizes:
         for dr in range(args.n_draws):
-            sample = np.sort(rng.choice(cells, min(K, len(cells)), replace=False))
+            if args.frac_selective is None:
+                sample = np.sort(rng.choice(cells, min(K, len(cells)), replace=False))
+            else:
+                sel_cells = np.where(np.isin(group, [A, B]))[0]
+                other = np.setdiff1d(cells, sel_cells)
+                n_s = min(int(round(args.frac_selective * K)), len(sel_cells))
+                sample = np.sort(np.r_[rng.choice(sel_cells, n_s, replace=False),
+                                       rng.choice(other, K - n_s, replace=False)])
             n_sel = int(np.isin(group[sample], [A, B]).sum())
             res = pa.run(trials, sample, y, n_t, t_cue, delay_start=t_don + 500,
                          count_window=(t_cue, t_cue + 1500), n_shuffle=args.n_shuffle, seed=K * 10 + dr,
@@ -72,7 +82,7 @@ def main():
             tb = res['t'].astype(int)
             off = res['state'] == -1
             truth_off = truth[:, np.clip(tb, 0, n_t - 1)][off]
-            row = dict(K=K, draw=dr, lam=args.lam, n_selective=n_sel, acc_delay=res['acc_delay'], acc_on=res['acc_on'],
+            row = dict(K=K, draw=dr, lam=args.lam, frac_selective=args.frac_selective, n_selective=n_sel, acc_delay=res['acc_delay'], acc_on=res['acc_on'],
                        acc_off=res['acc_off'], frac_on=res['frac_on_delay'], frac_off=res['frac_off_delay'],
                        on_per_trial=float(st['n_on'].mean()), off_per_trial=float(st['n_off'].mean()),
                        on_mean=float(st['on_dur'].mean()) if len(st['on_dur']) else np.nan,
