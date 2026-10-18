@@ -94,6 +94,7 @@ def main():
                        **{('split_' + k): v for k, v in res.get('split_half', {}).items()})
             rows.append(row)
             print(json.dumps(row), flush=True)
+            json.dump(rows, open(os.path.join(args.out, 'subsampling.json'), 'w'), indent=1)
             if dr == 0:
                 np.savez_compressed(os.path.join(args.out, f'states_K{K}.npz'), conf=res['conf'], state=res['state'],
                                     t=res['t'], y=y, sample=sample, on_dur=st['on_dur'], off_dur=st['off_dur'])

@@ -85,6 +85,10 @@ def main():
     a.set_xlabel('recorded neurons')
     a.set_ylabel('2- minus 1-state (mbit/sample)')
     a.set_title('Two-state mixture test')
+    for a in ax:
+        a.set_xticks(Ks)
+        a.set_xticklabels([str(k) for k in Ks])
+        a.minorticks_off()
     fig.suptitle(args.title, x=0.01, ha='left', fontweight='bold')
     fig.tight_layout()
     fig.savefig(os.path.join(args.inp, 'subsampling.png'), dpi=150, bbox_inches='tight')
