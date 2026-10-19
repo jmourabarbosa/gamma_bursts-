@@ -83,6 +83,8 @@ class Params:
     # cells of the memory pools and their inhibitory partners; all other cells draw their
     # inputs at random (Brunel's fixed total in-degree), giving them weak mixed selectivity
     fixed_group_indegree_pools_only: bool = False
+    # scale of the synapses from memory-pool E cells onto non-pool E cells (NS)
+    w_pool_out: float = 1.0
     seed: int = 0
 
     @property
@@ -173,6 +175,8 @@ def build_network(p: Params) -> Network:
             fac = 1.0 + a * np.abs(xpo * xpr) + b * xpo * xpr
             assert fac.min() >= 0, 'Dale violation: between-pool factor 1 + alpha - beta < 0'
             w[blk] *= fac
+    if p.w_pool_out != 1.0:
+        w[np.isin(group[pre], [A, B]) & (group[post] == NS)] *= p.w_pool_out
 
     order = np.argsort(pre, kind="stable")
     targets = post[order].astype(np.int32)
