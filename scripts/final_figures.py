@@ -214,7 +214,8 @@ def main():
         diff = (r[:, A] - r[:, B]) * (1 if d['cue'] == 'A' else -1)
         truth.append(np.convolve(diff, np.ones(100) / 100, mode='same'))
     truth = np.array(truth)[:, np.clip(t.astype(int), 0, n_t - 1)]
-    S['decoding']['memory_correct_in_off'] = float((truth[state == -1] > 0).mean()) if (state == -1).any() else None
+    offd = (state == -1) & dmask[None, :]
+    S['decoding']['memory_correct_in_off'] = float((truth[offd] > 0).mean()) if offd.any() else None
 
     fig = plt.figure(figsize=(11, 8.5))
     gs = fig.add_gridspec(3, 3, hspace=0.6, wspace=0.35)
