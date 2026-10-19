@@ -52,6 +52,23 @@ With 200 recorded cells instead of 100:
 - the two-state test is better by +201 mbit/sample;
 - held-out tuning is 0.47 in On vs 0.02 in Off (`figures/final_ouT_sd0.45_K200/`).
 
+## 5. Is it an attractor? 60 s delays
+![long](figures/long_trials_60s.png)
+
+Each trial below has a 60 s delay, 30 times the task delay. The model is the same as above.
+- **No noise (left):** the cued pool sits on a flat ~125 Hz plateau for the full 60 s. The
+  uncued pool stays silent. This is a true attractor: nothing decays and nothing drifts.
+- **With the shared input noise (middle, right):** the active state is still an attractor. Between
+  noise events, each pool returns to the same plateau. But a deep, long dip in the drive can switch
+  both pools off for 1–10 s. After a short pause the cued pool restarts (NMDA). After a long one,
+  either pool can restart. Over 60 s the memory flips to the wrong pool in:
+  - 1 of 4 trials at SD 0.3;
+  - 3 of 8 trials at SD 0.45 (the report model). The cued pool is ahead in ~85% of trials in the
+    first seconds and in ~50–60% by 60 s.
+
+  So with noise the memory is metastable, with a lifetime of tens of seconds. That is much longer
+  than the 2 s task delay, which is why the 2 s statistics look stationary.
+
 **Caveats.**
 - The Off states are coordinated silences of the recorded (non-pool) cells. The memory itself
   sits in a small core of pool cells, about 4% of E, that are never in the sample. A recorded pool
