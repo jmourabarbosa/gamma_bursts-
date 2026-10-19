@@ -247,5 +247,58 @@ def fig_readout(best='data/mf_fit_rates/run0/best.json', out='data/mf_readout_cu
         print({k: round(v, 3) for k, v in r.items()})
 
 
+def fig_dynamics_fits(free='data/mf_fit_rates', silence='data/mf_fit_silence', out='data/mf_dyn_fresh.json'):
+    """Best dynamics-only fits (free read-out gain; read-out-free) vs the paper, on fresh seeds."""
+    import glob
+    from meanfield import rate_states as RS
+    best = {}
+    for name, d in (('free', free), ('silence', silence)):
+        runs = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(d, 'run*', 'best.json')))]
+        best[name] = dict(runs=runs, best=min(runs, key=lambda r: r['loss']))
+    res = {}
+    for name, ev in (('free', RS.evaluate), ('silence', RS.evaluate_silence)):
+        th = best[name]['best']['theta']
+        s = ev(th, n_trials=2112, seed=99)
+        res[name] = dict(theta=th, on_dur=s['on_dur'].tolist(), off_dur=s['off_dur'].tolist(),
+                         **{k: s[k] for k in ('n_on', 'n_off', 'on_mean', 'off_mean', 'on_median', 'off_median', 'acc', 'mem')},
+                         loss=F.loss(s, keep_terms=F.TERMS_STATES),
+                         spread={k: [r['theta'][k] for r in best[name]['runs']] for k in th},
+                         run_loss=[r['loss'] for r in best[name]['runs']])
+    json.dump(res, open(out, 'w'), indent=1)
+    tgt = F.target_hist()
+    fig, ax = plt.subplots(2, 2, figsize=(6.4, 4.4), gridspec_kw=dict(hspace=0.75, wspace=0.3))
+    titles = dict(free='Fit 1: dynamics + read-out gain (gain fitted)', silence='Fit 2: read-out-free (network states)')
+    for i, name in enumerate(('free', 'silence')):
+        r = res[name]
+        for j, (key, col, lab) in enumerate((('on', C_ON, 'On'), ('off', C_OFF, 'Off'))):
+            a = ax[i, j]
+            a.bar(F.EDGES[:-1], tgt[key][:-1] / 20, width=18, align='edge', color=col, alpha=0.35, lw=0, label='paper')
+            dur = np.array(r[f'{key}_dur'])
+            h = F.model_hist(dur)[:-1] / 20
+            a.step(np.r_[F.EDGES[:-1], F.EDGES[-1]], np.r_[h, h[-1]], where='post', color=INK, lw=1.6, label='model')
+            a.set_xlim(0, 620)
+            a.text(0.97, 0.95, f'{r["n_" + key]:.2f}/trial (paper {F.TARGET["n_" + key]:.2f})\n'
+                               f'mean {r[key + "_mean"]:.0f} ms (paper {F.TARGET[key + "_mean"]:.0f})',
+                   transform=a.transAxes, ha='right', va='top', fontsize=6.5, color=INK2)
+            a.set_title(f'{lab} states', fontsize=8, loc='left')
+            if i == 1:
+                a.set_xlabel('state length (ms)')
+            if j == 0:
+                a.set_ylabel('probability / ms')
+        th = r['theta']
+        g = f' · gain {10 ** th["log10_c"]:.3f} z/Hz' if 'log10_c' in th else ''
+        ax[i, 0].text(0, 1.32, f'{titles[name]} — loss {r["loss"]:.1f}, memory {r["mem"]:.1%} (fresh seeds)',
+                      transform=ax[i, 0].transAxes, fontsize=7.5, weight='bold', color=INK)
+        ax[i, 0].text(0, 1.18, f'τ_N {th["tau_N"]:.0f} ms · w_s {th["w_s"]:.2f} · dips {th["dip_rate"]:.1f}/s, mean '
+                               f'{th["dip_mean"]:.0f} ms, k {th["dip_shape"]:.1f}, −{100 * th["dip_depth"]:.0f}% · σ {th["sigma"]:.3f}{g}',
+                      transform=ax[i, 0].transAxes, fontsize=6.5, color=INK2)
+    ax[0, 1].legend(fontsize=6.5, loc='center right')
+    f = os.path.join(OUT, 'fig6_dynamics_fits.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+    for name in res:
+        print(name, {k: (round(v, 3) if isinstance(v, float) else v) for k, v in res[name].items() if k not in ('on_dur', 'off_dur', 'theta')})
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits}[sys.argv[1]](*sys.argv[2:])
