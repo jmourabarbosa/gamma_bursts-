@@ -128,7 +128,7 @@ def fig_fit(val='data/mf_validate'):
     v = _load_val(val)
     d = v['full']
     tgt = F.target_hist()
-    fig, ax = plt.subplots(1, 3, figsize=(7.4, 2.5), gridspec_kw=dict(wspace=0.38, width_ratios=[1, 1, 0.8]))
+    fig, ax = plt.subplots(1, 3, figsize=(8.2, 2.6), gridspec_kw=dict(wspace=0.38, width_ratios=[1, 1, 1.05]))
     for a, key, col, name, n_p in ((ax[0], 'on', C_ON, 'On', 3890), (ax[1], 'off', C_OFF, 'Off', 6174)):
         a.bar(F.EDGES[:-1], tgt[key][:-1] / 20, width=18, align='edge', color=col, alpha=0.35, lw=0,
               label=f'Panichello 2024 (n = {n_p:,})')
@@ -139,7 +139,7 @@ def fig_fit(val='data/mf_validate'):
         a.set_xlim(0, 620); a.set_xlabel('state length (ms)'); a.set_ylabel('probability / ms')
         H = F.hellinger2(F.model_hist(dur), tgt[key])
         a.set_title(f'{name} states')
-        a.text(0.97, 0.62, f'mean {dur.mean():.0f} ms (paper {F.TARGET[key + "_mean"]:.0f})\n'
+        a.text(0.97, 0.55, f'mean {dur.mean():.0f} ms (paper {F.TARGET[key + "_mean"]:.0f})\n'
                            f'median {np.median(dur):.0f} ms (paper {F.TARGET[key + "_median"]:.0f})\nHellinger² {H:.3f}',
                transform=a.transAxes, ha='right', va='top', fontsize=6.5, color=INK2)
         a.legend(fontsize=6.5, loc='upper right')
@@ -147,12 +147,12 @@ def fig_fit(val='data/mf_validate'):
     rows = [('', 'model', 'paper'),
             ('On per trial', f'{d["n_on"].mean():.2f}', '2.35'),
             ('Off per trial', f'{d["n_off"].mean():.2f}', '3.74'),
-            ('decoding (0.5-1.4 s)', f'{d["acc"]:.0%}', '~70%'),
-            ('memory correct, end', f'{v["mem"]:.1%}', '≥95% (req.)'),
+            ('decoding 0.5–1.4 s', f'{d["acc"]:.0%}', '~70%'),
+            ('memory correct', f'{v["mem"]:.1%}', '≥95% req.'),
             ('trials', f'{len(d["n_on"]):,}', '1,653')]
     for i, r in enumerate(rows):
         for j, c in enumerate(r):
-            a.text([0.0, 0.62, 0.86][j], 0.92 - 0.14 * i, c, fontsize=7, ha='left' if j == 0 else 'center',
+            a.text([0.0, 0.66, 0.9][j], 0.92 - 0.14 * i, c, fontsize=7, ha='left' if j == 0 else 'center',
                    color=INK if i else INK2, weight='bold' if i == 0 else 'normal', transform=a.transAxes)
     th = v['theta']
     a.text(0.0, -0.08, f'τ_N {th["tau_N"]:.0f} ms · dips {th["dip_rate"]:.1f}/s, mean {th["dip_mean"]:.0f} ms, '
