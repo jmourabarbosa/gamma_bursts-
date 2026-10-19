@@ -24,11 +24,19 @@ def main():
     ap.add_argument('--n-sessions', type=int, default=4)
     ap.add_argument('--x0', default=None, help='json file with a starting theta')
     ap.add_argument('--sigma0', type=float, default=0.25)
+    ap.add_argument('--readout', choices=('decoder', 'rates'), default='decoder',
+                    help='decoder: recorded cells + fast decoder, full loss; rates: pool rates + one gain, '
+                         'state statistics only (histograms and counts)')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     fixed = {k: float(v) for k, v in (s.split('=') for s in a.fix)}
-    names = [k for k in F.BOUNDS if k not in fixed]
-    lo = np.array([F.BOUNDS[k][0] for k in names]); hi = np.array([F.BOUNDS[k][1] for k in names])
+    if a.readout == 'rates':
+        from meanfield import rate_states
+        bounds, evaluate, keep = F.BOUNDS_RATES, lambda th: rate_states.evaluate(th, seed=a.seed), F.TERMS_STATES
+    else:
+        bounds, evaluate, keep = F.BOUNDS, lambda th: F.evaluate(th, n_sessions=a.n_sessions, seed=a.seed), None
+    names = [k for k in bounds if k not in fixed]
+    lo = np.array([bounds[k][0] for k in names]); hi = np.array([bounds[k][1] for k in names])
     rng = np.random.default_rng(a.seed)
     if a.x0:
         th0 = json.load(open(a.x0))
@@ -44,8 +52,8 @@ def main():
 
     def f(u):
         th = theta(u)
-        s = F.evaluate(th, n_sessions=a.n_sessions, seed=a.seed)
-        L, parts = F.loss(s, parts=True)
+        s = evaluate(th)
+        L, parts = F.loss(s, parts=True, keep_terms=keep)
         L += 10 * float(np.sum(np.clip(u - 1, 0, None) ** 2 + np.clip(-u, 0, None) ** 2))   # stay in bounds
         row = dict(theta=th, loss=L, parts=parts, **{k: s[k] for k in ('n_on', 'n_off', 'on_mean', 'off_mean',
                                                                         'on_median', 'off_median', 'acc', 'mem')})

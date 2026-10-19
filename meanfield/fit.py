@@ -14,6 +14,10 @@ TARGET = dict(n_on=2.35, n_off=3.74, on_mean=192.4, off_mean=146.1, on_median=15
 BOUNDS = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 8.0), dip_mean=(20.0, 300.0),
               dip_shape=(0.7, 6.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04), f_sel=(0.003, 0.08),
               tune_sd=(0.0, 0.05))
+# rate read-out fit (meanfield.rate_states): dynamics + one read-out gain, recording parameters dropped
+BOUNDS_RATES = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 8.0), dip_mean=(20.0, 300.0),
+                    dip_shape=(0.7, 6.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04), log10_c=(-2.5, -0.5))
+TERMS_STATES = ('hist_on', 'hist_off', 'n_on', 'n_off')
 REC_KEYS = ('K', 'f_sel', 'tune_sd', 'base_rate', 'base_cv', 'n_per_class', 'delay_min', 'delay_max')
 
 
@@ -58,7 +62,7 @@ def summarize(stats_list, acc_list, mem_list):
                 acc=float(np.mean(acc_list)), mem=float(np.mean(mem_list)))
 
 
-def loss(summ, tgt=None, parts=False):
+def loss(summ, tgt=None, parts=False, keep_terms=None):
     tgt = tgt or target_hist()
     h_on = hellinger2(model_hist(summ['on_dur']), tgt['on'])
     h_off = hellinger2(model_hist(summ['off_dur']), tgt['off'])
@@ -67,6 +71,8 @@ def loss(summ, tgt=None, parts=False):
                  n_off=((summ['n_off'] - TARGET['n_off']) / 0.5) ** 2,
                  acc=((summ['acc'] - TARGET['acc']) / 0.05) ** 2,
                  mem=2e4 * max(0.0, 0.95 - summ['mem']) ** 2)          # memory correct >= 95% (near-hard)
+    if keep_terms is not None:
+        terms = {k: v for k, v in terms.items() if k in keep_terms}
     L = float(sum(terms.values()))
     return (L, terms) if parts else L
 
