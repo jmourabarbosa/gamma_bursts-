@@ -272,8 +272,11 @@ def _loo_dual_nb(counts, y, yy, lam, n_iter):
                 ga = K @ r + lam * (K @ a)
                 KW = K * W.reshape(1, m)
                 Haa = KW @ K + lam * K
+                jit = 1e-8
                 for i in range(m):
-                    Haa[i, i] += 1e-8
+                    jit = max(jit, 1e-10 * Haa[i, i])
+                for i in range(m):
+                    Haa[i, i] += jit
                 Hac = K @ W
                 H[:m, :m] = Haa
                 H[:m, m] = Hac
