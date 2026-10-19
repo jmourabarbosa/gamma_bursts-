@@ -79,6 +79,8 @@ def main():
     ap.add_argument('--seed', type=int, default=3)
     ap.add_argument('--frac-selective', type=float, default=None,
                     help='draw this fraction of the sample from the memory pools (Panichello: 0.44)')
+    ap.add_argument('--silence-pop', default='E', choices=['E', 'NS'],
+                    help='population whose silences are measured: all E cells, or only the non-pool E cells')
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
     meta, group, trials = load(args.data)
@@ -91,17 +93,26 @@ def main():
     S = dict(model=meta['params'], K=args.K, n_trials=len(trials))
 
     # ------------------------------------------------------------ silences
+    ns_only = args.silence_pop == 'NS'
+
+    def silence_rate(r):
+        if ns_only:
+            return uniform_filter1d(r[:, NS].astype(float), 5)
+        return uniform_filter1d(r[:, :3] @ sizes[:3] / sizes[:3].sum(), 5)
+
     sil, after = [], []
     for d in trials:
         r = d['rates'][:n_t]
-        e5 = uniform_filter1d(r[:, :3] @ sizes[:3] / sizes[:3].sum(), 5)
+        e5 = silence_rate(r)
         C, U = (A, B) if d['cue'] == 'A' else (B, A)
         for a_, b_ in runs(e5[int(t_don):] < 1.0):
             a_ += int(t_don)
             b_ += int(t_don)
             if b_ - a_ >= 20:
                 sil.append(b_ - a_)
-                if b_ + 50 < n_t:
+                if ns_only:  # memory pools keep firing: is the cued pool ahead during the silence?
+                    after.append((b_ - a_, r[a_:b_, C].sum() > r[a_:b_, U].sum()))
+                elif b_ + 50 < n_t:
                     after.append((b_ - a_, r[b_:b_ + 50, C].sum() > r[b_:b_ + 50, U].sum()))
     sil = np.array(sil)
     after = np.array(after, float) if after else np.zeros((0, 2))
@@ -115,8 +126,7 @@ def main():
 
     fig = plt.figure(figsize=(11, 6.6))
     gs = fig.add_gridspec(2, 3, hspace=0.5, wspace=0.35, height_ratios=[1.3, 1])
-    d = trials[int(np.argmax([((uniform_filter1d(t['rates'][:n_t, :3] @ sizes[:3] / sizes[:3].sum(), 5)[int(t_don):] < 1).sum())
-                              for t in trials]))]
+    d = trials[int(np.argmax([(silence_rate(t['rates'][:n_t])[int(t_don):] < 1).sum() for t in trials]))]
     a = fig.add_subplot(gs[0, :])
     C, U = (A, B) if d['cue'] == 'A' else (B, A)
     y0 = 0
@@ -128,15 +138,19 @@ def main():
         a.scatter(d['spk_t'][m], lut[d['spk_i'][m]] + y0, s=1.5, c=col, lw=0, rasterized=True)
         a.text(n_t + 20, y0 + 30, lab, fontsize=8, color=INK2, va='center')
         y0 += 64
-    e5 = uniform_filter1d(d['rates'][:n_t, :3] @ sizes[:3] / sizes[:3].sum(), 5)
+    e5 = silence_rate(d['rates'][:n_t])
     for a_, b_ in runs(e5 < 1.0):
         if b_ - a_ >= 20 and a_ > t_don:
             a.axvspan(a_, b_, color=GRID, lw=0, zorder=0)
     a.axvline(t_cue, color=INK2, lw=0.8)
     a.set_yticks([])
     a.set_xlim(0, n_t)
-    a.set_xlabel('time (ms); grey = network-wide silence (E rate < 1 Hz for ≥ 20 ms)')
-    a.set_title(f'Example trial (cue {d["cue"]}): spontaneous network-wide silences during the delay')
+    if ns_only:
+        a.set_xlabel('time (ms); grey = silence of the non-pool E cells (rate < 1 Hz for ≥ 20 ms)')
+        a.set_title(f'Example trial (cue {d["cue"]}): the background goes silent, the memory pool keeps firing')
+    else:
+        a.set_xlabel('time (ms); grey = network-wide silence (E rate < 1 Hz for ≥ 20 ms)')
+        a.set_title(f'Example trial (cue {d["cue"]}): spontaneous network-wide silences during the delay')
     a = fig.add_subplot(gs[1, 0])
     a.hist(sil, np.arange(0, max(400, np.percentile(sil, 99)) + 20, 20), color=INK2)
     a.set_yscale('log')
@@ -158,8 +172,8 @@ def main():
     a.set_xticks(range(len(bins)), ['20-50', '50-100', '100-200', '200-400', '>400'], fontsize=8)
     a.set_ylim(0, 1.1)
     a.set_xlabel('silence duration (ms)')
-    a.set_ylabel('P(cued pool restarts first)')
-    a.set_title('Memory survives silences (NMDA)')
+    a.set_ylabel('P(cued pool > uncued during silence)' if ns_only else 'P(cued pool restarts first)')
+    a.set_title('Memory held through silences' if ns_only else 'Memory survives silences (NMDA)')
     a = fig.add_subplot(gs[1, 2])
     a.bar([0], [end_ok], color=C_A, width=0.5)
     a.text(0, end_ok + 0.02, f'{end_ok:.2f}', ha='center')
