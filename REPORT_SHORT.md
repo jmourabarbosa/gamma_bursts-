@@ -64,6 +64,19 @@ decoder-Off bins, the cued pool is ahead in only 38% of bins. In the rest both p
 and the memory exists only as decaying NMDA current in the cued pool's synapses, from which that
 pool restarts. There is no plasticity: the trace is the ordinary NMDA time constant (300 ms).
 
+**Subsampling is not needed.** The Off states survive with much larger random samples:
+
+| Recorded cells (pool cells) | Decoding | Off per trial (mean) | Off fraction | Two-state gain | Held-out On / Off |
+|---|---|---|---|---|---|
+| 100 (3) | 87% | 0.8 (308 ms) | 20% | +181 mbit | 0.35 / 0.04 |
+| 200 (1) | 87% | 0.95 (210 ms) | 20% | +212 mbit | 0.39 / 0.05 |
+| 1,000 (29) | 89% | 0.7 (258 ms) | 16% | +471 mbit | 0.37 / −0.02 |
+| 4,000 (133) | 90% | 0.6 (236 ms) | 14% | +712 mbit | 0.36 / −0.02 |
+
+The Off states are whole-network pauses, memory pool included, so no number of recorded cells can
+decode through them. The memory then exists only as decaying NMDA current. Figures:
+`figures/final_ouT_sd0.45_K{1000,4000}_random/`.
+
 ## 5. Is it an attractor? 60 s delays
 ![long](figures/long_trials_60s.png)
 
