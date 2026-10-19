@@ -14,9 +14,9 @@ def cue_profile(p, T, cue=None, t_cue=1000.0, cue_dur=150.0, cue_strength=0.1):
     return ext
 
 
-def slow_input_noise(n, sd, tau, seed):
+def slow_input_noise(n, sd, tau, seed, floor=0.0):
     """Multiplicative slow fluctuation of the external drive shared by all cells:
-    1 + sd * OU(tau), clipped at 0 (1 ms rows)."""
+    1 + sd * OU(tau), clipped below at `floor` (1 ms rows)."""
     rng = np.random.default_rng(seed)
     a = np.exp(-1.0 / tau)
     x = np.empty(n)
@@ -24,15 +24,15 @@ def slow_input_noise(n, sd, tau, seed):
     eps = rng.standard_normal(n) * np.sqrt(1 - a * a)
     for i in range(1, n):
         x[i] = a * x[i - 1] + eps[i]
-    return np.clip(1.0 + sd * x, 0.0, None)
+    return np.clip(1.0 + sd * x, floor, None)
 
 
 def run_trial(net, cue='A', t_pre=1000.0, cue_dur=150.0, t_delay=2500.0,
-              cue_strength=0.1, seed=0, V0=None, ext_noise_sd=0.0, ext_noise_tau=200.0, **kw):
+              cue_strength=0.1, seed=0, V0=None, ext_noise_sd=0.0, ext_noise_tau=200.0, ext_noise_floor=0.0, **kw):
     T = t_pre + cue_dur + t_delay
     ext = cue_profile(net.p, T, cue, t_pre, cue_dur, cue_strength)
     if ext_noise_sd > 0:
-        ext *= slow_input_noise(len(ext), ext_noise_sd, ext_noise_tau, seed + 7919)[:, None]
+        ext *= slow_input_noise(len(ext), ext_noise_sd, ext_noise_tau, seed + 7919, ext_noise_floor)[:, None]
     res = simulate(net, T, ext_profile=ext, seed=seed, V0=V0, **kw)
     res.update(cue=cue, t_cue=t_pre, cue_dur=cue_dur, t_delay_on=t_pre + cue_dur, T=T)
     return res
