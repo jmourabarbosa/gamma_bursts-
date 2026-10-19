@@ -297,6 +297,7 @@ def main():
     perm = rng.permutation(args.K)
     halves = (perm[: args.K // 2], perm[args.K // 2:])
     cur = {k: [] for k in ('on_p', 'on_n', 'off_p', 'off_n')}
+    fr = {'on': [], 'off': [], 'base': []}   # held-out firing rate (Hz) per trial
     for h in (0, 1):
         Cl = np.ascontiguousarray(Cm[:, halves[h]])
         c1 = loo_confidence_dual(Cl, y, args.lam)
@@ -305,6 +306,13 @@ def main():
         s1, _, _ = pa.label_states(c1, n1, valid)
         Xt = Cm[:, halves[1 - h]].astype(float)
         Z = (Xt - Xt.mean(0, keepdims=True)) / (Xt.std(0, keepdims=True) + 1e-9)
+        bmask = (tc >= 200) & (tc < t_cue - 50)
+        for k in range(len(trials)):
+            fr['base'].append(10.0 * Call[k][halves[1 - h]][:, bmask].mean())
+            for lab, key in ((1, 'on'), (-1, 'off')):
+                m = (s1[k] == lab) & dmk
+                if m.sum():
+                    fr[key].append(10.0 * Xt[k][:, m].mean())
 
         def means(yy, lab):
             out = np.full((Z.shape[1], 2), np.nan)
@@ -333,7 +341,17 @@ def main():
     S['heldout_tuning'] = {k: float(v[0]) for k, v in mv.items()}
     S['heldout_tuning']['on_diff'] = float(mv['on_p'][0] - mv['on_n'][0])
     S['heldout_tuning']['off_diff'] = float(mv['off_p'][0] - mv['off_n'][0])
-    fig, a = plt.subplots(figsize=(4.2, 3.8))
+    S['heldout_rate_hz'] = {k: float(np.mean(v)) if v else None for k, v in fr.items()}
+    fig, (a, a2) = plt.subplots(1, 2, figsize=(8, 3.8), gridspec_kw=dict(wspace=0.45))
+    keys = [('base', INK2, 'pre-cue'), ('on', C_ON, 'On'), ('off', C_OFF, 'Off')]
+    for i, (k_, c_, lab) in enumerate(keys):
+        v = np.array(fr[k_])
+        if len(v):
+            a2.bar(i, v.mean(), color=c_, width=0.6)
+            a2.errorbar(i, v.mean(), yerr=v.std() / np.sqrt(len(v)), color=INK, capsize=3)
+    a2.set_xticks(range(3), [k[2] for k in keys])
+    a2.set_ylabel('held-out cells, mean firing rate (Hz)')
+    a2.set_title('Firing rate by state', fontsize=9)
     for key, c_, lab in (('on', C_ON, 'On'), ('off', C_OFF, 'Off')):
         a.errorbar([0, 1], [mv[key + '_n'][0], mv[key + '_p'][0]], yerr=[mv[key + '_n'][1], mv[key + '_p'][1]],
                    color=c_, marker='o', ms=6, lw=1.6, capsize=3, label=lab)
