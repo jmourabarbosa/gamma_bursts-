@@ -210,3 +210,15 @@ the bridgeable gap to ~200 ms but also stabilizes the active state.
 - Screens: `scripts/exploration/*.py`, with results in `figures/screens/*.jsonl`.
 - Reproducing model 1: `scripts/run_session.py` ×4 sessions (README), then
   `python scripts/subsample_decoding.py --data data/session --out figures/subsampling_v1 --sizes 25 50 100 200 400 --lam 10`.
+
+## Stationary memory with Off states (slow shared input noise)
+
+The final model is summarised in `REPORT_SHORT.md`. The earlier fading-memory model is replaced
+by a stable memory core: α = 2.8, NMDA 300 ms. A slow fluctuation of the external drive, shared
+by all cells (OU, τ 500 ms, SD 45%), silences the weakly tuned background cells for 50 ms to over
+1 s. Decoders trained on those background cells show:
+- Off states of about 200 ms;
+- a two-state mixture that beats the one-state model;
+- held-out tuning that drops in Off (0.37 vs 0.10 with 100 cells; 0.47 vs 0.02 with 200).
+
+Meanwhile the memory stays stationary (97.5% correct at the end of the delay).

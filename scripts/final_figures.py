@@ -126,7 +126,12 @@ def main():
 
     fig = plt.figure(figsize=(11, 6.6))
     gs = fig.add_gridspec(2, 3, hspace=0.5, wspace=0.35, height_ratios=[1.3, 1])
-    d = trials[int(np.argmax([(silence_rate(t['rates'][:n_t])[int(t_don):] < 1).sum() for t in trials]))]
+    # example: a trial with memory correct at the end and a silence fraction at the 80th percentile
+    sfrac = np.array([(silence_rate(t_['rates'][:n_t])[int(t_don):] < 1).mean() for t_ in trials])
+    ok_ = np.array([(t_['rates'][n_t - 300:n_t, A].mean() > t_['rates'][n_t - 300:n_t, B].mean()) == (t_['cue'] == 'A')
+                    for t_ in trials])
+    cand = np.where(ok_)[0]
+    d = trials[int(cand[np.argmin(np.abs(sfrac[cand] - np.percentile(sfrac, 80)))])]
     a = fig.add_subplot(gs[0, :])
     C, U = (A, B) if d['cue'] == 'A' else (B, A)
     y0 = 0
@@ -147,7 +152,7 @@ def main():
     a.set_xlim(0, n_t)
     if ns_only:
         a.set_xlabel('time (ms); grey = silence of the non-pool E cells (rate < 1 Hz for ≥ 20 ms)')
-        a.set_title(f'Example trial (cue {d["cue"]}): the background goes silent, the memory pool keeps firing')
+        a.set_title(f'Example trial (cue {d["cue"]}): the background goes silent; the memory pool keeps firing or pauses and restarts')
     else:
         a.set_xlabel('time (ms); grey = network-wide silence (E rate < 1 Hz for ≥ 20 ms)')
         a.set_title(f'Example trial (cue {d["cue"]}): spontaneous network-wide silences during the delay')
@@ -246,7 +251,11 @@ def main():
     a.set_title('Single-trial decoder confidence (probability of the correct cue)')
     fig.colorbar(im, ax=a, fraction=0.02)
     a = fig.add_subplot(gs[2, :])
-    ex = np.argsort(-((state == -1) & dmask).sum(1))[:4]
+    # examples: trials whose memory is correct at the end, with the most Off states
+    held = np.array([(d_['rates'][n_t - 300:n_t, A].mean() > d_['rates'][n_t - 300:n_t, B].mean()) == (d_['cue'] == 'A')
+                     for d_ in trials])
+    n_off = np.array([len(runs((state[k] == -1) & dmask)) for k in range(len(trials))])
+    ex = np.argsort(-(n_off + 0.01 * ((state == 1) & dmask).sum(1)) - 100 * held)[:4]
     for j, k in enumerate(ex):
         a.plot(t, conf[k] + 1.15 * j, color=INK, lw=0.9)
         a.fill_between(t, 1.15 * j, 1.15 * j + 1, where=state[k] == 1, color=C_ON, alpha=0.25, lw=0, step='mid')
