@@ -27,12 +27,33 @@ def slow_input_noise(n, sd, tau, seed, floor=0.0):
     return np.clip(1.0 + sd * x, floor, None)
 
 
+def shared_dips(n, rate, mean_dur, depth, seed, shape=2.0, ramp=10.0):
+    """Brief dips of the external drive shared by all cells (1 ms rows). Dip onsets are a
+    Poisson process (rate per s); durations are gamma(shape) with mean mean_dur (ms); during a
+    dip the drive is multiplied by (1 - depth). Edges are smoothed with `ramp` ms ramps."""
+    rng = np.random.default_rng(seed)
+    m = np.ones(n)
+    t = rng.exponential(1000.0 / rate)
+    while t < n:
+        d = rng.gamma(shape, mean_dur / shape)
+        a, b = int(t), int(min(n, t + d))
+        m[a:b] = np.minimum(m[a:b], 1.0 - depth)
+        t += d + rng.exponential(1000.0 / rate)
+    if ramp > 0:
+        w = int(ramp)
+        m = np.convolve(np.r_[np.ones(w), m, np.ones(w)], np.ones(w) / w, mode='same')[w:-w]
+    return m
+
+
 def run_trial(net, cue='A', t_pre=1000.0, cue_dur=150.0, t_delay=2500.0,
-              cue_strength=0.1, seed=0, V0=None, ext_noise_sd=0.0, ext_noise_tau=200.0, ext_noise_floor=0.0, **kw):
+              cue_strength=0.1, seed=0, V0=None, ext_noise_sd=0.0, ext_noise_tau=200.0, ext_noise_floor=0.0,
+              dip_rate=0.0, dip_mean=120.0, dip_depth=0.8, **kw):
     T = t_pre + cue_dur + t_delay
     ext = cue_profile(net.p, T, cue, t_pre, cue_dur, cue_strength)
     if ext_noise_sd > 0:
         ext *= slow_input_noise(len(ext), ext_noise_sd, ext_noise_tau, seed + 7919, ext_noise_floor)[:, None]
+    if dip_rate > 0:
+        ext *= shared_dips(len(ext), dip_rate, dip_mean, dip_depth, seed + 104729)[:, None]
     res = simulate(net, T, ext_profile=ext, seed=seed, V0=V0, **kw)
     res.update(cue=cue, t_cue=t_pre, cue_dur=cue_dur, t_delay_on=t_pre + cue_dur, T=T)
     return res
