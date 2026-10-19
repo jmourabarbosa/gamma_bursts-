@@ -25,15 +25,20 @@ def main():
     ap.add_argument('--x0', default=None, help='json file with a starting theta')
     ap.add_argument('--sigma0', type=float, default=0.25)
     ap.add_argument('--n-trials', type=int, default=1056, help='trials per evaluation (rates read-out)')
-    ap.add_argument('--readout', choices=('decoder', 'rates'), default='decoder',
+    ap.add_argument('--readout', choices=('decoder', 'rates', 'silence'), default='decoder',
                     help='decoder: recorded cells + fast decoder, full loss; rates: pool rates + one gain, '
-                         'state statistics (histograms and counts) + memory requirement')
+                         'state statistics (histograms and counts) + memory requirement; silence: '
+                         'read-out-free, states = network attractor states, same loss')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     fixed = {k: float(v) for k, v in (s.split('=') for s in a.fix)}
     if a.readout == 'rates':
         from meanfield import rate_states
         bounds, evaluate, keep = F.BOUNDS_RATES, lambda th: rate_states.evaluate(th, n_trials=a.n_trials, seed=a.seed), F.TERMS_STATES
+    elif a.readout == 'silence':
+        from meanfield import rate_states
+        bounds = {k: v for k, v in F.BOUNDS_RATES.items() if k != 'log10_c'}
+        evaluate, keep = lambda th: rate_states.evaluate_silence(th, n_trials=a.n_trials, seed=a.seed), F.TERMS_STATES
     else:
         bounds, evaluate, keep = F.BOUNDS, lambda th: F.evaluate(th, n_sessions=a.n_sessions, seed=a.seed), None
     names = [k for k in bounds if k not in fixed]
