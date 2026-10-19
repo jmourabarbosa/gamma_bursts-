@@ -102,5 +102,91 @@ def fig_surrogate(calib='data/mf_calib'):
     print('wrote', f)
 
 
+def _load_val(val):
+    import glob
+    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(val, 'ses*.json')))]
+    out = {}
+    for name in ('full', 'fast'):
+        g = lambda k: np.concatenate([np.asarray(r[name][k], float) for r in rows])
+        out[name] = dict(on_dur=g('on_dur'), off_dur=g('off_dur'), n_on=g('n_on'), n_off=g('n_off'),
+                         acc=float(np.mean([r[name]['acc'] for r in rows])))
+    out['mem'] = float(np.mean([r['mem'] for r in rows]))
+    out['n_sessions'] = len(rows)
+    out['theta'] = rows[0]['theta']
+    return out
+
+
+def fig_fit(val='data/mf_validate'):
+    v = _load_val(val)
+    d = v['full']
+    tgt = F.target_hist()
+    fig, ax = plt.subplots(1, 3, figsize=(7.4, 2.5), gridspec_kw=dict(wspace=0.38, width_ratios=[1, 1, 0.8]))
+    for a, key, col, name, n_p in ((ax[0], 'on', C_ON, 'On', 3890), (ax[1], 'off', C_OFF, 'Off', 6174)):
+        a.bar(F.EDGES[:-1], tgt[key][:-1] / 20, width=18, align='edge', color=col, alpha=0.35, lw=0,
+              label=f'Panichello 2024 (n = {n_p:,})')
+        dur = d[f'{key}_dur']
+        h = F.model_hist(dur)[:-1] / 20
+        a.step(np.r_[F.EDGES[:-1], F.EDGES[-1]], np.r_[h, h[-1]], where='post', color=INK, lw=1.6,
+               label=f'model (n = {len(dur):,})')
+        a.set_xlim(0, 620); a.set_xlabel('state length (ms)'); a.set_ylabel('probability / ms')
+        H = F.hellinger2(F.model_hist(dur), tgt[key])
+        a.set_title(f'{name} states')
+        a.text(0.97, 0.62, f'mean {dur.mean():.0f} ms (paper {F.TARGET[key + "_mean"]:.0f})\n'
+                           f'median {np.median(dur):.0f} ms (paper {F.TARGET[key + "_median"]:.0f})\nHellinger² {H:.3f}',
+               transform=a.transAxes, ha='right', va='top', fontsize=6.5, color=INK2)
+        a.legend(fontsize=6.5, loc='upper right')
+    a = ax[2]; a.axis('off')
+    rows = [('', 'model', 'paper'),
+            ('On per trial', f'{d["n_on"].mean():.2f}', '2.35'),
+            ('Off per trial', f'{d["n_off"].mean():.2f}', '3.74'),
+            ('decoding (0.5-1.4 s)', f'{d["acc"]:.0%}', '~70%'),
+            ('memory correct, end', f'{v["mem"]:.1%}', '≥95% (req.)'),
+            ('trials', f'{len(d["n_on"]):,}', '1,653')]
+    for i, r in enumerate(rows):
+        for j, c in enumerate(r):
+            a.text([0.0, 0.62, 0.86][j], 0.92 - 0.14 * i, c, fontsize=7, ha='left' if j == 0 else 'center',
+                   color=INK if i else INK2, weight='bold' if i == 0 else 'normal', transform=a.transAxes)
+    th = v['theta']
+    a.text(0.0, -0.08, f'τ_N {th["tau_N"]:.0f} ms · dips {th["dip_rate"]:.1f}/s, mean {th["dip_mean"]:.0f} ms, '
+                       f'k {th["dip_shape"]:.1f}, −{100 * th["dip_depth"]:.0f}%\nσ {th["sigma"]:.3f} · w_s {th["w_s"]:.2f} · '
+                       f'f_sel {th["f_sel"]:.3f} · tune {th["tune_sd"]:.3f}', fontsize=6.3, color=INK2, transform=a.transAxes, va='top')
+    fig.suptitle(f'Best fit, full pipeline (logistic decoder): {v["n_sessions"]} sessions × 132 trials × 329 units',
+                 fontsize=8, x=0.07, ha='left', y=1.04)
+    f = os.path.join(OUT, 'fig3_fit_histograms.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
+def fig_sensitivity(sens='data/mf_sens.json'):
+    r = json.load(open(sens))
+    names = list(r['sweeps'])
+    lab = dict(tau_N='τ_N (ms)', w_s='w_s (NMDA strength)', dip_rate='dip rate (1/s)', dip_mean='dip mean (ms)',
+               dip_shape='dip shape k', dip_depth='dip depth δ', sigma='noise σ', f_sel='memory-cell fraction',
+               tune_sd='background tuning SD')
+    fig, ax = plt.subplots(2, len(names), figsize=(1.25 * len(names) + 0.6, 3.6), sharey='row',
+                           gridspec_kw=dict(hspace=0.35, wspace=0.12))
+    for j, n in enumerate(names):
+        rows = r['sweeps'][n]
+        x = [q['value'] for q in rows]
+        a = ax[0, j]
+        a.plot(x, [q['on_mean'] for q in rows], '-o', color=C_ON, ms=2.5, lw=1.6, label='On')
+        a.plot(x, [q['off_mean'] for q in rows], '-o', color=C_OFF, ms=2.5, lw=1.6, label='Off')
+        a.axvline(r['theta'][n], color=MUTED, lw=1, ls=':')
+        a.set_title(lab[n], fontsize=7, loc='center', weight='normal')
+        b = ax[1, j]
+        b.plot(x, [q['n_on'] for q in rows], '-o', color=C_ON, ms=2.5, lw=1.6)
+        b.plot(x, [q['n_off'] for q in rows], '-o', color=C_OFF, ms=2.5, lw=1.6)
+        b.plot(x, [4 * q['mem'] for q in rows], '--', color=INK2, lw=1)
+        b.axvline(r['theta'][n], color=MUTED, lw=1, ls=':')
+        b.tick_params(axis='x', labelsize=6)
+        a.tick_params(axis='x', labelsize=6)
+    ax[0, 0].set_ylabel('mean length (ms)'); ax[1, 0].set_ylabel('states per trial\n(dashed: 4 × memory)')
+    ax[0, 0].legend(fontsize=6.5, loc='upper left')
+    fig.suptitle('One-at-a-time sweeps around the best fit (dotted line); fast pipeline', fontsize=8, x=0.05, ha='left', y=0.99)
+    f = os.path.join(OUT, 'fig4_sensitivity.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity}[sys.argv[1]](*sys.argv[2:])

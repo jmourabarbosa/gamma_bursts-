@@ -66,7 +66,7 @@ def loss(summ, tgt=None, parts=False):
                  n_on=((summ['n_on'] - TARGET['n_on']) / 0.5) ** 2,
                  n_off=((summ['n_off'] - TARGET['n_off']) / 0.5) ** 2,
                  acc=((summ['acc'] - TARGET['acc']) / 0.05) ** 2,
-                 mem=1000 * max(0.0, 0.95 - summ['mem']) ** 2 / 0.01 * 0.01)
+                 mem=2e4 * max(0.0, 0.95 - summ['mem']) ** 2)          # memory correct >= 95% (near-hard)
     L = float(sum(terms.values()))
     return (L, terms) if parts else L
 
