@@ -196,5 +196,56 @@ def fig_sensitivity(sens='data/mf_sens.json'):
     print('wrote', f)
 
 
+# user's analysis of the recordings (all units vs top-k units by decoder weight)
+DATA_TOPK = [dict(label='all', acc=0.676, n_on=1.8, on=185, n_off=3.1, off=155),
+             dict(label='top 50', acc=0.720, n_on=2.5, on=210, n_off=2.8, off=130),
+             dict(label='top 20', acc=0.721, n_on=2.6, on=219, n_off=2.75, off=122),
+             dict(label='top 10', acc=0.710, n_on=2.7, on=220, n_off=2.8, off=117)]
+
+
+def fig_readout(best='data/mf_fit_rates/run0/best.json', out='data/mf_readout_curve.json'):
+    """Fixed dynamics, read-out gain varied: state statistics vs decoding accuracy."""
+    from meanfield import rate_states as RS
+    th = json.load(open(best))['theta']
+    if os.path.exists(out) and json.load(open(out))['theta'] == th:
+        rows = json.load(open(out))['rows']
+    else:
+        rows = []
+        for lc in np.linspace(-2.5, 1.5, 17):
+            ss = [RS.evaluate(dict(th, log10_c=float(lc)), seed=sd) for sd in (11, 12)]
+            rows.append(dict(c=float(10 ** lc), **{k: float(np.mean([x[k] for x in ss]))
+                                                   for k in ('acc', 'n_on', 'n_off', 'on_mean', 'off_mean')}))
+        json.dump(dict(theta=th, rows=rows), open(out, 'w'))
+    c_fit = 10 ** th['log10_c']
+    fig, ax = plt.subplots(1, 4, figsize=(7.6, 2.0), gridspec_kw=dict(wspace=0.5))
+    items = (('n_on', 'n_on', 'On per trial', C_ON, 2.35), ('on_mean', 'on', 'On length (ms)', C_ON, 192.4),
+             ('n_off', 'n_off', 'Off per trial', C_OFF, 3.74), ('off_mean', 'off', 'Off length (ms)', C_OFF, 146.1))
+    acc = np.array([r['acc'] for r in rows])
+    for a, (km, kd, lab, col, paper) in zip(ax, items):
+        y = np.array([r[km] for r in rows])
+        a.plot(acc, y, '-', color=col, lw=2, zorder=2)
+        a.plot(acc, y, 'o', color=col, ms=2.5, zorder=2)
+        i = int(np.argmin(np.abs(np.log([r['c'] for r in rows]) - np.log(c_fit))))
+        a.plot(acc[i], y[i], 'o', ms=7, mfc='none', mec=INK, mew=1.2, zorder=3)
+        a.annotate('perfect\nread-out', (acc[-1], y[-1]), xytext=(-4, 0), textcoords='offset points', ha='right',
+                   va='center', fontsize=6, color=INK2)
+        a.plot(0.70, paper, 'D', color=MUTED, ms=4.5, zorder=3)
+        for d in DATA_TOPK:
+            a.plot(d['acc'], d[kd], 's', ms=4, color=INK if d['label'] == 'all' else '#fcfcfb', mec=INK, mew=1, zorder=4)
+        a.set_title(lab, fontsize=8); a.set_xlabel('decoding accuracy'); a.set_xlim(0.55, 1.0)
+    from matplotlib.lines import Line2D
+    h = [Line2D([], [], color=INK2, lw=2, marker='o', ms=2.5, label='model, read-out gain varied'),
+         Line2D([], [], ls='', marker='o', ms=7, mfc='none', mec=INK, label='fitted gain'),
+         Line2D([], [], ls='', marker='s', ms=4, color=INK, label='data, all units'),
+         Line2D([], [], ls='', marker='s', ms=4, mfc='#fcfcfb', mec=INK, label='data, top 50/20/10'),
+         Line2D([], [], ls='', marker='D', ms=4.5, color=MUTED, label='paper (Fig. 4)')]
+    fig.legend(handles=h, loc='lower center', ncol=5, fontsize=6.5, bbox_to_anchor=(0.5, -0.2))
+    f = os.path.join(OUT, 'fig5_readout_curve.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+    for r in rows:
+        print({k: round(v, 3) for k, v in r.items()})
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout}[sys.argv[1]](*sys.argv[2:])
