@@ -17,7 +17,8 @@ BOUNDS = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 8.0), dip_me
 # rate read-out fit (meanfield.rate_states): dynamics + one read-out gain, recording parameters dropped
 BOUNDS_RATES = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 8.0), dip_mean=(20.0, 300.0),
                     dip_shape=(0.7, 6.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04), log10_c=(-2.5, -0.5))
-TERMS_STATES = ('hist_on', 'hist_off', 'n_on', 'n_off')
+TERMS_STATES = ('hist_on', 'hist_off', 'n_on', 'n_off', 'mem')
+MEM_MIN = 0.98      # memory correct at the end of the delay, on the fit's own trials (margin for >= 95% on new ones)
 REC_KEYS = ('K', 'f_sel', 'tune_sd', 'base_rate', 'base_cv', 'n_per_class', 'delay_min', 'delay_max')
 
 
@@ -70,7 +71,7 @@ def loss(summ, tgt=None, parts=False, keep_terms=None):
                  n_on=((summ['n_on'] - TARGET['n_on']) / 0.5) ** 2,
                  n_off=((summ['n_off'] - TARGET['n_off']) / 0.5) ** 2,
                  acc=((summ['acc'] - TARGET['acc']) / 0.05) ** 2,
-                 mem=2e4 * max(0.0, 0.95 - summ['mem']) ** 2)          # memory correct >= 95% (near-hard)
+                 mem=2e4 * max(0.0, MEM_MIN - summ['mem']) ** 2)       # memory correct (near-hard)
     if keep_terms is not None:
         terms = {k: v for k, v in terms.items() if k in keep_terms}
     L = float(sum(terms.values()))
