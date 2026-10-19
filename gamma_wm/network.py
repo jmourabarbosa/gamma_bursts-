@@ -55,6 +55,9 @@ class Params:
     tau_nmda: float = 0.0     # ms
     tau_gaba: float = 0.0     # ms
     q_nmda: float = 0.0       # fraction of recurrent E charge carried by NMDA
+    # slow inhibition (GABA_B-like): fraction q_gabab of inhibitory charge decays with tau_gabab
+    tau_gabab: float = 0.0    # ms
+    q_gabab: float = 0.0
     # spike-frequency adaptation of E cells (intrinsic current, not plasticity): each spike
     # adds a hyperpolarising current decaying with tau_w whose voltage integral is b_w mV
     tau_w: float = 0.0        # ms
@@ -102,7 +105,7 @@ class Params:
     @property
     def has_kinetics(self):
         return (self.tau_ampa > 0 or self.tau_gaba > 0 or (self.tau_nmda > 0 and self.q_nmda > 0)
-                or (self.tau_w > 0 and self.b_w > 0))
+                or (self.tau_w > 0 and self.b_w > 0) or (self.tau_gabab > 0 and self.q_gabab > 0))
 
 
 @dataclass
@@ -275,7 +278,7 @@ def _simulate(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
 @njit(cache=True)
 def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
                   indptr, targets, weights, delays, group, N_E, J_ext, ext_lambda, ext_res,
-                  V0, seed, max_spikes, rec_V_idx, tau_a, tau_n, tau_g, q, tau_w, b_w):
+                  V0, seed, max_spikes, rec_V_idx, tau_a, tau_n, tau_g, q, tau_w, b_w, tau_gb, q_gb):
     """As _simulate, with exponentially decaying synaptic currents. x_c (mV/ms) obeys
     dx_c/dt = -x_c/tau_c; a spike of efficacy w adds w*(1 - exp(-dt/tau_c))/dt (= w/tau_c
     for tau_c >> dt), so the summed input of one spike is exactly w, as for the delta
@@ -299,6 +302,10 @@ def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
     ka = (1.0 - da) / dt
     kn = (1.0 - dn) / dt
     kg = (1.0 - dg) / dt
+    slow_i = tau_gb > 0 and q_gb > 0
+    dgb = np.exp(-dt / tau_gb) if slow_i else 0.0
+    kgb = (1.0 - dgb) / dt if slow_i else 0.0
+    xgb = np.zeros(N)
     adapt = tau_w > 0 and b_w > 0
     dw = np.exp(-dt / tau_w) if adapt else 0.0
     kw = b_w * (1.0 - dw) / dt if adapt else 0.0
@@ -328,11 +335,14 @@ def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
                 xn[i] = xn[i] * dn + q * inE * kn
             else:
                 jump += q * inE
-            # GABA
+            # GABA: fast (GABA_A) part and optional slow (GABA_B-like) part
+            qf = 1.0 - q_gb if slow_i else 1.0
+            if slow_i:
+                xgb[i] = xgb[i] * dgb + q_gb * inI * kgb
             if tau_g > 0:
-                xg[i] = xg[i] * dg + inI * kg
+                xg[i] = xg[i] * dg + qf * inI * kg
             else:
-                jump += inI
+                jump += qf * inI
             if adapt:
                 wad[i] *= dw
             if ref[i] > 0:
@@ -340,7 +350,7 @@ def _simulate_syn(n_steps, dt, tau, theta, V_r, ref_steps, max_delay,
                 continue
             lam = ext_lambda[lam_row, group[i]]
             n_ext = np.random.poisson(lam) if lam > 0 else 0
-            V[i] = V[i] * decay + dt * (xa[i] + xn[i] + xg[i] - wad[i]) + jump + J_ext * n_ext
+            V[i] = V[i] * decay + dt * (xa[i] + xn[i] + xg[i] + xgb[i] - wad[i]) + jump + J_ext * n_ext
             if V[i] >= theta:
                 V[i] = V_r
                 ref[i] = ref_steps
@@ -394,7 +404,8 @@ def simulate(net: Network, T: float, ext_profile=None, seed=None, V0=None,
             max_spikes, np.asarray(rec_V_idx, dtype=np.int64))
     if p.has_kinetics:
         st, si, pop, Vf, Vrec = _simulate_syn(*common, p.N_E, p.J, ext_lambda, ext_res, *tail,
-                                              p.tau_ampa, p.tau_nmda, p.tau_gaba, p.q_nmda, p.tau_w, p.b_w)
+                                              p.tau_ampa, p.tau_nmda, p.tau_gaba, p.q_nmda, p.tau_w, p.b_w,
+                                              p.tau_gabab, p.q_gabab)
     else:
         st, si, pop, Vf, Vrec = _simulate(*common, p.J, ext_lambda, ext_res, *tail)
     return dict(t=st * p.dt, i=si, pop=pop, V=Vf, V_rec=Vrec, T=T, dt=p.dt)
