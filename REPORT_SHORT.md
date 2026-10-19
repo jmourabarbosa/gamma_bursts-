@@ -73,6 +73,9 @@ pool restarts. There is no plasticity: the trace is the ordinary NMDA time const
 | 1,000 (29) | 89% | 0.7 (258 ms) | 16% | +471 mbit | 0.37 / −0.02 |
 | 4,000 (133) | 90% | 0.6 (236 ms) | 14% | +712 mbit | 0.36 / −0.02 |
 
+| 400 memory cells only | 92% | 0.47 (341 ms) | 15% | +1183 mbit | 1.62 / 0.02 |
+| all 12,500 cells | 90% | Off states present, mean 253 ms | – | – | – |
+
 The Off states are whole-network pauses, memory pool included, so no number of recorded cells can
 decode through them. The memory then exists only as decaying NMDA current. Figures:
 `figures/final_ouT_sd0.45_K{1000,4000}_random/`.
