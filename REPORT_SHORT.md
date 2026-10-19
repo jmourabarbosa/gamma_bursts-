@@ -97,6 +97,25 @@ Each trial below has a 60 s delay, 30 times the task delay. The model is the sam
   So with noise the memory is metastable, with a lifetime of tens of seconds. That is much longer
   than the 2 s task delay, which is why the 2 s statistics look stationary.
 
+## 6. How slow must NMDA be? (sweep of the NMDA decay time)
+![nmda](figures/nmda_sweep/state_lengths.png)
+
+Same network and noise, NMDA decay time 50–300 ms (same charge per spike), 40 trials each. State
+lengths are pooled from 5 random samples of 100 cells.
+
+| | No noise (300 ms) | 50 ms | 100 ms | 150 ms | 200 ms | 300 ms |
+|---|---|---|---|---|---|---|
+| Off states per trial | 0.01 | 1.15 | 0.89 | 1.0 | 0.93 | 0.93 |
+| Cued pool restarts first after a pool pause | – | 46% | 53% | 64% | 67% | 93% |
+| Memory correct at end of delay | 100% | 68% | 88% | 85% | 90% | 97% |
+
+- **No noise means no Off states.** The shared input fluctuation is what causes them.
+- **The shape of the On and Off histograms hardly depends on the NMDA decay time.** It is set by
+  the noise.
+- **The NMDA decay time sets whether the memory survives an Off state.** Below ~300 ms the cued
+  pool restarts first only 46–67% of the time (13–15 pauses per model, so roughly ±13%), and
+  Off states often erase the memory. A decay time of 300 ms is at the slow end of GluN2B values.
+
 **Caveats.**
 - With a random sample, Off states come mostly from pauses of the whole network, memory pool
   included. They do not come from the background alone. Long Off states (> ~300 ms) are therefore
