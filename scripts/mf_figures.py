@@ -79,14 +79,27 @@ def fig_mechanism():
 def fig_surrogate(calib='data/mf_calib'):
     import glob
     rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(calib, 'val*.json')))]
-    fig, ax = plt.subplots(1, 5, figsize=(7.4, 2.0), gridspec_kw=dict(wspace=0.55))
+    methods = [m for m in ('fast', 'expected') if all(m in r for r in rows)]
+    names = dict(fast='spike-based fast decoder', expected='expected z (no spikes)')
+    fig, axs = plt.subplots(len(methods), 5, figsize=(7.4, 2.1 * len(methods)), squeeze=False,
+                            gridspec_kw=dict(wspace=0.55, hspace=0.7))
+    for ax, meth in zip(axs, methods):
+        _surrogate_row(ax, rows, meth, names[meth])
+    fig.suptitle(f'Approximations vs the full pipeline (logistic decoder, approx. LOO): {len(rows)} sessions at random '
+                 'parameters, λ = 1000; dotted = paper value', fontsize=8, x=0.07, ha='left', y=1.02, color=INK)
+    f = os.path.join(OUT, 'fig2_surrogate_validation.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
+def _surrogate_row(ax, rows, meth, label):
     items = (('acc', 'decoding accuracy', lambda r: r['acc']), ('n_on', 'On per trial', lambda r: r['n_on']),
              ('n_off', 'Off per trial', lambda r: r['n_off']),
              ('on', 'On mean (ms)', lambda r: np.mean(r['on_dur']) if r['on_dur'] else np.nan),
              ('off', 'Off mean (ms)', lambda r: np.mean(r['off_dur']) if r['off_dur'] else np.nan))
     tgt = dict(acc=0.70, n_on=2.35, n_off=3.74, on=192.4, off=146.1)
     for a, (k, lab, g) in zip(ax, items):
-        x = np.array([g(r['full']) for r in rows]); y = np.array([g(r['fast']) for r in rows])
+        x = np.array([g(r['full']) for r in rows]); y = np.array([g(r[meth]) for r in rows])
         m = ~np.isnan(x) & ~np.isnan(y)
         lo, hi = np.nanmin(np.r_[x, y]), np.nanmax(np.r_[x, y])
         a.plot([lo, hi], [lo, hi], color=MUTED, lw=1)
@@ -94,12 +107,7 @@ def fig_surrogate(calib='data/mf_calib'):
         a.axvline(tgt[k], color=C_ON if k in ('n_on', 'on') else C_OFF if k in ('n_off', 'off') else INK2, lw=1, ls=':')
         a.set_title(lab, fontsize=8); a.set_xlabel('full pipeline')
         a.text(0.04, 0.96, f'r = {np.corrcoef(x[m], y[m])[0, 1]:.3f}', transform=a.transAxes, va='top', fontsize=7, color=INK2)
-    ax[0].set_ylabel('fast surrogate')
-    fig.suptitle(f'Fast surrogate (linearised decoder) vs full pipeline (logistic, approx. LOO): {len(rows)} sessions at '
-                 'random parameters, λ = 1000; dotted = paper value', fontsize=8, x=0.07, ha='left', y=1.08, color=INK)
-    f = os.path.join(OUT, 'fig2_surrogate_validation.png')
-    fig.savefig(f, dpi=170, bbox_inches='tight')
-    print('wrote', f)
+    ax[0].set_ylabel(label, fontsize=7.5)
 
 
 def _load_val(val):
