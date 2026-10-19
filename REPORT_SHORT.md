@@ -13,44 +13,56 @@
   fall silent. The memory pool holds the memory through the dip: it keeps firing, or pauses and
   restarts first thanks to NMDA.
 - **Task:** binary, 40 trials, 2 s delay.
-- **Recorded sample:** 100 random cells that are not in the memory pools (E and I).
+- **Recorded sample:** 100 cells drawn uniformly at random from the whole network, with no bias.
+  In this draw, 3 of them are memory-pool cells.
 - **Analysis:** Panichello's pipeline unchanged: 100 ms windows, leave-one-out logistic decoder,
   shuffled null, On/Off labelling, two-state beta-mixture test, split-half held-out tuning.
 
-Figures: `figures/final_ouT_sd0.45_K100/`. Script: `scripts/final_figures.py --silence-pop NS --frac-selective 0`.
+Figures: `figures/final_ouT_sd0.45_K100_random/`. Script: `scripts/final_figures.py --silence-pop NS` (uniform random sample).
 Data: `scripts/run_session.py` with `ext_noise_sd 0.45, ext_noise_tau 500` (see `summary.json` for every parameter).
 
 | | Model | Panichello et al. 2024 |
 |---|---|---|
 | Memory over the delay | **stationary**: cued − uncued pool rate 81, 85, 90, 91 Hz in successive 500 ms bins; correct at end 97.5% (the 1 error is a cue that never started the memory) | – |
 | Background silences | 1.8/s, mean 159 ms, 95th percentile 690 ms, max 1.7 s; 29% of the delay | – |
-| Trial-averaged decoding (delay) | **85%**, flat across the delay | ~70% |
-| Off states (decoding at chance) | 1.4 per trial, mean 204 ms (median 100) | 3.7 per trial, mean 146 ms (median 100) |
-| On states | 2.5 per trial, mean 120 ms | 2.4 per trial, mean 192 ms |
-| Two-state vs one-state beta model | **two states better, +148 mbit/sample** | two states better (19/25 sessions) |
-| Held-out tuning, pref − non (On / Off) | **0.37 / 0.10** (3.7× lower in Off) | strongly reduced in Off |
+| Trial-averaged decoding (delay) | **87%**, flat across the delay | ~70% |
+| Off states (decoding at chance) | 0.8 per trial, mean 308 ms (median 150) | 3.7 per trial, mean 146 ms (median 100) |
+| On states | 3.1 per trial, mean 149 ms | 2.4 per trial, mean 192 ms |
+| Two-state vs one-state beta model | **two states better, +181 mbit/sample** | two states better (19/25 sessions) |
+| Held-out tuning, pref − non (On / Off) | **0.35 / 0.04** (~9× lower in Off) | strongly reduced in Off |
 
 ## 1. Silences and the memory across them
-![silences](figures/final_ouT_sd0.45_K100/fig_silences.png)
+![silences](figures/final_ouT_sd0.45_K100_random/fig_silences.png)
 
 During background silences, the cued pool is still firing 60% of the time. For the other 40%, both
 pools are paused, and when firing restarts it is the cued pool that restarts (uncued pool ahead:
 < 1%). In the example, the cued pool pauses from 2.6 to 3.1 s and then comes back.
 
 ## 2. Decoding: flat on average, clear Off states on single trials
-![decoding](figures/final_ouT_sd0.45_K100/fig_decoding.png)
+![decoding](figures/final_ouT_sd0.45_K100_random/fig_decoding.png)
 
 ## 3. Two-state (beta-mixture) test
-![mixture](figures/final_ouT_sd0.45_K100/fig_mixture.png)
+![mixture](figures/final_ouT_sd0.45_K100_random/fig_mixture.png)
 
 ## 4. Cross-validated tuning curves: tuning lost in Off states
-![tuning](figures/final_ouT_sd0.45_K100/fig_tuning.png)
+![tuning](figures/final_ouT_sd0.45_K100_random/fig_tuning.png)
 
-With 200 recorded cells instead of 100:
-- decoding is 85%;
-- there is 1.0 Off state per trial, with a mean of 253 ms;
-- the two-state test is better by +201 mbit/sample;
-- held-out tuning is 0.47 in On vs 0.02 in Off (`figures/final_ouT_sd0.45_K200/`).
+**Other random draws.** The same result holds in 8 more independent random samples of 100 cells,
+each with 2–4 pool cells (`figures/random_draws/`):
+- decoding: 81–89%;
+- Off states: 0.5–1.3 per trial, mean 195–400 ms;
+- two-state test: better in every draw, by +58 to +247 mbit;
+- held-out tuning: 0.32–0.45 in On vs 0.03–0.11 in Off.
+
+The other draws cover noise SD 0.45 and SD 0.55. With 200 cells (1 pool cell), held-out tuning is
+0.39 in On vs 0.05 in Off.
+
+**Why random samples still show Off states.** The few sampled pool cells carry the memory whenever
+the pool is firing. The decoder therefore fails mainly when the pool itself pauses: in the deepest
+dips of the drive the whole network, memory pool included, falls silent for a few hundred ms. In
+decoder-Off bins, the cued pool is ahead in only 38% of bins. In the rest both pools are silent,
+and the memory exists only as decaying NMDA current in the cued pool's synapses, from which that
+pool restarts. There is no plasticity: the trace is the ordinary NMDA time constant (300 ms).
 
 ## 5. Is it an attractor? 60 s delays
 ![long](figures/long_trials_60s.png)
@@ -70,11 +82,11 @@ Each trial below has a 60 s delay, 30 times the task delay. The model is the sam
   than the 2 s task delay, which is why the 2 s statistics look stationary.
 
 **Caveats.**
-- The Off states are coordinated silences of the recorded (non-pool) cells. The memory itself
-  sits in a small core of pool cells, about 4% of E, that are never in the sample. A recorded pool
-  cell fires at ~90 Hz in On and in Off, so it would decode perfectly in both.
+- With a random sample, Off states come mostly from pauses of the whole network, memory pool
+  included. They do not come from the background alone. Long Off states (> ~300 ms) are therefore
+  periods where the memory survives only in the NMDA trace.
 - The silences come from slow shared input noise, not from a purely internal mechanism.
 - Decoding is 85%, not ~70%. Stronger noise (SD 55%) gives 77–79% and 1.8–1.9 Off states per
-  trial (`figures/final_ouT_sd0.55_K*`). The cost is that ~10% of trials lose the memory during the
+  trial (`figures/final_ouT_sd0.55_K*`; random samples: 81–82%). The cost is that ~10% of trials lose the memory during the
   delay, which shows as a dip in decoding late in the delay.
 - The full history of attempts is in `REPORT.md`.
