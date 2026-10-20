@@ -300,5 +300,78 @@ def fig_dynamics_fits(free='data/mf_fit_rates', silence='data/mf_fit_silence', o
         print(name, {k: (round(v, 3) if isinstance(v, float) else v) for k, v in res[name].items() if k not in ('on_dur', 'off_dur', 'theta')})
 
 
+def _gain_curve(th, out, n_trials=1056):
+    """Fixed dynamics, gain varied; states counted 0-1,400 ms after cue onset (as in the data analysis)."""
+    from meanfield import rate_states as RS
+    th = {k: v for k, v in th.items() if k != 'log10_c'}
+    if os.path.exists(out) and json.load(open(out))['theta'] == th:
+        return json.load(open(out))['rows']
+    p = M.params(**th); p['t_delay'] = 1600.0
+    rows = []
+    for lc in np.linspace(-2.5, 1.5, 17):
+        acc = []
+        stats = []
+        for sd in (11, 12):
+            sim = M.simulate(p, np.tile([0, 1], n_trials // 2), seed=sd)
+            st, z, state, tc, thr = RS.states(sim, 10 ** lc, np.random.default_rng(sd + 1), delay=(1350., 1350.))
+            dm = (tc >= sim['t_cue'] + 500) & (tc < sim['t_cue'] + 1400)
+            stats.append(dict(acc=float((z[:, dm] > 0).mean()), n_on=float(st['n_on'].mean()), n_off=float(st['n_off'].mean()),
+                              on_mean=float(st['on_dur'].mean()) if len(st['on_dur']) else np.nan,
+                              off_mean=float(st['off_dur'].mean()) if len(st['off_dur']) else np.nan,
+                              frac_on=float((state[:, dm] == 1).mean()), frac_off=float((state[:, dm] == -1).mean())))
+        rows.append(dict(c=float(10 ** lc), **{k: float(np.nanmean([x[k] for x in stats])) for k in stats[0]}))
+    json.dump(dict(theta=th, rows=rows), open(out, 'w'))
+    return rows
+
+
+def fig_readout_data(data='meanfield/data/readout_summary_data.csv', dyn='data/mf_dyn_fresh.json'):
+    import csv
+    D = list(csv.DictReader(open(data)))
+    res = json.load(open(dyn))
+    curves = dict(free=_gain_curve(res['free']['theta'], 'data/mf_curve_free.json'),
+                  silence=_gain_curve(res['silence']['theta'], 'data/mf_curve_silence.json'))
+    c_fit = 10 ** res['free']['theta']['log10_c']
+    items = (('off_per_trial', 'n_off', 'Off per trial', C_OFF), ('off_mean_ms', 'off_mean', 'Off mean (ms)', C_OFF),
+             ('frac_off', 'frac_off', 'fraction of delay Off', C_OFF),
+             ('on_per_trial', 'n_on', 'On per trial', C_ON), ('on_mean_ms', 'on_mean', 'On mean (ms)', C_ON),
+             ('frac_on', 'frac_on', 'fraction of delay On', C_ON))
+    fig, axs = plt.subplots(2, 3, figsize=(7.4, 4.3), gridspec_kw=dict(wspace=0.42, hspace=0.55))
+    for a, (kd, km, lab, col) in zip(axs.ravel(), items):
+        for name, ls, lw in (('free', '-', 2.0), ('silence', '--', 1.4)):
+            rows = curves[name]
+            acc = np.array([r['acc'] for r in rows]); y = np.array([r[km] for r in rows])
+            a.plot(acc, y, ls, color=col, lw=lw, zorder=2)
+            if name == 'free':
+                i = int(np.argmin(np.abs(np.log([r['c'] for r in rows]) - np.log(c_fit))))
+                a.plot(acc[i], y[i], 'o', ms=6, mfc='none', mec=INK, mew=1.1, zorder=3)
+        for st, mk, fc in (('random', 'o', MUTED), ('top', 's', '#fcfcfb')):
+            rr = [r for r in D if r['set'] == st]
+            x = [float(r['accuracy']) for r in rr]; y = [float(r[kd]) for r in rr]
+            e = [float(r[kd + '_sem']) for r in rr]
+            a.plot(x, y, '-', color=INK2, lw=0.8, zorder=3)
+            a.errorbar(x, y, yerr=e, fmt=mk, ms=4, mfc=fc, mec=INK, ecolor=INK2, elinewidth=0.8, capsize=0, zorder=4)
+            for r, xx, yy in zip(rr, x, y):
+                if r['k'] in ('5', '200'):
+                    a.annotate(r['k'], (xx, yy), xytext=(3, 3), textcoords='offset points', fontsize=5.5, color=INK2)
+        al = [r for r in D if r['set'] == 'all'][0]
+        a.errorbar(float(al['accuracy']), float(al[kd]), yerr=float(al[kd + '_sem']), fmt='D', ms=5, color=INK, zorder=5)
+        a.set_title(lab, fontsize=8); a.set_xlim(0.5, 1.0)
+        if a in axs[1]:
+            a.set_xlabel('decoding accuracy (500–1,400 ms)')
+    from matplotlib.lines import Line2D
+    h = [Line2D([], [], color=INK2, lw=2, label='model fit 1 dynamics, gain varied'),
+         Line2D([], [], color=INK2, lw=1.4, ls='--', label='model fit 2 dynamics, gain varied'),
+         Line2D([], [], ls='', marker='o', ms=6, mfc='none', mec=INK, label='fit 1 gain'),
+         Line2D([], [], ls='', marker='D', ms=5, color=INK, label='data, all units'),
+         Line2D([], [], ls='', marker='s', ms=4, mfc='#fcfcfb', mec=INK, label='data, top k'),
+         Line2D([], [], ls='', marker='o', ms=4, color=MUTED, mec=INK, label='data, random k')]
+    fig.legend(handles=h, loc='lower center', ncol=3, fontsize=6.5, bbox_to_anchor=(0.5, -0.1))
+    fig.suptitle('States vs read-out: data (25 sessions, λ = 30, ± session SEM; k = 5…200) and model (gain varied); '
+                 'states counted 0–1,400 ms', fontsize=7.5, x=0.06, ha='left', y=0.99)
+    f = os.path.join(OUT, 'fig7_readout_data.png')
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data}[sys.argv[1]](*sys.argv[2:])

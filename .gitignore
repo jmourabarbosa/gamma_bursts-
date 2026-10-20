@@ -3,3 +3,4 @@ __pycache__/
 data/
 figures/*/part_*/
 figures/*/from_logs/
+!meanfield/data/
