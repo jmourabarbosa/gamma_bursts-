@@ -34,17 +34,24 @@ EDGES = np.arange(40, 620, 20)
 def load_targets():
     rows = {(r['set'], r['k']): r for r in csv.DictReader(open(os.path.join(DATA, 'readout_summary_data_lam10000.csv')))}
     tg = {s: {k: float(rows[s][k]) for k in ('mu_on', 'accuracy') + tuple(x[0] for x in STATS)} for s in SETS}
+    hist = {st: load_hist(st) for st in SETS}
+    return tg, hist
+
+
+def load_hist(st):
+    """Data On/Off length histograms of one unit set, as probabilities in EDGES bins plus a >= 600 ms bin
+    (states shorter than 40 ms excluded, as in the model histograms)."""
     H = {}
     for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv'))):
-        if r['set'] == 'top' and r['k'] == '20':
+        if (r['set'], r['k']) == st:
             H.setdefault(r['state'], []).append((float(r['bin_lo_ms']), float(r['count'])))
-    hist = {}
-    for st, v in H.items():
+    out = {}
+    for state, v in H.items():
         lo = np.array([a for a, _ in v]); c = np.array([b for _, b in v])
-        tot = c.sum()
+        tot = c.sum() - c[lo < EDGES[0]].sum()
         inside = np.array([c[lo == e].sum() for e in EDGES[:-1]])
-        hist[st] = np.r_[inside, tot - inside.sum() - c[lo < EDGES[0]].sum()] / (tot - c[lo < EDGES[0]].sum())
-    return tg, hist
+        out[state] = np.r_[inside, tot - inside.sum()] / tot
+    return out
 
 
 def mu_on(z, rng, n_max=40000):
@@ -105,10 +112,9 @@ def evaluate(theta, tg, n_trials=1056, seed=0, keep=False):
                  off_mean=float(s['off_dur'].mean()) if len(s['off_dur']) else 0.0,
                  on_mean=float(s['on_dur'].mean()) if len(s['on_dur']) else 0.0,
                  frac_off=float((state[:, dm] == -1).mean()), frac_on=float((state[:, dm] == 1).mean()))
-        if st == ('top', '20'):
-            r['h_off'], r['h_on'] = model_hist(s['off_dur']), model_hist(s['on_dur'])
-            if keep:
-                r['off_dur'], r['on_dur'] = s['off_dur'].tolist(), s['on_dur'].tolist()
+        r['h_off'], r['h_on'] = model_hist(s['off_dur']), model_hist(s['on_dur'])
+        if keep:
+            r['off_dur'], r['on_dur'] = s['off_dur'].tolist(), s['on_dur'].tolist()
         out['sets'][st] = r
     return out
 
@@ -119,7 +125,8 @@ def loss(out, tg, hist, parts=False):
         r = out['sets'][st]
         terms['/'.join(st)] = float(np.mean([((r[mk] - tg[st][dk]) / sc) ** 2 for dk, mk, sc in STATS]))
     r20 = out['sets'][('top', '20')]
-    terms['hist_top20'] = 100 * (hellinger2(r20['h_off'], hist['off']) + hellinger2(r20['h_on'], hist['on']))
+    h20 = hist[('top', '20')]
+    terms['hist_top20'] = 100 * (hellinger2(r20['h_off'], h20['off']) + hellinger2(r20['h_on'], h20['on']))
     terms['mem'] = 2e4 * max(0.0, MEM_MIN - out['mem']) ** 2
     L = float(sum(terms.values()))
     return (L, terms) if parts else L

@@ -497,11 +497,11 @@ def fig_refit(res='data/mf_refit_best_fresh.json', out='fig10_refit_lam10000.png
              ('frac_off', 'frac_off', 'fraction Off', C_OFF), ('on_per_trial', 'n_on', 'On per trial', C_ON),
              ('on_mean_ms', 'on_mean', 'On mean (ms)', C_ON), ('frac_on', 'frac_on', 'fraction On', C_ON),
              ('accuracy', 'accuracy', 'accuracy (not fitted)', INK2), ('mu_on', 'mu_on', 'μ_on (anchored)', INK2))
-    fig = plt.figure(figsize=(7.6, 7.4))
-    gs = fig.add_gridspec(3, 4, height_ratios=[1, 1, 1.15], hspace=0.75, wspace=0.45)
+    fig = plt.figure(figsize=(9.0, 9.6))
+    top = fig.add_gridspec(2, 4, left=0.07, right=0.98, top=0.915, bottom=0.53, hspace=0.75, wspace=0.45)
     x = np.arange(len(sets))
     for i, (dk, mk, name, col) in enumerate(stats):
-        a = fig.add_subplot(gs[i // 4, i % 4])
+        a = fig.add_subplot(top[i // 4, i % 4])
         d = [float(rows[s][dk]) for s in sets]
         e = [float(rows[s].get(dk + '_sem', 0) or 0) for s in sets]
         a.errorbar(x, d, yerr=e, fmt='s', ms=4, mfc='#fcfcfb', mec=INK, ecolor=INK2, elinewidth=0.8, label='data')
@@ -513,22 +513,39 @@ def fig_refit(res='data/mf_refit_best_fresh.json', out='fig10_refit_lam10000.png
         a.axvline(2.5, color=MUTED, lw=0.6); a.axvline(5.5, color=MUTED, lw=0.6)
     from matplotlib.lines import Line2D
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='#fcfcfb', mec=INK, label='data (± session SEM)'),
-                        Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model')],
-               loc='upper right', fontsize=7, bbox_to_anchor=(0.98, 1.0))
+                        Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
+                        Line2D([], [], color=INK, lw=1.5, label='model histogram')],
+               loc='upper right', fontsize=7, bbox_to_anchor=(0.98, 0.965), ncol=3)
     edges = RF.EDGES
+    bot = fig.add_gridspec(2, len(sets), left=0.07, right=0.98, top=0.44, bottom=0.05, hspace=0.45, wspace=0.12)
     for j, (st, col, name) in enumerate((('off', C_OFF, 'Off'), ('on', C_ON, 'On'))):
-        a = fig.add_subplot(gs[2, 2 * j:2 * j + 2])
-        a.bar(edges[:-1], hist[st][:-1] / 20, width=18, align='edge', color=col, alpha=0.35, lw=0, label='data, top 20')
-        h = np.array(r['sets']['top/20']['h_' + st])[:-1] / 20
-        a.step(edges, np.r_[h, h[-1]], where='post', color=INK, lw=1.5, label='model')
-        a.set_xlim(0, 620); a.set_xlabel('state length (ms)'); a.set_title(f'{name} lengths, top 20 '
-                                                                         f'(Hellinger² {RF.hellinger2(np.array(r["sets"]["top/20"]["h_" + st]), hist[st]):.3f})', fontsize=8)
-        if j == 0:
-            a.set_ylabel('probability / ms'); a.legend(fontsize=6.5)
+        ymax = 0
+        axs = []
+        for i, sset in enumerate(sets):
+            a = fig.add_subplot(bot[j, i])
+            hd = hist[sset][st]
+            a.bar(edges[:-1], hd[:-1] / 20, width=18, align='edge', color=col, alpha=0.35, lw=0)
+            h = np.array(r['sets']['/'.join(sset)]['h_' + st])[:-1] / 20
+            a.step(edges, np.r_[h, h[-1]], where='post', color=INK, lw=1.2)
+            ymax = max(ymax, (hd[:-1] / 20).max(), h.max())
+            H2 = RF.hellinger2(np.array(r['sets']['/'.join(sset)]['h_' + st]), hd)
+            a.set_title(f'{lab[i]}', fontsize=7.5, loc='center')
+            a.text(0.97, 0.95, f'H² {H2:.3f}', transform=a.transAxes, ha='right', va='top', fontsize=6, color=INK2)
+            a.set_xlim(0, 620); a.set_xticks([0, 300, 600]); a.tick_params(labelsize=6)
+            if i:
+                a.set_yticklabels([])
+            if j == 1:
+                a.set_xlabel('length (ms)', fontsize=7)
+            axs.append(a)
+        for a in axs:
+            a.set_ylim(0, ymax * 1.08)
+        axs[0].set_ylabel(f'{name}\nprobability / ms', fontsize=7.5)
+    fig.text(0.07, 0.465, 'State length histograms for every unit set (bars: data; line: model; H²: Hellinger² shape '
+             'mismatch; the top-20 pair is the one in the loss)', fontsize=7.5, color=INK2)
     th = r['theta']
     fig.suptitle(f'Rate-model refit to the λ = 10,000 table (gain per set anchored by μ_on): memory {r["mem"]:.1%}, fresh seeds\n'
                  f'τ_N {th["tau_N"]:.0f} ms · w_s {th["w_s"]:.2f} · dips {th["dip_rate"]:.1f}/s, mean {th["dip_mean"]:.0f} ms, '
-                 f'k {th["dip_shape"]:.1f}, −{100 * th["dip_depth"]:.0f}% · σ {th["sigma"]:.3f}', fontsize=8, x=0.06, ha='left', y=1.0)
+                 f'k {th["dip_shape"]:.1f}, −{100 * th["dip_depth"]:.0f}% · σ {th["sigma"]:.3f}', fontsize=8, x=0.07, ha='left', y=1.0)
     f = os.path.join(OUT, out)
     fig.savefig(f, dpi=170, bbox_inches='tight')
     print('wrote', f)
