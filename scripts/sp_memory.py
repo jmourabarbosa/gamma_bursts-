@@ -20,7 +20,7 @@ from gamma_wm.network import A, B  # noqa: E402
 
 def main(prefix):
     rows = []
-    for sd in sorted(glob.glob(prefix + '*')):
+    for sd in sorted(glob.glob(prefix + '[0-9]*')):
         meta = json.load(open(os.path.join(sd, 'meta.json')))
         T = meta['task']
         t_cue = int(T['t_pre'])
@@ -38,14 +38,18 @@ def main(prefix):
                     a2, b2 = a + t_cue, b + t_cue
                     lead = cp[b2:b2 + 100].sum() > up[b2:b2 + 100].sum() if b2 + 100 <= t_end else None
                     pauses.append((b - a, lead, a2 - t_cue))
+            kept = uniform_filter1d(r[:, C], 50)[last].max() > 20 and r[last, C].mean() > r[last, U].mean()
+            silent = (r[t_cue + 500:t_cue + 1400, C] > 20).mean() < 0.1
             rows.append(dict(ok=bool(r[last, C].mean() > r[last, U].mean()), active=bool(r[last, C].mean() > 10),
+                             kept=bool(kept), silent=bool(silent),
                              pauses=pauses, ns=float(r[t_cue + 500:t_end, 0].mean())))
     n = len(rows)
     pa = [p for r in rows for p in r['pauses']]
     pa14 = [p for r in rows for p in r['pauses'] if p[2] < 1400]
     led = [p[1] for p in pa if p[1] is not None]
-    print(f'{prefix}: {n} trials | memory correct {np.mean([r["ok"] for r in rows]):.1%}, cued pool active at end '
-          f'{np.mean([r["active"] for r in rows]):.1%} | pool pauses starting 0-1,400 ms: {len(pa14) / n:.2f}/trial, '
+    print(f'{prefix}: {n} trials | memory not lost {np.mean([r["kept"] for r in rows]):.1%} | cued pool silent '
+          f'(<10% of 500-1,400 ms) {np.mean([r["silent"] for r in rows]):.1%} | cued ahead at end '
+          f'{np.mean([r["ok"] for r in rows]):.1%} | pool pauses starting 0-1,400 ms: {len(pa14) / n:.2f}/trial, '
           f'mean {np.mean([p[0] for p in pa14]) if pa14 else 0:.0f} ms, median {np.median([p[0] for p in pa14]) if pa14 else 0:.0f} ms '
           f'| cued restarts first {np.mean(led) if led else float("nan"):.0%} of {len(led)} | background {np.mean([r["ns"] for r in rows]):.1f} Hz')
     for lo, hi in ((50, 150), (150, 300), (300, 600), (600, 5000)):
