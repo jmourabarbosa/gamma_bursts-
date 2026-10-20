@@ -443,7 +443,7 @@ def fig_spiking_decoding(tr='data/sp_start_traces', label='Spiking starting poin
     a.axhline(0.5, color=INK2, ls=':', lw=0.8); a.axvspan(0, 50, color='#e4e3df', lw=0)
     a.axvspan(500, 1400, ymin=0, ymax=0.04, color=MUTED, lw=0)
     a.set_xlim(t[0], t[-1]); a.set_ylim(0.3, 1.02); a.set_ylabel('decoding accuracy')
-    a.legend(fontsize=7, loc='upper right', ncol=2)
+    a.legend(fontsize=7, loc='lower right', ncol=2)
     n_tr = sum(len(x['y']) for x in S)
     a.set_title(f'{label}: decoding across all {n_tr} trials ({len(S)} sessions; λ = 30; grey = cue; '
                 'bar = 500–1,400 ms)', fontsize=8.5)
@@ -476,7 +476,7 @@ def fig_spiking_decoding(tr='data/sp_start_traces', label='Spiking starting poin
         a.axvline(0, color=INK2, lw=0.5); a.axvline(50, color=INK2, lw=0.5)
         a.set_xlim(t[0], t[-1]); a.set_yticks([]); a.set_xlabel('time from cue onset (ms)')
         a.set_title(f'{name}: first {n_show} trials of session {session + 1} (not selected)', fontsize=8)
-    fig.text(0.06, 0.41, 'Decoder confidence in the correct cue (0–1 per row, dotted = 0.5); shading: orange = On, '
+    fig.text(0.06, 0.035, 'Decoder confidence in the correct cue (0–1 per row, dotted = 0.5); shading: orange = On, '
              'blue = Off. "memory lost": uncued pool ahead at the end of the delay.', fontsize=7, color=INK2)
     f = os.path.join(OUT, out)
     fig.savefig(f, dpi=170, bbox_inches='tight')
