@@ -513,6 +513,7 @@ def fig_refit(res='data/mf_refit_best_fresh.json', out='fig10_refit_lam10000.png
         a.set_xticks(x); a.set_xticklabels(lab, rotation=60, fontsize=6)
         a.set_title(name, fontsize=8)
         a.axvline(2.5, color=MUTED, lw=0.6); a.axvline(5.5, color=MUTED, lw=0.6)
+        a.set_ylim(0, a.get_ylim()[1] * 1.05)
     from matplotlib.lines import Line2D
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='#fcfcfb', mec=INK, label='data (± session SEM)'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
