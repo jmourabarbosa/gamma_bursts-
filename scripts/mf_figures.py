@@ -324,7 +324,8 @@ def _gain_curve(th, out, n_trials=1056):
     return rows
 
 
-def fig_readout_data(data='meanfield/data/readout_summary_data.csv', dyn='data/mf_dyn_fresh.json'):
+def fig_readout_data(data='meanfield/data/readout_summary_data.csv', dyn='data/mf_dyn_fresh.json', lam_label='30',
+                     out='fig7_readout_data.png'):
     import csv
     D = list(csv.DictReader(open(data)))
     res = json.load(open(dyn))
@@ -366,9 +367,9 @@ def fig_readout_data(data='meanfield/data/readout_summary_data.csv', dyn='data/m
          Line2D([], [], ls='', marker='s', ms=4, mfc='#fcfcfb', mec=INK, label='data, top k'),
          Line2D([], [], ls='', marker='o', ms=4, color=MUTED, mec=INK, label='data, random k')]
     fig.legend(handles=h, loc='lower center', ncol=3, fontsize=6.5, bbox_to_anchor=(0.5, -0.1))
-    fig.suptitle('States vs read-out: data (25 sessions, λ = 30, ± session SEM; k = 5…200) and model (gain varied); '
+    fig.suptitle(f'States vs read-out: data (25 sessions, λ = {lam_label}, ± session SEM; k = 5…200) and model (gain varied); '
                  'states counted 0–1,400 ms', fontsize=7.5, x=0.06, ha='left', y=0.99)
-    f = os.path.join(OUT, 'fig7_readout_data.png')
+    f = os.path.join(OUT, out)
     fig.savefig(f, dpi=170, bbox_inches='tight')
     print('wrote', f)
 
