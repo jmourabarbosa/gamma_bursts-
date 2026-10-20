@@ -63,3 +63,7 @@ gating. The memory is carried by ordinary rate coding with fixed synapses.
 - **2026-10-19.** Paper structure set: intro → mean-field model of input switching and recovery,
   fitted to On/Off histograms → spiking model with the fitted parameters → CCGs from the spiking
   model. Existing spiking and CCG results (`PAPER_COMPARISON.md`) serve as preliminary material.
+- **2026-10-20.** Short draft written as a shared doc, titled "Intermittent Rate Coding Without
+  Short-Term Plasticity Can Support Working Memory":
+  https://claude.ai/code/artifact/4cc2f6a8-f451-40d9-bc32-58838fb49369. Spiking and CCG numbers
+  come from model 1 (`PAPER_COMPARISON.md`). The mean-field fit results are still placeholders.
