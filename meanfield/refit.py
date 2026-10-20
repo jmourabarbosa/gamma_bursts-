@@ -48,9 +48,11 @@ def load_hist(st):
     out = {}
     for state, v in H.items():
         lo = np.array([a for a, _ in v]); c = np.array([b for _, b in v])
-        tot = c.sum() - c[lo < EDGES[0]].sum()
+        # the CSV's 580-600 ms bin also holds every state >= 600 ms (clipped), which the '600' row repeats
+        over = c[lo == 600].sum()
+        c = np.where(lo == 580, c - over, c)
         inside = np.array([c[lo == e].sum() for e in EDGES[:-1]])
-        out[state] = np.r_[inside, tot - inside.sum()] / tot
+        out[state] = np.r_[inside, over] / (inside.sum() + over)
     return out
 
 

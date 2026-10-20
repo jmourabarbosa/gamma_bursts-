@@ -382,6 +382,8 @@ def fig_spiking(dec='data/sp_start_decode', label='spiking starting point', out=
     H = {}
     for r in csv.DictReader(open('meanfield/data/readout_histograms_data.csv')):
         H.setdefault((r['set'], r['k'], r['state']), []).append(float(r['count']))
+    for key, v in H.items():                       # 580-600 bin also holds the clipped >= 600 ms states
+        v[-2] -= v[-1]
     S = json.load(open(os.path.join(dec, 'summary.json')))
     D = {(r['set'], r['k']): r for r in csv.DictReader(open('meanfield/data/readout_summary_data.csv'))}
     edges = np.arange(0, 620, 20)
@@ -389,7 +391,7 @@ def fig_spiking(dec='data/sp_start_decode', label='spiking starting point', out=
     for i, (st, dk, name) in enumerate((('all', ('all', 'session count'), 'all units (329)'), ('top', ('top', '20'), 'top 20 units'))):
         for j, (state, col) in enumerate((('off', C_OFF), ('on', C_ON))):
             a = ax[i, j]
-            hd = np.array(H[(dk[0], dk[1], state)]); hd = hd[:-1] / hd.sum()
+            hd = np.array(H[(dk[0], dk[1], state)]); hd = hd[:-1] / hd.sum()          # >= 600 ms in the total
             a.bar(edges[:-1], hd / 20, width=18, align='edge', color=col, alpha=0.35, lw=0, label='data')
             dur = np.concatenate([[d for dr in [x for x in s['results'] if x['set'] == st and x['lam'] == 30.0][0]['draws']
                                    for d in dr[state + '_dur']] for s in ses])
@@ -541,7 +543,8 @@ def fig_refit(res='data/mf_refit_best_fresh.json', out='fig10_refit_lam10000.png
             a.set_ylim(0, ymax * 1.08)
         axs[0].set_ylabel(f'{name}\nprobability / ms', fontsize=7.5)
     fig.text(0.07, 0.465, 'State length histograms for every unit set (bars: data; line: model; H²: Hellinger² shape '
-             'mismatch; the top-20 pair is the one in the loss)', fontsize=7.5, color=INK2)
+             'mismatch; the top-20 pair is the one in the loss). States ≥ 600 ms (0.4–4% of states) are not drawn.',
+             fontsize=7.5, color=INK2)
     th = r['theta']
     fig.suptitle(f'Rate-model refit to the λ = 10,000 table (gain per set anchored by μ_on): memory {r["mem"]:.1%}, fresh seeds\n'
                  f'τ_N {th["tau_N"]:.0f} ms · w_s {th["w_s"]:.2f} · dips {th["dip_rate"]:.1f}/s, mean {th["dip_mean"]:.0f} ms, '
