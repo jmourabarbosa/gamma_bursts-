@@ -373,5 +373,52 @@ def fig_readout_data(data='meanfield/data/readout_summary_data.csv', dyn='data/m
     print('wrote', f)
 
 
+def fig_spiking(dec='data/sp_start_decode', label='spiking starting point', out='fig8_spiking_start.png', mem=None):
+    """Spiking run vs data (lambda = 30): Off and On length histograms for all units and top 20, plus a table."""
+    import csv
+    import glob
+    ses = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(dec, 'sp_*.json')))]
+    H = {}
+    for r in csv.DictReader(open('meanfield/data/readout_histograms_data.csv')):
+        H.setdefault((r['set'], r['k'], r['state']), []).append(float(r['count']))
+    S = json.load(open(os.path.join(dec, 'summary.json')))
+    D = {(r['set'], r['k']): r for r in csv.DictReader(open('meanfield/data/readout_summary_data.csv'))}
+    edges = np.arange(0, 620, 20)
+    fig, ax = plt.subplots(2, 3, figsize=(7.6, 4.2), gridspec_kw=dict(wspace=0.35, hspace=0.6, width_ratios=[1, 1, 0.95]))
+    for i, (st, dk, name) in enumerate((('all', ('all', 'session count'), 'all units (329)'), ('top', ('top', '20'), 'top 20 units'))):
+        for j, (state, col) in enumerate((('off', C_OFF), ('on', C_ON))):
+            a = ax[i, j]
+            hd = np.array(H[(dk[0], dk[1], state)]); hd = hd[:-1] / hd.sum()
+            a.bar(edges[:-1], hd / 20, width=18, align='edge', color=col, alpha=0.35, lw=0, label='data')
+            dur = np.concatenate([[d for dr in [x for x in s['results'] if x['set'] == st and x['lam'] == 30.0][0]['draws']
+                                   for d in dr[state + '_dur']] for s in ses])
+            h, _ = np.histogram(np.minimum(dur, 10000), np.r_[edges, np.inf]); h = h[:-1] / max(1, len(dur))
+            a.step(edges, np.r_[h, h[-1]] / 20, where='post', color=INK, lw=1.5, label='spiking')
+            a.set_xlim(0, 620); a.set_title(f'{state.capitalize()} — {name}', fontsize=8)
+            if i == 1:
+                a.set_xlabel('state length (ms)')
+        ax[i, 0].set_ylabel('probability / ms')
+        ax[0, 0].legend(fontsize=6.5)
+        a = ax[i, 2]; a.axis('off')
+        v = S[f'{st}|{20 if st == "top" else 329}|30.0']; d = D[dk]
+        rows = [('', 'spiking', 'data'), ('accuracy', f'{v["accuracy"][0]:.2f}', f'{float(d["accuracy"]):.2f}'),
+                ('Off / trial', f'{v["off_per_trial"][0]:.2f}', f'{float(d["off_per_trial"]):.2f}'),
+                ('Off mean ms', f'{v["off_mean_ms"][0]:.0f}', f'{float(d["off_mean_ms"]):.0f}'),
+                ('frac Off', f'{v["frac_off"][0]:.2f}', f'{float(d["frac_off"]):.2f}'),
+                ('On / trial', f'{v["on_per_trial"][0]:.2f}', f'{float(d["on_per_trial"]):.2f}'),
+                ('On mean ms', f'{v["on_mean_ms"][0]:.0f}', f'{float(d["on_mean_ms"]):.0f}')]
+        for r_, row in enumerate(rows):
+            for c_, txt in enumerate(row):
+                a.text([0.0, 0.62, 0.88][c_], 0.95 - 0.13 * r_, txt, transform=a.transAxes, fontsize=7,
+                       ha='left' if c_ == 0 else 'center', color=INK if r_ else INK2, weight='bold' if r_ == 0 else 'normal')
+    title = f'{label}: 4 sessions × 132 trials, λ = 30, states 0–1,400 ms'
+    if mem is not None:
+        title += f'; memory correct {mem:.0%} (required ≥ 95%)'
+    fig.suptitle(title, fontsize=8, x=0.06, ha='left', y=0.99)
+    f = os.path.join(OUT, out)
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking}[sys.argv[1]](*sys.argv[2:])
