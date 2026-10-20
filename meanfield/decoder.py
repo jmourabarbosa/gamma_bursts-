@@ -39,8 +39,9 @@ def _fit_alo_bin(X, yy, lam, eps_c, n_iter):
         H[:n, n] = Hac
         H[n, :n] = Hac
         H[n, n] = W.sum() + 1e-8
+        H[n, n] += eps_c
         g[:n] = ga
-        g[n] = r.sum()
+        g[n] = r.sum() + eps_c * c
         st = np.linalg.solve(H, g)
         a -= st[:n]
         c -= st[n]
@@ -83,10 +84,15 @@ def _alo_all(counts, y, yy, lam, eps_c, n_iter):
     return conf
 
 
-def alo_confidence(counts, y, lam=10.0, shuffle_rng=None, n_iter=30, eps_c=1e-3):
+def alo_confidence(counts, y, lam=10.0, shuffle_rng=None, n_iter=30, eps_c=None):
     """Approximate leave-one-trial-out confidence (n_trials, n_bins); same interface as
     gamma_wm.analysis.loo_confidence_dual. With shuffle_rng, the decoder is trained on permuted
-    labels and confidence is read against the true label (the null)."""
+    labels and confidence is read against the true label (the null).
+    eps_c: L2 penalty on the intercept. Default lam/100, as the data analysis (a constant feature of
+    value 10 penalised like the weights); a near-zero value leaves the intercept free, which biases
+    leave-one-out predictions below chance when there is little signal."""
+    if eps_c is None:
+        eps_c = lam / 100.0
     yy = y if shuffle_rng is None else shuffle_rng.permutation(y)
     return _alo_all(np.ascontiguousarray(counts, dtype=np.float64), np.asarray(y, np.float64),
                     np.asarray(yy, np.float64), float(lam), float(eps_c), int(n_iter))
