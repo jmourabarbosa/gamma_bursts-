@@ -420,5 +420,68 @@ def fig_spiking(dec='data/sp_start_decode', label='spiking starting point', out=
     print('wrote', f)
 
 
+def _runs(mask):
+    a = np.r_[False, mask, False].astype(int)
+    return list(zip(np.where(np.diff(a) == 1)[0], np.where(np.diff(a) == -1)[0]))
+
+
+def fig_spiking_decoding(tr='data/sp_start_traces', label='Spiking starting point', out='fig9_spiking_decoding.png',
+                         session=0, n_show=12):
+    """Trial-averaged decoding through the delay and consecutive single trials with On/Off states."""
+    import glob
+    S = [dict(np.load(f)) for f in sorted(glob.glob(os.path.join(tr, '*_traces.npz')))]
+    t = S[0]['t_rel']
+    fig = plt.figure(figsize=(7.6, 8.6))
+    gs = fig.add_gridspec(3, 2, height_ratios=[1, 0.8, 3.4], hspace=0.5, wspace=0.12)
+    # (a) accuracy over time, mean +- SEM over sessions
+    a = fig.add_subplot(gs[0, :])
+    for key, col, lab in (('all', INK, 'all units (329)'), ('top', C_ON, 'top 20 units')):
+        acc = np.array([(x[key + '_conf'] > 0.5).mean(0) for x in S])
+        m, e = acc.mean(0), acc.std(0) / np.sqrt(len(S))
+        a.fill_between(t, m - e, m + e, color=col, alpha=0.2, lw=0)
+        a.plot(t, m, color=col, lw=1.4, label=lab)
+    a.axhline(0.5, color=INK2, ls=':', lw=0.8); a.axvspan(0, 50, color='#e4e3df', lw=0)
+    a.axvspan(500, 1400, ymin=0, ymax=0.04, color=MUTED, lw=0)
+    a.set_xlim(t[0], t[-1]); a.set_ylim(0.3, 1.02); a.set_ylabel('decoding accuracy')
+    a.legend(fontsize=7, loc='upper right', ncol=2)
+    n_tr = sum(len(x['y']) for x in S)
+    a.set_title(f'{label}: decoding across all {n_tr} trials ({len(S)} sessions; λ = 30; grey = cue; '
+                'bar = 500–1,400 ms)', fontsize=8.5)
+    # (b) fraction of trials On / Off over time (all units)
+    a = fig.add_subplot(gs[1, :])
+    for lab_, col, name in ((1, C_ON, 'On'), (-1, C_OFF, 'Off')):
+        fr = np.array([(x['all_state'] == lab_).mean(0) for x in S])
+        a.plot(t, fr.mean(0), color=col, lw=1.4, label=name)
+    a.axvspan(0, 50, color='#e4e3df', lw=0); a.set_xlim(t[0], t[-1]); a.set_ylim(0, 1)
+    a.set_ylabel('fraction of trials'); a.legend(fontsize=7, loc='upper right', ncol=2)
+    a.set_title('Fraction of trials in each state (all units)', fontsize=8.5)
+    # (c) consecutive single trials
+    x = S[session]
+    r = x['rates']
+    for col_i, (key, name) in enumerate((('all', 'all units (329)'), ('top', 'top 20 units'))):
+        a = fig.add_subplot(gs[2, col_i])
+        for j in range(n_show):
+            base = (n_show - 1 - j) * 1.25
+            st = x[key + '_state'][j]
+            for lab_, c in ((1, C_ON), (-1, C_OFF)):
+                for i0, i1 in _runs(st == lab_):
+                    a.fill_between([t[i0] - 5, t[i1 - 1] + 5], base, base + 1, color=c, alpha=0.35, lw=0)
+            a.plot(t, base + x[key + '_conf'][j], color=INK, lw=0.7)
+            a.plot([t[0], t[-1]], [base + 0.5] * 2, color=INK2, ls=':', lw=0.5)
+            if col_i == 1:
+                cA = 0 if x['y'][j] == 1 else 1
+                ok = r[j, -300:, cA].mean() > r[j, -300:, 1 - cA].mean()
+                a.text(t[-1] + 20, base + 0.5, f'trial {j + 1}' + ('' if ok else '\nmemory lost'), fontsize=6.5,
+                       va='center', color=INK2 if ok else C_ON)
+        a.axvline(0, color=INK2, lw=0.5); a.axvline(50, color=INK2, lw=0.5)
+        a.set_xlim(t[0], t[-1]); a.set_yticks([]); a.set_xlabel('time from cue onset (ms)')
+        a.set_title(f'{name}: first {n_show} trials of session {session + 1} (not selected)', fontsize=8)
+    fig.text(0.06, 0.41, 'Decoder confidence in the correct cue (0–1 per row, dotted = 0.5); shading: orange = On, '
+             'blue = Off. "memory lost": uncued pool ahead at the end of the delay.', fontsize=7, color=INK2)
+    f = os.path.join(OUT, out)
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding}[sys.argv[1]](*sys.argv[2:])

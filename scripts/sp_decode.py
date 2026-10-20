@@ -28,7 +28,7 @@ def load(sd):
     trials = []
     for f in sorted(glob.glob(os.path.join(sd, 'trial*.npz'))):
         d = np.load(f)
-        trials.append(dict(cue=str(d['cue']), spk_t=d['spk_t'], spk_i=d['spk_i']))
+        trials.append(dict(cue=str(d['cue']), spk_t=d['spk_t'], spk_i=d['spk_i'], rates=d['rates']))
     return meta, group, trials
 
 
@@ -90,6 +90,8 @@ def main():
     ap.add_argument('--K', type=int, default=329)
     ap.add_argument('--n-shuffle', type=int, default=30)
     ap.add_argument('--n-random', type=int, default=5)
+    ap.add_argument('--save-traces', action='store_true', help='also save per-trial confidence, z and states '
+                    '(all units and top 20, first lambda) and pool rates, for plotting')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     for si, sd in enumerate(sorted(glob.glob(a.data + '*'))):
@@ -130,6 +132,8 @@ def main():
                     conf, nulls = decode(cols(units), y, lam, a.n_shuffle, si * 10 + j)
                     st, z = cluster_label(conf, nulls, t_rel)
                     rows.append(stats(st, conf, z, t_rel))
+                    if name == 'all' and lam == a.lams[0]:
+                        traces = dict(all_conf=conf, all_state=st, all_z=z)
                 out['results'].append(dict(set=name, k=k, lam=lam, draws=rows))
             # top 20: decode with each half's units, keep the test trials of that half
             conf = np.zeros((len(y), len(t_rel))); nulls = np.zeros((a.n_shuffle, len(y), len(t_rel)))
@@ -138,9 +142,16 @@ def main():
                 conf[halves == h], nulls[:, halves == h] = c[halves == h], n[:, halves == h]
             st, z = cluster_label(conf, nulls, t_rel)
             out['results'].append(dict(set='top', k=20, lam=lam, draws=[stats(st, conf, z, t_rel)]))
+            if lam == a.lams[0]:
+                traces.update(top_conf=conf, top_state=st, top_z=z)
             print(sd, lam, {r['set']: {k: round(v, 3) for k, v in r['draws'][0].items() if not isinstance(v, list)}
                             for r in out['results'] if r['lam'] == lam}, flush=True)
         json.dump(out, open(f, 'w'))
+        if a.save_traces:
+            from gamma_wm.network import A, B
+            rates = np.array([t['rates'][:n_t][:, [A, B]] for t in trials], np.float32)
+            np.savez_compressed(f.replace('.json', '_traces.npz'), t_rel=t_rel, y=y, rates=rates, t_cue=t_cue,
+                                **{k: v.astype(np.float32) if v.dtype.kind == 'f' else v.astype(np.int8) for k, v in traces.items()})
 
 
 if __name__ == '__main__':
