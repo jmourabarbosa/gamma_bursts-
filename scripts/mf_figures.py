@@ -555,5 +555,67 @@ def fig_refit(res='data/mf_refit_best_fresh.json', out='fig10_refit_lam10000.png
     print('wrote', f)
 
 
+def fig_refit_trials(res='data/mf_refit_best_fresh.json', out='fig11_refit_trials.png', n_show=4, seed=5):
+    """Consecutive example trials of the refit dynamics: pool rates, NMDA gating and input dips, plus the top-20
+    read-out (z with the anchored gain, measured noise) and its On/Off labels."""
+    from meanfield import refit as RF
+    from meanfield.rate_states import window_rate_diff
+    from meanfield.surrogate import label
+    r = json.load(open(res))
+    th = r['theta']
+    gain = r['sets']['top/20']['gain']
+    p = M.params(**th); p['t_delay'] = 1600.0
+    cued = np.tile([0, 1], 64)
+    sim = M.simulate(p, cued, seed=seed)
+    rng = np.random.default_rng(seed + 1)
+    dw, tc = window_rate_diff(sim)
+    eta = RF.noise(dw.shape, RF.RHO['top'], rng)
+    thr = RF.null_thr(dw.shape, RF.RHO['top'], rng)
+    tz = tc - sim['t_cue']
+    valid = (tz >= 0) & (tz <= 1400)
+    z = gain * dw + eta
+    state = label(z, valid, thr)
+    t = np.arange(sim['rA'].shape[1]) - sim['t_cue']
+    fig = plt.figure(figsize=(7.6, 2.35 * n_show))
+    gs = fig.add_gridspec(n_show * 2, 1, height_ratios=[1.6, 0.8] * n_show, hspace=0.25)
+    for j in range(n_show):
+        k = j
+        rc, ru = (sim['rA'][k], sim['rB'][k]) if cued[k] == 0 else (sim['rB'][k], sim['rA'][k])
+        sc, su = (sim['sA'][k], sim['sB'][k]) if cued[k] == 0 else (sim['sB'][k], sim['sA'][k])
+        a = fig.add_subplot(gs[2 * j])
+        a.fill_between(t, 0, 160, where=sim['m'][k] < 0.6, color=MUTED, alpha=0.35, lw=0, label='input dip')
+        a.plot(t, rc, color=INK, lw=1.3, label='cued pool')
+        a.plot(t, ru, color='#7a6be0', lw=1.3, label='uncued pool')
+        a.plot(t, 10 * sim['bg'][k], color=MUTED, lw=0.9, label='background ×10')
+        a.axvspan(0, 50, color=C_ON, alpha=0.25, lw=0)
+        a.set_xlim(-300, 1600); a.set_ylim(0, 160); a.set_ylabel('rate (Hz)', fontsize=7)
+        a.tick_params(labelbottom=False, labelsize=6.5)
+        a2 = a.twinx(); a2.spines['right'].set_visible(True)
+        a2.plot(t, sc, color=INK, lw=0.9, ls=':'); a2.plot(t, su, color='#7a6be0', lw=0.9, ls=':')
+        a2.set_ylim(0, 1); a2.tick_params(labelsize=6.5)
+        a2.set_ylabel('NMDA s (dotted)', fontsize=7, color=INK2)
+        lost = sc[-100:].mean() - su[-100:].mean() < 0.05
+        a.set_title(f'trial {j + 1}' + ('   (memory lost)' if lost else ''), fontsize=8)
+        if j == 0:
+            a.legend(loc='lower right', ncol=4, fontsize=6.5, bbox_to_anchor=(1, 1.02), borderaxespad=0)
+        b = fig.add_subplot(gs[2 * j + 1], sharex=a)
+        for lab_, c in ((1, C_ON), (-1, C_OFF)):
+            for i0, i1 in _runs(state[k] == lab_):
+                b.axvspan(tz[i0] - 5, tz[i1 - 1] + 5, color=c, alpha=0.35, lw=0)
+        b.plot(tz, z[k], color=INK, lw=0.8)
+        b.axhline(1.96, color=INK2, ls=':', lw=0.6); b.axhline(0.84, color=INK2, ls=':', lw=0.6)
+        b.set_ylim(-3, 7.5); b.set_ylabel('z (top 20)', fontsize=7); b.tick_params(labelsize=6.5)
+        if j < n_show - 1:
+            b.tick_params(labelbottom=False)
+    b.set_xlabel('time from cue onset (ms)')
+    fig.suptitle(f'Refit dynamics, first {n_show} trials (not selected): τ_N {th["tau_N"]:.0f} ms, dips {th["dip_rate"]:.1f}/s, '
+                 f'mean {th["dip_mean"]:.0f} ms, −{100 * th["dip_depth"]:.0f}%. Lower rows: top-20 read-out '
+                 f'(gain {gain:.3f} z/Hz); orange = On, blue = Off; dotted lines z = 1.96, 0.84',
+                 fontsize=7.5, x=0.06, ha='left', y=0.93)
+    f = os.path.join(OUT, out)
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit, 'refit_trials': fig_refit_trials}[sys.argv[1]](*sys.argv[2:])
