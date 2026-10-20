@@ -23,10 +23,13 @@ def main():
     ap.add_argument('--maxfev', type=int, default=1000)
     ap.add_argument('--n-trials', type=int, default=792)
     ap.add_argument('--x0', default=None)
+    ap.add_argument('--max-rate', type=float, default=8.0, help='upper bound of the dip rate (1/s)')
+    ap.add_argument('--max-shape', type=float, default=6.0, help='upper bound of the dip shape k')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     tg, hist = RF.load_targets()
     bounds = {k: v for k, v in F.BOUNDS_RATES.items() if k != 'log10_c'}
+    bounds.update(dip_rate=(0.5, a.max_rate), dip_shape=(0.7, a.max_shape))
     names = list(bounds)
     lo = np.array([bounds[k][0] for k in names]); hi = np.array([bounds[k][1] for k in names])
     rng = np.random.default_rng(a.seed)
