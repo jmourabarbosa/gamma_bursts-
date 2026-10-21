@@ -101,7 +101,7 @@ def figure1(out, path):
         for i0, i1 in R.runs(state[k] == lab):
             d.axvspan(tz[i0] - R.STEP / 2, tz[i1 - 1] + R.STEP / 2, color=c, alpha=0.18, lw=0)
     d.plot(tz, z[k], color=INK, lw=0.9)
-    d.axhline(0, color=INK2, lw=0.6)
+    d.axhline(0, color=INK2, ls='--', lw=0.6)
     d.axhline(1.96, color=C_ON, ls=':', lw=0.8); d.axhline(0.84, color=C_OFF, ls=':', lw=0.8)
     d.set_ylim(-3, 9); d.set_ylabel('decoding z\n(all units)'); d.tick_params(labelbottom=False)
     b = fig.add_subplot(gs[2], sharex=a)
