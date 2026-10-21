@@ -1,7 +1,7 @@
 """Paper figures of the best-fit model.
 
 Figure 1: A, an example trial: 2 s of delay with a constant common input, then dips switched on (pool rates
-          with the top-20 On/Off labels, NMDA gating, common input). B, the fitted model's top-20 Off and On
+          and NMDA gating with the top-20 On/Off labels; common input below). B, right of A: the fitted model's top-20 Off and On
           length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
 Figure 2: On/Off statistics of every unit set, model vs data.
 
@@ -72,9 +72,9 @@ def figure1(out, path):
     sim, tz, z, state = example_trials(r['gain'])
     k = pick_trial(sim, tz, state)
     t = np.arange(sim['rA'].shape[1]) - sim['t_cue']
-    fig = plt.figure(figsize=(7.4, 5.4))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 1.1, 0.8], hspace=0.22, left=0.09, right=0.98, top=0.93, bottom=0.47)
-    gh = fig.add_gridspec(1, 2, wspace=0.12, left=0.09, right=0.98, top=0.32, bottom=0.08)
+    fig = plt.figure(figsize=(10.0, 3.2))
+    gs = fig.add_gridspec(2, 1, height_ratios=[2.6, 1], hspace=0.15, left=0.06, right=0.58, top=0.86, bottom=0.15)
+    gh = fig.add_gridspec(1, 2, wspace=0.1, left=0.7, right=0.99, top=0.86, bottom=0.15)
     a = fig.add_subplot(gs[0])
     for lab, c in ((1, C_ON), (-1, C_OFF)):
         for i0, i1 in R.runs(state[k] == lab):
@@ -85,20 +85,21 @@ def figure1(out, path):
     a.plot(t, sim['rB'][k], color=C_UN, lw=1.0)
     a.set_xlim(-300, QUIET + DIPS); a.set_ylim(0, 160); a.set_ylabel('rate (Hz)')
     a.tick_params(labelbottom=False)
+    a2 = a.twinx(); a2.spines['right'].set_visible(True)
+    a2.plot(t, sim['sA'][k], color=INK, lw=1.0, ls=':')
+    a2.plot(t, sim['sB'][k], color=C_UN, lw=1.0, ls=':')
+    a2.set_ylim(0, 1); a2.set_ylabel('NMDA gating s (dotted)')
     a.legend(handles=[Line2D([], [], color=INK, lw=1.2, label='cued pool'), Line2D([], [], color=C_UN, lw=1.2, label='uncued pool'),
+                      Line2D([], [], color=INK2, lw=1.0, ls=':', label='NMDA gating'),
                       plt.Rectangle((0, 0), 1, 1, color=C_ON, alpha=0.35, lw=0, label='On'),
                       plt.Rectangle((0, 0), 1, 1, color=C_OFF, alpha=0.35, lw=0, label='Off')],
-             loc='lower left', bbox_to_anchor=(0, 1.0), ncol=4, fontsize=7, borderaxespad=0.2, handlelength=1.5)
-    a.text(-0.07, 1.08, 'A', transform=a.transAxes, fontsize=9, weight='bold')
-    n_ = fig.add_subplot(gs[1], sharex=a)
-    n_.plot(t, sim['sA'][k], color=INK, lw=1.1)
-    n_.plot(t, sim['sB'][k], color=C_UN, lw=1.1)
-    n_.set_ylim(0, 1); n_.set_ylabel('NMDA\ngating s'); n_.tick_params(labelbottom=False)
-    b = fig.add_subplot(gs[2], sharex=a)
+             loc='lower left', bbox_to_anchor=(0, 1.0), ncol=5, fontsize=7, borderaxespad=0.2, handlelength=1.5)
+    a.text(-0.08, 1.09, 'A', transform=a.transAxes, fontsize=9, weight='bold')
+    b = fig.add_subplot(gs[1], sharex=a)
     b.plot(t, sim['m'][k], color=INK2, lw=1.0)
     b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
     b.set_xlabel('time from cue onset (ms)')
-    for ax_ in (a, n_, b):
+    for ax_ in (a, b):
         ax_.axvline(QUIET, color=INK2, ls='--', lw=0.7)
     a.text(QUIET + 15, 150, 'dips start', fontsize=6.5, color=INK2, va='top')
     # histograms of the fitted model's top-20 state lengths (states 0-1,400 ms after cue onset)
@@ -109,11 +110,11 @@ def figure1(out, path):
         dur = [(e - b0) * R.STEP for row in r['state'] for b0, e in R.runs(row == lab)]
         h.hist(dur, edges, color=c, alpha=0.8, lw=0, rwidth=0.9)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
-        h.text(0.97, 0.9, f'{name} states', transform=h.transAxes, ha='right', fontsize=7.5, color=c, weight='bold')
+        h.set_title(f'{name} states', fontsize=8, color=c, loc='center')
         h.set_xlabel('state length (ms)'); h.tick_params(labelsize=6.5)
         if j == 0:
             h.set_ylabel(f'count\n({len(r["state"]):,} trials)', fontsize=7)
-            h.text(-0.14, 1.08, 'B', transform=h.transAxes, fontsize=9, weight='bold')
+            h.text(-0.42, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
         else:
             h.tick_params(labelleft=False)
         hs.append(h)
