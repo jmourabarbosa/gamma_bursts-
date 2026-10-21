@@ -103,7 +103,8 @@ def figure1(out, path):
     d.plot(tz, z[k], color=INK, lw=0.9)
     d.axhline(0, color=INK2, ls='--', lw=0.6)
     d.axhline(1.96, color=C_ON, ls='--', lw=0.8); d.axhline(0.84, color=C_OFF, ls='--', lw=0.8)
-    d.set_ylim(-3, 9); d.set_ylabel('decoding z\n(all units)'); d.tick_params(labelbottom=False)
+    zk = z[k][tz <= QUIET + DIPS]
+    d.set_ylim(zk.min() - 0.3, zk.max() + 0.3); d.set_yticks(np.arange(np.ceil(zk.min()), zk.max() + 0.3, 2)); d.set_ylabel('decoding z\n(all units)'); d.tick_params(labelbottom=False)
     b = fig.add_subplot(gs[2], sharex=a)
     b.plot(t, sim['m'][k], color=INK2, lw=1.0)
     b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
