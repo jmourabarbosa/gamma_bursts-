@@ -1,7 +1,7 @@
 """Paper figures of the best-fit model.
 
 Figure 1: A, an example trial: 2 s of delay with a constant common input, then dips switched on (pool rates
-          and NMDA gating, top-20 decoding z, with On/Off labels; common input below). B, right of A: the fitted model's top-20 Off and On
+          and NMDA gating, decoding z from all units, with On/Off labels; common input below). B, right of A: all-unit Off and On
           length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
 Figure 2: On/Off statistics of every unit set, model vs data.
 
@@ -26,12 +26,13 @@ plt.rcParams.update({'figure.facecolor': 'white', 'axes.facecolor': 'white', 'sa
                      'legend.frameon': False, 'xtick.color': INK2, 'ytick.color': INK2, 'axes.labelcolor': INK})
 
 
+FIG1_SET = ('all', 'session count')   # unit set whose read-out Figure 1 shows
 QUIET, DIPS = 2000, 1500      # example trial: delay without dips (ms after cue onset), then with dips
 
 
 def example_trials(gain, n=300, seed=11):
     """Long trials: a delay of QUIET ms with a constant common input, then DIPS ms with dips. Returns the
-    simulation, read-out z (top-20 gain and noise) and On/Off labels over the whole delay."""
+    simulation, read-out z (gain and noise of FIG1_SET) and On/Off labels over the whole delay."""
     p = M.params(t_delay=QUIET + DIPS - M.FIXED['cue_dur'])
     rng = np.random.default_rng(seed)
     dt = p['dt']
@@ -42,8 +43,8 @@ def example_trials(gain, n=300, seed=11):
     m[:, i0:i0 + int(10 / dt)] = 1.0          # no dip already running at the switch
     sim = M.simulate(p, np.zeros(n, int), seed=seed + 1, m=m)
     dw, tz = R.rate_diff(sim)
-    z = gain * dw + R.noise(dw.shape, R.RHO['top'], rng)
-    thr = R.null_threshold(dw.shape, R.RHO['top'], rng)
+    z = gain * dw + R.noise(dw.shape, R.RHO[FIG1_SET[0]], rng)
+    thr = R.null_threshold(dw.shape, R.RHO[FIG1_SET[0]], rng)
     return sim, tz, z, R.label(z, tz >= 0, thr)
 
 
@@ -68,7 +69,7 @@ def pick_trial(sim, tz, state):
 
 
 def figure1(out, path):
-    r = out['sets'][('top', '20')]
+    r = out['sets'][FIG1_SET]
     sim, tz, z, state = example_trials(r['gain'])
     k = pick_trial(sim, tz, state)
     t = np.arange(sim['rA'].shape[1]) - sim['t_cue']
@@ -101,7 +102,7 @@ def figure1(out, path):
             d.axvspan(tz[i0] - R.STEP / 2, tz[i1 - 1] + R.STEP / 2, color=c, alpha=0.18, lw=0)
     d.plot(tz, z[k], color=INK, lw=0.9)
     d.axhline(1.96, color=C_ON, ls=':', lw=0.8); d.axhline(0.84, color=C_OFF, ls=':', lw=0.8)
-    d.set_ylim(-3, 9); d.set_ylabel('decoding\nz (top 20)'); d.tick_params(labelbottom=False)
+    d.set_ylim(-3, 9); d.set_ylabel('decoding z\n(all units)'); d.tick_params(labelbottom=False)
     b = fig.add_subplot(gs[2], sharex=a)
     b.plot(t, sim['m'][k], color=INK2, lw=1.0)
     b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
@@ -109,14 +110,14 @@ def figure1(out, path):
     for ax_ in (a, d, b):
         ax_.axvline(QUIET, color=INK2, ls='--', lw=0.7)
     a.text(QUIET + 15, 150, 'dips start', fontsize=6.5, color=INK2, va='top')
-    # top-20 state lengths (states 0-1,400 ms after cue onset), model vs data, as fractions of all states
+    # all-unit state lengths (states 0-1,400 ms after cue onset), model vs data, as fractions of all states
     edges = np.arange(0, 620, 20)
     hs = []
     for j, (lab, c, name) in enumerate(((-1, C_OFF, 'Off'), (1, C_ON, 'On'))):
         h = fig.add_subplot(gh[0, j], sharey=hs[0] if hs else None)
         dur = [(e - b0) * R.STEP for row in r['state'] for b0, e in R.runs(row == lab)]
         h.bar(edges[:-1], np.histogram(dur, edges)[0] / len(dur), width=18, align='edge', color=c, alpha=0.8, lw=0)
-        dc, n = R.data_counts(('top', '20'), name.lower())
+        dc, n = R.data_counts(FIG1_SET, name.lower())
         h.step(edges, np.r_[dc, dc[-1]] / n, where='post', color=INK, lw=1.0)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.set_title(f'{name} states', fontsize=8, color=c, loc='center')
