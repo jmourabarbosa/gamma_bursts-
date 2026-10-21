@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from meanfield import explore as E, fit as F, model as M  # noqa: E402
@@ -656,5 +657,87 @@ def fig_predictions_exc(*preds, out='fig12_predictions_excitatory.png'):
     print('wrote', f)
 
 
+def fig_predictions_exc_data(*preds, out='fig13_excitatory_data_vs_model.png'):
+    """Model excitatory-cell predictions against the recordings (meanfield/data/excitatory/)."""
+    P = [json.load(open(p)) for p in preds]
+    cols = ['#0b0b0b', '#7a6be0']
+    dcol = {'E_strict': '#e0782b', 'all': '#9c9c9c'}
+    dd = 'meanfield/data/excitatory/'
+    S = pd.read_csv(dd + 'a1_summary.csv'); C = pd.read_csv(dd + 'a1_aligned_curves.csv')
+    R = pd.read_csv(dd + 'recovery_summary.csv')
+    sv = lambda cls, m: S.query('unit_class==@cls and measure==@m').iloc[0]
+    groups = (('pref', 'tuned_pref'), ('opp', 'tuned_opp'), ('untuned', 'untuned'))
+    fig, ax = plt.subplots(2, 3, figsize=(8.6, 5.0), gridspec_kw=dict(wspace=0.38, hspace=0.62))
+    # aligned to Off onset; tuned-pref normalised to the mid-On level, untuned to pre-cue
+    for a, (g, dg, norm, ttl) in zip(ax[0, :2], (('pref', 'tuned_pref', 'on', 'tuned, preferred cue: rate / mid-On rate'),
+                                                ('untuned', 'untuned', 'pre', 'untuned: rate / pre-cue rate'))):
+        for c, pr in zip(cols, P):
+            y = np.array(pr['onset_aligned'][g]) / (pr['mid_ratio_to_pre'][g]['on'] if norm == 'on' else 1)
+            a.plot(pr['lags_ms'], y, color=c, lw=1.5, label=pr['label'])
+        for cls in ('E_strict', 'all'):
+            d = C.query('unit_class==@cls and curve==@dg+"_onset_300to1000"')
+            k = sv(cls, f'mid_{dg}_on')['mean'] if norm == 'on' else 1
+            a.plot(d.t_ms, d.mean_ratio / k, color=dcol[cls], lw=1.5,
+                   label='data, ' + ('excitatory (E_strict)' if cls == 'E_strict' else 'all units'))
+            a.fill_between(d.t_ms, (d.mean_ratio - d['sem']) / k, (d.mean_ratio + d['sem']) / k, color=dcol[cls], alpha=0.25, lw=0)
+        a.axvline(0, color=MUTED, lw=0.8); a.axhline(1, color=INK2, ls=':', lw=0.8)
+        a.set_ylim(0, 1.45 if norm == 'on' else 1.5); a.set_title(ttl + '\n(aligned to Off onset)', fontsize=7.5)
+        a.set_xlabel('ms from Off onset', fontsize=7); a.tick_params(labelsize=6.5)
+    # mid-state Off / On ratios
+    a = ax[0, 2]; x = np.arange(3)
+    for k, (c, pr) in enumerate(zip(cols, P)):
+        a.plot(x - 0.2 + 0.13 * k, [pr['mid_ratio_to_pre'][g]['off'] / pr['mid_ratio_to_pre'][g]['on'] for g, _ in groups], 'o', color=c, ms=5)
+    for k, cls in enumerate(('E_strict', 'all')):
+        a.plot(x + 0.06 + 0.13 * k, [sv(cls, f'mid_{dg}_off')['mean'] / sv(cls, f'mid_{dg}_on')['mean'] for _, dg in groups],
+               's', color=dcol[cls], ms=5)
+    a.axhline(1, color=INK2, ls=':', lw=0.8); a.set_yscale('log')
+    a.set_xticks(x); a.set_xticklabels(['tuned\npref', 'tuned\nopp', 'untuned'], fontsize=7)
+    a.set_title('mid-Off / mid-On rate', fontsize=7.5); a.tick_params(labelsize=6.5)
+    # recovery: Off -> On level, normalised (tuned, preferred cue, offset at 0)
+    bins = ['50-100', '100-200', '200-400']
+    a = ax[1, 0]
+    rc = pd.read_csv(dd + 'recovery_curves.csv')
+    for c, pr in zip(cols, P):
+        cv = np.array(pr['recovery']['100-200']['curve']); t = np.arange(len(cv)) * 10
+        a.plot(t, (cv - cv[0]) / (pr['mid_ratio_to_pre']['pref']['on'] - cv[0]), color=c, lw=1.5)
+    rr = R.query('unit_class=="E_strict" and analysis=="2_tuned_preferred_cue"').set_index('measure')['mean']
+    # E_strict leaves < 1 tuned unit per labelling here, so use the larger E_any set for this curve
+    ra = R.query('unit_class=="E_any" and analysis=="2_tuned_preferred_cue"').set_index('measure')['mean']
+    d = rc.query('unit_class=="E_any" and analysis=="2_tuned_preferred_cue" and off_length_ms=="100-200"')
+    lo, hi = ra['100-200_level_off'], ra['100-200_level_on']
+    a.plot(d.t_from_offset_ms, (d.mean_ratio - lo) / (hi - lo), color=dcol['E_strict'], lw=1.5, ls='--')
+    a.fill_between(d.t_from_offset_ms, (d.mean_ratio - d['sem'] - lo) / (hi - lo), (d.mean_ratio + d['sem'] - lo) / (hi - lo),
+                   color=dcol['E_strict'], alpha=0.2, lw=0)
+    a.text(0.97, 0.93, 'data: E_any (dashed)', transform=a.transAxes, ha='right', fontsize=6.5, color=dcol['E_strict'])
+    a.axhline(1, color=INK2, ls=':', lw=0.8); a.axhline(0, color=INK2, ls=':', lw=0.8)
+    a.set_title('recovery after 100-200 ms Off (tuned, pref)\n0 = mid-Off, 1 = mid-On', fontsize=7.5)
+    a.set_xlabel('ms from Off offset', fontsize=7); a.tick_params(labelsize=6.5); a.set_xlim(0, 300)
+    a = ax[1, 1]
+    for c, pr in zip(cols, P):
+        a.plot(range(3), [pr['recovery'][b]['t50_ms'] for b in bins], '-o', color=c, ms=4)
+    y = [rr[f'{b}_t50_ms'] for b in bins]
+    e = [R.query('unit_class=="E_strict" and analysis=="2_tuned_preferred_cue" and measure==@b+"_t50_ms"')['sem'].iloc[0] for b in bins]
+    a.errorbar(range(3), y, e, fmt='-s', color=dcol['E_strict'], ms=4, lw=1.5)
+    a.set_xticks(range(3)); a.set_xticklabels(bins, fontsize=6.5)
+    a.set_title('half-recovery time (tuned, pref)', fontsize=7.5); a.set_ylabel('ms', fontsize=7)
+    a.set_xlabel('Off length (ms)', fontsize=7); a.set_ylim(bottom=0); a.tick_params(labelsize=6.5)
+    a = ax[1, 2]
+    bins4 = bins + ['>400']
+    for c, pr in zip(cols, P):
+        a.plot(range(4), [pr['recovery'][b.replace('>400', '400-2000')]['frac_followed_on'] for b in bins4], '-o', color=c, ms=4)
+        a.plot(range(4), [pr['recovery'][b.replace('>400', '400-2000')]['frac_followed_ci'] for b in bins4], '--o', color=c, ms=3, mfc='white')
+    a.plot(range(4), [rr[f'{b}_frac_followed_by_on'] for b in bins4], '-s', color=dcol['E_strict'], ms=4)
+    a.plot(range(4), [rr[f'{b}_frac_followed_by_conf_incorrect'] for b in bins4], '--s', color=dcol['E_strict'], ms=3, mfc='white')
+    a.set_xticks(range(4)); a.set_xticklabels(bins4, fontsize=6.5); a.set_ylim(0, 0.8)
+    a.set_title('Off followed within 200 ms by\nOn (solid) / confidently incorrect (dashed)', fontsize=7.5)
+    a.set_xlabel('Off length (ms)', fontsize=7); a.tick_params(labelsize=6.5)
+    h, l = ax[0, 0].get_legend_handles_labels()
+    fig.legend(h, l, fontsize=6.5, loc='upper left', bbox_to_anchor=(0.06, 1.03), ncol=4, frameon=False)
+    fig.suptitle('Excitatory cells around Off states: model predictions vs recordings', fontsize=8.5, x=0.06, ha='left', y=1.07)
+    f = os.path.join(OUT, out)
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit, 'refit_trials': fig_refit_trials, 'predictions_exc': fig_predictions_exc}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit, 'refit_trials': fig_refit_trials, 'predictions_exc': fig_predictions_exc, 'predictions_exc_data': fig_predictions_exc_data}[sys.argv[1]](*sys.argv[2:])
