@@ -58,13 +58,13 @@ def data_counts(st, state):
     return inside, inside.sum() + over
 
 
-def rate_diff(sim):
-    """Cued minus uncued pool rate in 100 ms windows every 10 ms; window centres relative to cue onset."""
+def rate_diff(sim, t_from=-100):
+    """Cued minus uncued pool rate in 100 ms windows every 10 ms, centres from t_from ms relative to cue onset."""
     d = np.where(sim['cued'][:, None] == 0, sim['rA'] - sim['rB'], sim['rB'] - sim['rA'])
     c = np.cumsum(np.c_[np.zeros(len(d)), d], axis=1)
     dw = ((c[:, WIN:] - c[:, :-WIN]) / WIN)[:, ::STEP]
     tc = np.arange(dw.shape[1]) * STEP + WIN / 2 - sim['t_cue']
-    keep = tc >= -100
+    keep = tc >= t_from
     return dw[:, keep], tc[keep]
 
 

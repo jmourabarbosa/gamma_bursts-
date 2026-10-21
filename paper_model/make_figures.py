@@ -42,7 +42,7 @@ def example_trials(gain, n=300, seed=11):
     m[:, i0:] = M.common_input(n, n_t - i0, dt, p['dip_rate'], p['dip_mean'], p['dip_depth'], p['dip_shape'], rng)
     m[:, i0:i0 + int(10 / dt)] = 1.0          # no dip already running at the switch
     sim = M.simulate(p, np.zeros(n, int), seed=seed + 1, m=m)
-    dw, tz = R.rate_diff(sim)
+    dw, tz = R.rate_diff(sim, t_from=-250)     # include the pre-cue period (pure read-out noise)
     z = gain * dw + R.noise(dw.shape, R.RHO[FIG1_SET[0]], rng)
     thr = R.null_threshold(dw.shape, R.RHO[FIG1_SET[0]], rng)
     return sim, tz, z, R.label(z, tz >= 0, thr)
