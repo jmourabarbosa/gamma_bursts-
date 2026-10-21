@@ -1,7 +1,8 @@
 """Paper figures of the best-fit model.
 
-Figure 1: a representative single trial (pool rates with the top-20 On/Off labels, and the common input below)
-          and the model's top-20 Off and On length histograms.
+Figure 1: A, an example trial: 2 s of delay with a constant common input, then dips switched on (pool rates
+          with the top-20 On/Off labels, NMDA gating, common input). B, the fitted model's top-20 Off and On
+          length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
 Figure 2: On/Off statistics of every unit set, model vs data.
 
 usage: python -m paper_model.make_figures [--n-trials 2112] [--seed 1] [--out figures/paper_model]
@@ -25,68 +26,97 @@ plt.rcParams.update({'figure.facecolor': 'white', 'axes.facecolor': 'white', 'sa
                      'legend.frameon': False, 'xtick.color': INK2, 'ytick.color': INK2, 'axes.labelcolor': INK})
 
 
-def pick_trial(out):
-    """A representative trial: memory held, 3-4 Off and 2-4 On states in 0-1,400 ms, with typical lengths."""
-    sim, r = out['sim'], out['sets'][('top', '20')]
+QUIET, DIPS = 2000, 1500      # example trial: delay without dips (ms after cue onset), then with dips
+
+
+def example_trials(gain, n=300, seed=11):
+    """Long trials: a delay of QUIET ms with a constant common input, then DIPS ms with dips. Returns the
+    simulation, read-out z (top-20 gain and noise) and On/Off labels over the whole delay."""
+    p = M.params(t_delay=QUIET + DIPS - M.FIXED['cue_dur'])
+    rng = np.random.default_rng(seed)
+    dt = p['dt']
+    n_t = int(round((p['t_pre'] + p['cue_dur'] + p['t_delay']) / dt))
+    i0 = int(round((p['t_pre'] + QUIET) / dt))
+    m = np.ones((n, n_t))
+    m[:, i0:] = M.common_input(n, n_t - i0, dt, p['dip_rate'], p['dip_mean'], p['dip_depth'], p['dip_shape'], rng)
+    m[:, i0:i0 + int(10 / dt)] = 1.0          # no dip already running at the switch
+    sim = M.simulate(p, np.zeros(n, int), seed=seed + 1, m=m)
+    dw, tz = R.rate_diff(sim)
+    z = gain * dw + R.noise(dw.shape, R.RHO['top'], rng)
+    thr = R.null_threshold(dw.shape, R.RHO['top'], rng)
+    return sim, tz, z, R.label(z, tz >= 0, thr)
+
+
+def pick_trial(sim, tz, state):
+    """Representative trial: memory held, On throughout the quiet delay, 3-5 Off states once dips start,
+    with typical lengths."""
     ok = M.memory_correct(sim)
+    quiet = (tz >= 300) & (tz < QUIET)
     best, score = 0, np.inf
     for k in range(len(ok)):
-        off = [(b - a) * R.STEP for a, b in R.runs(r['state'][k] == -1)]
-        on = [(b - a) * R.STEP for a, b in R.runs(r['state'][k] == 1)]
-        if not ok[k] or not 3 <= len(off) <= 4 or not 2 <= len(on) <= 4 or max(off) > 300:
+        st = state[k]
+        off = [(b - a) * R.STEP for a, b in R.runs(st == -1) if tz[a] >= QUIET]
+        on = [(b - a) * R.STEP for a, b in R.runs(st == 1) if tz[a] >= QUIET]
+        strong = sim['rA'][k][-300:].max() > 80 and sim['sA'][k][-1] > 0.4 and min(
+            sim['sA'][k][int(sim['t_cue'] + QUIET):].min(), 1) > 0.25     # memory clearly held through the dips
+        if not ok[k] or not strong or (st[quiet] == -1).any() or not 3 <= len(off) <= 5 or len(on) < 2 or max(off) > 300:
             continue
-        s = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (r['state'][k][r['state'][k] != 0].size < 100)
-        if s < score:
-            best, score = k, s
+        sc = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (st[quiet] != 1).mean() * 5
+        if sc < score:
+            best, score = k, sc
     return best
 
 
-def figure1(out, summ, hist, path):
-    sim, r = out['sim'], out['sets'][('top', '20')]
-    k = pick_trial(out)
-    cued = sim['cued'][k]
-    rc, ru = (sim['rA'][k], sim['rB'][k]) if cued == 0 else (sim['rB'][k], sim['rA'][k])
-    t = np.arange(len(rc)) - sim['t_cue']
-    tz, st = out['tz'], r['state'][k]
-    fig = plt.figure(figsize=(7.2, 3.0))
-    gs = fig.add_gridspec(2, 2, width_ratios=[2.3, 1], height_ratios=[2.2, 1], wspace=0.32, hspace=0.18,
-                          left=0.08, right=0.98, top=0.86, bottom=0.15)
-    a = fig.add_subplot(gs[0, 0])
+def figure1(out, path):
+    r = out['sets'][('top', '20')]
+    sim, tz, z, state = example_trials(r['gain'])
+    k = pick_trial(sim, tz, state)
+    t = np.arange(sim['rA'].shape[1]) - sim['t_cue']
+    fig = plt.figure(figsize=(7.4, 5.4))
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 1.1, 0.8], hspace=0.22, left=0.09, right=0.98, top=0.93, bottom=0.47)
+    gh = fig.add_gridspec(1, 2, wspace=0.12, left=0.09, right=0.98, top=0.32, bottom=0.08)
+    a = fig.add_subplot(gs[0])
     for lab, c in ((1, C_ON), (-1, C_OFF)):
-        for i0, i1 in R.runs(st == lab):
+        for i0, i1 in R.runs(state[k] == lab):
             a.axvspan(tz[i0] - R.STEP / 2, tz[i1 - 1] + R.STEP / 2, color=c, alpha=0.18, lw=0)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
-    a.text(25, 140, 'cue', ha='center', fontsize=6.5, color=INK2, rotation=90)
-    a.plot(t, rc, color=INK, lw=1.2, label='cued pool')
-    a.plot(t, ru, color=C_UN, lw=1.2, label='uncued pool')
-    a.set_xlim(-300, 1500); a.set_ylim(0, 160); a.set_ylabel('rate (Hz)')
+    a.text(60, 6, 'cue', fontsize=6.5, color=INK2)
+    a.plot(t, sim['rA'][k], color=INK, lw=1.0)
+    a.plot(t, sim['rB'][k], color=C_UN, lw=1.0)
+    a.set_xlim(-300, QUIET + DIPS); a.set_ylim(0, 160); a.set_ylabel('rate (Hz)')
     a.tick_params(labelbottom=False)
     a.legend(handles=[Line2D([], [], color=INK, lw=1.2, label='cued pool'), Line2D([], [], color=C_UN, lw=1.2, label='uncued pool'),
                       plt.Rectangle((0, 0), 1, 1, color=C_ON, alpha=0.35, lw=0, label='On'),
                       plt.Rectangle((0, 0), 1, 1, color=C_OFF, alpha=0.35, lw=0, label='Off')],
              loc='lower left', bbox_to_anchor=(0, 1.0), ncol=4, fontsize=7, borderaxespad=0.2, handlelength=1.5)
-    a.set_title('A', loc='left', x=-0.12, y=1.06)
-    b = fig.add_subplot(gs[1, 0], sharex=a)
-    b.plot(t, sim['m'][k], color=INK2, lw=1.1)
-    b.set_ylim(0, 1.1); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
+    a.text(-0.07, 1.08, 'A', transform=a.transAxes, fontsize=9, weight='bold')
+    n_ = fig.add_subplot(gs[1], sharex=a)
+    n_.plot(t, sim['sA'][k], color=INK, lw=1.1)
+    n_.plot(t, sim['sB'][k], color=C_UN, lw=1.1)
+    n_.set_ylim(0, 1); n_.set_ylabel('NMDA\ngating s'); n_.tick_params(labelbottom=False)
+    b = fig.add_subplot(gs[2], sharex=a)
+    b.plot(t, sim['m'][k], color=INK2, lw=1.0)
+    b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
     b.set_xlabel('time from cue onset (ms)')
-    for j, (s, c, name) in enumerate((('off', C_OFF, 'Off'), ('on', C_ON, 'On'))):
-        h = fig.add_subplot(gs[j, 1]) if j == 0 else fig.add_subplot(gs[1, 1])
-        lab = 1 if s == 'on' else -1
-        dur = np.array([(b - a) * R.STEP for row in r['state'] for a, b in R.runs(row == lab)], float)
-        edges = np.arange(0, 620, 20)
-        hm = np.histogram(dur, edges)[0] / len(dur) / 20
-        h.bar(edges[:-1], hm, width=18, align='edge', color=c, alpha=0.8, lw=0)
-        h.set_xlim(0, 620); h.set_ylim(0, hm.max() * 1.1)
-        h.set_xticks([0, 200, 400, 600])
+    for ax_ in (a, n_, b):
+        ax_.axvline(QUIET, color=INK2, ls='--', lw=0.7)
+    a.text(QUIET + 15, 150, 'dips start', fontsize=6.5, color=INK2, va='top')
+    # histograms of the fitted model's top-20 state lengths (states 0-1,400 ms after cue onset)
+    edges = np.arange(0, 620, 20)
+    hs = []
+    for j, (lab, c, name) in enumerate(((-1, C_OFF, 'Off'), (1, C_ON, 'On'))):
+        h = fig.add_subplot(gh[0, j], sharey=hs[0] if hs else None)
+        dur = [(e - b0) * R.STEP for row in r['state'] for b0, e in R.runs(row == lab)]
+        h.hist(dur, edges, color=c, alpha=0.8, lw=0, rwidth=0.9)
+        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.text(0.97, 0.9, f'{name} states', transform=h.transAxes, ha='right', fontsize=7.5, color=c, weight='bold')
-        h.tick_params(labelsize=6.5)
-        h.set_ylabel('prob. / ms', fontsize=7)
+        h.set_xlabel('state length (ms)'); h.tick_params(labelsize=6.5)
         if j == 0:
-            h.tick_params(labelbottom=False)
-            h.set_title('B', loc='left', x=-0.3, y=1.06)
+            h.set_ylabel(f'count\n({len(r["state"]):,} trials)', fontsize=7)
+            h.text(-0.14, 1.08, 'B', transform=h.transAxes, fontsize=9, weight='bold')
         else:
-            h.set_xlabel('length (ms)')
+            h.tick_params(labelleft=False)
+        hs.append(h)
     fig.savefig(path, dpi=300)
     plt.close(fig)
     return k
@@ -132,7 +162,7 @@ def main():
     os.makedirs(a.out, exist_ok=True)
     summ, hist = R.load_data()
     out = R.evaluate(n_trials=a.n_trials, seed=a.seed, summ=summ, keep=True)
-    k = figure1(out, summ, hist, os.path.join(a.out, 'fig1_trial_histograms.png'))
+    k = figure1(out, os.path.join(a.out, 'fig1_trial_histograms.png'))
     figure2(out, summ, os.path.join(a.out, 'fig2_fit_all_sets.png'))
     res = dict(theta=M.FIT, n_trials=a.n_trials, seed=a.seed, example_trial=int(k), memory_correct=out['mem'],
                sets={'/'.join(s): {kk: v for kk, v in r.items() if kk not in ('z', 'state', 'h_on', 'h_off')} for s, r in out['sets'].items()})

@@ -112,14 +112,16 @@ KEYS = ('r_max', 'theta', 'kappa', 'w_a', 'beta', 'w_I', 'I_0', 'tau_r', 'tau_I'
         'bg_max', 'bg_theta', 'bg_kappa', 'I_bg', 'cue_amp', 'dt', 'tau_N', 'w_s', 'sigma', 'sigma_bg')
 
 
-def simulate(p, cued, seed=0):
+def simulate(p, cued, seed=0, m=None):
     """Simulate trials; cued: (n_tr,) 0 = A, 1 = B. Returns 1 ms traces (n_tr, n_t): rA, rB, bg, sA, sB, m;
-    time 0 is the start of the pre-cue period, the cue starts at t_cue."""
+    time 0 is the start of the pre-cue period, the cue starts at t_cue. m: optional common input (n_tr, n) at
+    resolution dt; by default it is drawn with dips."""
     rng = np.random.default_rng(seed)
     cued = np.asarray(cued, np.int64)
     dt = p['dt']
     n = int(round((p['t_pre'] + p['cue_dur'] + p['t_delay']) / dt))
-    m = common_input(len(cued), n, dt, p['dip_rate'], p['dip_mean'], p['dip_depth'], p['dip_shape'], rng)
+    if m is None:
+        m = common_input(len(cued), n, dt, p['dip_rate'], p['dip_mean'], p['dip_depth'], p['dip_shape'], rng)
     t = np.arange(n) * dt
     cue_on = (t >= p['t_pre']) & (t < p['t_pre'] + p['cue_dur'])
     xi = _ou(rng.standard_normal((len(cued), n, 3)), np.exp(-dt / p['tau_xi']))
