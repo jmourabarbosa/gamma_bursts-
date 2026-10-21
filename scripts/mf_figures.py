@@ -617,5 +617,44 @@ def fig_refit_trials(res='data/mf_refit_best_fresh.json', out='fig11_refit_trial
     print('wrote', f)
 
 
+def fig_predictions_exc(*preds, out='fig12_predictions_excitatory.png'):
+    """Model predictions for excitatory cells around Off states (scripts/mf_predict_exc.py output)."""
+    P = [json.load(open(p)) for p in preds]
+    cols = ['#0b0b0b', '#7a6be0', '#1baf7a']
+    groups = (('pref', 'tuned, preferred cue'), ('opp', 'tuned, opposite cue'), ('untuned', 'untuned'))
+    fig, ax = plt.subplots(2, 4, figsize=(9.6, 4.6), gridspec_kw=dict(wspace=0.38, hspace=0.6))
+    for i, (g, name) in enumerate(groups):
+        for j, (key, lab) in enumerate((('onset_aligned', 'from Off onset'), ('offset_aligned', 'from Off offset'))):
+            a = ax[j, i]
+            for c, pr in zip(cols, P):
+                a.plot(pr['lags_ms'], pr[key][g], color=c, lw=1.5, label=pr['label'])
+            a.axvline(0, color=MUTED, lw=0.8); a.axhline(1, color=INK2, ls=':', lw=0.8)
+            a.set_title(f'{name}: {lab}', fontsize=7.5); a.set_xlabel('ms', fontsize=7); a.tick_params(labelsize=6.5)
+            if i == 0:
+                a.set_ylabel('rate / pre-cue rate', fontsize=7)
+            a.set_ylim(bottom=0)
+    a = ax[0, 3]
+    x = np.arange(3)
+    for k, (c, pr) in enumerate(zip(cols, P)):
+        on = [pr['mid_ratio_to_pre'][g]['on'] for g, _ in groups]; off = [pr['mid_ratio_to_pre'][g]['off'] for g, _ in groups]
+        a.plot(x + 0.15 * k, np.array(off) / np.maximum(np.array(on), 1e-9), 'o', color=c, ms=5)
+    a.axhline(1, color=INK2, ls=':', lw=0.8)
+    a.set_xticks(x + 0.075); a.set_xticklabels(['pref', 'opp', 'untuned'], fontsize=7)
+    a.set_yscale('log'); a.set_title('Off / On rate (mid-state)', fontsize=7.5); a.tick_params(labelsize=6.5)
+    a = ax[1, 3]
+    for c, pr in zip(cols, P):
+        bins = list(pr['recovery'])
+        a.plot(range(len(bins)), [pr['recovery'][b]['t50_ms'] for b in bins], '-o', color=c, ms=4)
+    a.set_xticks(range(len(bins))); a.set_xticklabels([b.replace('-2000', '+') for b in bins], fontsize=6.5, rotation=30)
+    a.set_title('half-recovery after Off (pref)', fontsize=7.5); a.set_ylabel('ms', fontsize=7); a.set_xlabel('Off length (ms)', fontsize=7)
+    a.tick_params(labelsize=6.5); a.set_ylim(bottom=0)
+    ax[0, 0].legend(fontsize=6.5, loc='upper left', bbox_to_anchor=(0, 1.45), ncol=3)
+    fig.suptitle('Model predictions for excitatory cells (top-20 read-out; preferred = cued pool, opposite = uncued pool, '
+                 'untuned = background)', fontsize=8, x=0.06, ha='left', y=1.06)
+    f = os.path.join(OUT, out)
+    fig.savefig(f, dpi=170, bbox_inches='tight')
+    print('wrote', f)
+
+
 if __name__ == '__main__':
-    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit, 'refit_trials': fig_refit_trials}[sys.argv[1]](*sys.argv[2:])
+    {'mechanism': fig_mechanism, 'surrogate': fig_surrogate, 'fit': fig_fit, 'sensitivity': fig_sensitivity, 'readout': fig_readout, 'dynamics': fig_dynamics_fits, 'readout_data': fig_readout_data, 'spiking': fig_spiking, 'spiking_decoding': fig_spiking_decoding, 'refit': fig_refit, 'refit_trials': fig_refit_trials, 'predictions_exc': fig_predictions_exc}[sys.argv[1]](*sys.argv[2:])
