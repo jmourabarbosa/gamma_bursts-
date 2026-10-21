@@ -47,6 +47,17 @@ def load_data():
     return summ, hist
 
 
+def data_counts(st, state):
+    """Data state-length counts of one unit set in 20 ms bins from 0 to 600 ms, and the total number of states."""
+    v = [(float(r['bin_lo_ms']), float(r['count'])) for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv')))
+         if (r['set'], r['k'], r['state']) == (*st, state)]
+    lo = np.array([a for a, _ in v]); c = np.array([b for _, b in v])
+    over = c[lo == 600].sum()
+    c = np.where(lo == 580, c - over, c)
+    inside = np.array([c[lo == e].sum() for e in np.arange(0, 600, 20)])
+    return inside, inside.sum() + over
+
+
 def rate_diff(sim):
     """Cued minus uncued pool rate in 100 ms windows every 10 ms; window centres relative to cue onset."""
     d = np.where(sim['cued'][:, None] == 0, sim['rA'] - sim['rB'], sim['rB'] - sim['rA'])

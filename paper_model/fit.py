@@ -1,7 +1,7 @@
 """CMA-ES fit of the model's dynamics (model.BOUNDS) to the read-out table of every unit set.
 
-Loss: for every unit set, the mean squared scaled error of the six On/Off statistics (readout.STATS); plus
-100 x Hellinger^2 between model and data top-20 On and Off length histograms; plus a memory penalty
+Loss: for every unit set, the mean squared scaled error of the six On/Off statistics (readout.STATS) plus
+100 x Hellinger^2 between model and data On and Off length histograms (averaged over sets); plus a memory penalty
 2e4 x max(0, 0.98 - memory correct)^2. The read-out gains are not fitted (anchored by mu_on, readout.py).
 
 usage: python -m paper_model.fit --out fit_run0 --seed 0 [--maxfev 1000]
@@ -24,8 +24,9 @@ def hellinger2(p, q):
 def loss(out, summ, hist):
     terms = {'/'.join(st): float(np.mean([((out['sets'][st][mk] - summ[st][dk]) / sc) ** 2 for dk, mk, sc in R.STATS]))
              for st in R.SETS}
-    r, h = out['sets'][('top', '20')], hist[('top', '20')]
-    terms['hist_top20'] = 100 * (hellinger2(r['h_off'], h['off']) + hellinger2(r['h_on'], h['on']))
+    for st in R.SETS:
+        r, h = out['sets'][st], hist[st]
+        terms['hist/' + '/'.join(st)] = 100 / len(R.SETS) * (hellinger2(r['h_off'], h['off']) + hellinger2(r['h_on'], h['on']))
     terms['mem'] = 2e4 * max(0.0, MEM_MIN - out['mem']) ** 2
     return float(sum(terms.values())), terms
 
@@ -37,6 +38,7 @@ def main():
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--maxfev', type=int, default=1000)
     ap.add_argument('--n-trials', type=int, default=792)
+    ap.add_argument('--x0', action='store_true', help='start from the current best fit (model.FIT)')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     summ, hist = R.load_data()
@@ -56,7 +58,9 @@ def main():
         return L
 
     u0 = np.random.default_rng(a.seed).uniform(0.25, 0.75, len(names))
-    es = cma.CMAEvolutionStrategy(u0, 0.25, dict(seed=a.seed + 1, maxfevals=a.maxfev, verbose=-9, popsize=12))
+    if a.x0:
+        u0 = np.clip([(M.FIT[k] - l) / (h - l) for k, l, h in zip(names, lo, hi)], 0.02, 0.98)
+    es = cma.CMAEvolutionStrategy(u0, 0.15 if a.x0 else 0.25, dict(seed=a.seed + 1, maxfevals=a.maxfev, verbose=-9, popsize=12))
     while not es.stop():
         U = es.ask()
         es.tell(U, [f(u) for u in U])

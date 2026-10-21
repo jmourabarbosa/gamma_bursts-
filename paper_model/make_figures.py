@@ -109,19 +109,23 @@ def figure1(out, path):
     for ax_ in (a, d, b):
         ax_.axvline(QUIET, color=INK2, ls='--', lw=0.7)
     a.text(QUIET + 15, 150, 'dips start', fontsize=6.5, color=INK2, va='top')
-    # histograms of the fitted model's top-20 state lengths (states 0-1,400 ms after cue onset)
+    # top-20 state lengths (states 0-1,400 ms after cue onset), model vs data, as fractions of all states
     edges = np.arange(0, 620, 20)
     hs = []
     for j, (lab, c, name) in enumerate(((-1, C_OFF, 'Off'), (1, C_ON, 'On'))):
         h = fig.add_subplot(gh[0, j], sharey=hs[0] if hs else None)
         dur = [(e - b0) * R.STEP for row in r['state'] for b0, e in R.runs(row == lab)]
-        h.hist(dur, edges, color=c, alpha=0.8, lw=0, rwidth=0.9)
+        h.bar(edges[:-1], np.histogram(dur, edges)[0] / len(dur), width=18, align='edge', color=c, alpha=0.8, lw=0)
+        dc, n = R.data_counts(('top', '20'), name.lower())
+        h.step(edges, np.r_[dc, dc[-1]] / n, where='post', color=INK, lw=1.0)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.set_title(f'{name} states', fontsize=8, color=c, loc='center')
         h.set_xlabel('state length (ms)'); h.tick_params(labelsize=6.5)
         if j == 0:
-            h.set_ylabel(f'count\n({len(r["state"]):,} trials)', fontsize=7)
+            h.set_ylabel('fraction of states', fontsize=7)
             h.text(-0.42, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
+            h.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=MUTED, lw=0, label='model'),
+                              Line2D([], [], color=INK, lw=1.0, label='data')], loc='upper right', fontsize=6.5)
         else:
             h.tick_params(labelleft=False)
         hs.append(h)

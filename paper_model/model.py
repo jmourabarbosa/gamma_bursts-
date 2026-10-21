@@ -42,7 +42,7 @@ FIT = dict(
 )
 
 BOUNDS = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0),
-              dip_shape=(0.7, 6.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04))
+              dip_shape=(0.7, 10.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04))
 
 
 def params(**over):
