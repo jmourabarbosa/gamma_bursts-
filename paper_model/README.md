@@ -9,12 +9,13 @@ when the input returns, and the pool with more residual NMDA wins. The model is 
 |---|---|
 | `model.py` | equations, fixed parameters (`FIXED`), best fit (`FIT`), fit bounds, simulation, memory check |
 | `readout.py` | z = gain × (cued − uncued rate, 100 ms windows) + measured noise; gain anchored to the data's μ_on per unit set; On/Off labelling; statistics per unit set |
-| `fit.py` | CMA-ES fit of `FIT` (loss: six On/Off statistics for each of 7 unit sets, top-20 length histograms, memory ≥ 98% on the fit's trials) |
+| `fit.py` | CMA-ES fit of `FIT` (loss: six On/Off statistics and the On/Off length histograms of each of 7 unit sets, memory ≥ 98% on the fit's trials) |
 | `make_figures.py` | Figure 1 (example trial: 2 s delay without dips, then dips; model top-20 length histograms) and Figure 2 (On/Off statistics of every unit set, model vs data), `model_stats.json` |
 | `data/` | data read-out table and histograms (λ = 10,000), with the data agent's note |
 
-Fitted: τ_N 125 ms, w_s 1.63, dips 9.9/s, mean length 122 ms (gamma shape 5.9), depth 82%, noise σ 0.012.
-Memory correct at the end of the delay: 97.7% (2,112 new trials).
+Fitted (to the On/Off statistics and length histograms of all 7 unit sets): τ_N 132 ms, w_s 1.61, dips 10.2/s,
+mean length 119 ms (gamma shape 5.2), depth 84%, noise σ 0.012. Memory correct at the end of the delay: 98.3%
+(2,112 new trials).
 
 ```
 pip install numpy numba scikit-learn matplotlib cma
