@@ -1,7 +1,7 @@
 """Paper figures of the best-fit model.
 
 Figure 1: A, an example trial: 2 s of delay with a constant common input, then dips switched on (pool rates
-          and NMDA gating with the top-20 On/Off labels; common input below). B, right of A: the fitted model's top-20 Off and On
+          and NMDA gating, top-20 decoding z, with On/Off labels; common input below). B, right of A: the fitted model's top-20 Off and On
           length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
 Figure 2: On/Off statistics of every unit set, model vs data.
 
@@ -72,8 +72,8 @@ def figure1(out, path):
     sim, tz, z, state = example_trials(r['gain'])
     k = pick_trial(sim, tz, state)
     t = np.arange(sim['rA'].shape[1]) - sim['t_cue']
-    fig = plt.figure(figsize=(10.0, 3.2))
-    gs = fig.add_gridspec(2, 1, height_ratios=[2.6, 1], hspace=0.15, left=0.06, right=0.58, top=0.86, bottom=0.15)
+    fig = plt.figure(figsize=(10.0, 4.0))
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.6, 1.3, 0.9], hspace=0.15, left=0.06, right=0.58, top=0.86, bottom=0.15)
     gh = fig.add_gridspec(1, 2, wspace=0.1, left=0.7, right=0.99, top=0.86, bottom=0.15)
     a = fig.add_subplot(gs[0])
     for lab, c in ((1, C_ON), (-1, C_OFF)):
@@ -95,11 +95,18 @@ def figure1(out, path):
                       plt.Rectangle((0, 0), 1, 1, color=C_OFF, alpha=0.35, lw=0, label='Off')],
              loc='lower left', bbox_to_anchor=(0, 1.0), ncol=5, fontsize=7, borderaxespad=0.2, handlelength=1.5)
     a.text(-0.08, 1.09, 'A', transform=a.transAxes, fontsize=9, weight='bold')
-    b = fig.add_subplot(gs[1], sharex=a)
+    d = fig.add_subplot(gs[1], sharex=a)
+    for lab, c in ((1, C_ON), (-1, C_OFF)):
+        for i0, i1 in R.runs(state[k] == lab):
+            d.axvspan(tz[i0] - R.STEP / 2, tz[i1 - 1] + R.STEP / 2, color=c, alpha=0.18, lw=0)
+    d.plot(tz, z[k], color=INK, lw=0.9)
+    d.axhline(1.96, color=C_ON, ls=':', lw=0.8); d.axhline(0.84, color=C_OFF, ls=':', lw=0.8)
+    d.set_ylim(-3, 9); d.set_ylabel('decoding\nz (top 20)'); d.tick_params(labelbottom=False)
+    b = fig.add_subplot(gs[2], sharex=a)
     b.plot(t, sim['m'][k], color=INK2, lw=1.0)
     b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
     b.set_xlabel('time from cue onset (ms)')
-    for ax_ in (a, b):
+    for ax_ in (a, d, b):
         ax_.axvline(QUIET, color=INK2, ls='--', lw=0.7)
     a.text(QUIET + 15, 150, 'dips start', fontsize=6.5, color=INK2, va='top')
     # histograms of the fitted model's top-20 state lengths (states 0-1,400 ms after cue onset)
