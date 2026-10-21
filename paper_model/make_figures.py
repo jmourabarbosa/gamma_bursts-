@@ -1,7 +1,7 @@
 """Paper figures of the best-fit model.
 
 Figure 1: a representative single trial (pool rates with the top-20 On/Off labels, and the common input below)
-          and the top-20 Off and On length histograms, model vs data.
+          and the model's top-20 Off and On length histograms.
 Figure 2: On/Off statistics of every unit set, model vs data.
 
 usage: python -m paper_model.make_figures [--n-trials 2112] [--seed 1] [--out figures/paper_model]
@@ -72,18 +72,18 @@ def figure1(out, summ, hist, path):
     b.set_xlabel('time from cue onset (ms)')
     for j, (s, c, name) in enumerate((('off', C_OFF, 'Off'), ('on', C_ON, 'On'))):
         h = fig.add_subplot(gs[j, 1]) if j == 0 else fig.add_subplot(gs[1, 1])
-        hd = hist[('top', '20')][s][:-1] / 20
-        hm = r['h_' + s][:-1] / 20
-        h.bar(R.EDGES[:-1], hd, width=18, align='edge', color=c, alpha=0.45, lw=0, label='data')
-        h.step(R.EDGES, np.r_[hm, hm[-1]], where='post', color=INK, lw=1.2, label='model')
-        h.set_xlim(0, 620); h.set_ylim(0, max(hd.max(), hm.max()) * 1.1)
+        lab = 1 if s == 'on' else -1
+        dur = np.array([(b - a) * R.STEP for row in r['state'] for a, b in R.runs(row == lab)], float)
+        edges = np.arange(0, 620, 20)
+        hm = np.histogram(dur, edges)[0] / len(dur) / 20
+        h.bar(edges[:-1], hm, width=18, align='edge', color=c, alpha=0.8, lw=0)
+        h.set_xlim(0, 620); h.set_ylim(0, hm.max() * 1.1)
         h.set_xticks([0, 200, 400, 600])
         h.text(0.97, 0.9, f'{name} states', transform=h.transAxes, ha='right', fontsize=7.5, color=c, weight='bold')
         h.tick_params(labelsize=6.5)
         h.set_ylabel('prob. / ms', fontsize=7)
         if j == 0:
             h.tick_params(labelbottom=False)
-            h.legend(loc='center right', fontsize=6.5, bbox_to_anchor=(1, 0.55))
             h.set_title('B', loc='left', x=-0.3, y=1.06)
         else:
             h.set_xlabel('length (ms)')
@@ -97,10 +97,8 @@ def figure2(out, summ, path):
     panels = (('off_per_trial', 'n_off', 'Off states per trial', C_OFF), ('off_mean_ms', 'off_mean', 'Off length, mean (ms)', C_OFF),
               ('frac_off', 'frac_off', 'fraction of delay Off', C_OFF),
               ('on_per_trial', 'n_on', 'On states per trial', C_ON), ('on_mean_ms', 'on_mean', 'On length, mean (ms)', C_ON),
-              ('frac_on', 'frac_on', 'fraction of delay On', C_ON),
-              ('mu_on', 'mu_on', 'μ_on (gain anchored to it)', INK2), (None, 'gain', 'read-out gain (z per Hz)', INK2),
-              (None, None, 'memory correct', INK2))
-    fig, axs = plt.subplots(3, 3, figsize=(6.6, 6.4), gridspec_kw=dict(hspace=0.75, wspace=0.42))
+              ('frac_on', 'frac_on', 'fraction of delay On', C_ON))
+    fig, axs = plt.subplots(2, 3, figsize=(6.6, 4.3), gridspec_kw=dict(hspace=0.75, wspace=0.42))
     for a, (dk, mk, name, col) in zip(axs.ravel(), panels):
         a.set_title(name, fontsize=8)
         if mk is None:
@@ -120,7 +118,7 @@ def figure2(out, summ, path):
         a.set_ylim(0, a.get_ylim()[1] * 1.05); a.tick_params(labelsize=6.5)
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± SEM over 25 sessions)'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model')],
-               loc='lower left', bbox_to_anchor=(0.1, 0.9), ncol=2, fontsize=7)
+               loc='lower left', bbox_to_anchor=(0.1, 0.93), ncol=2, fontsize=7)
     fig.savefig(path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
