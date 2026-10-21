@@ -86,8 +86,8 @@ def model_hist(dur):
     return np.r_[h, (dur >= EDGES[-1]).sum()] / max(1, (dur >= EDGES[0]).sum())
 
 
-def evaluate(theta, tg, n_trials=1056, seed=0, keep=False):
-    p = M.params(**theta); p['t_delay'] = 1600.0
+def evaluate(theta, tg, n_trials=1056, seed=0, keep=False, base=None):
+    p = M.params(**dict(base or {}, **theta)); p['t_delay'] = 1600.0
     sim = M.simulate(p, np.tile([0, 1], n_trials // 2), seed=seed * 100 + 1)
     dw, tc = window_rate_diff(sim)
     rng = np.random.default_rng(seed * 100 + 2)

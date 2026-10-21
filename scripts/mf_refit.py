@@ -25,11 +25,19 @@ def main():
     ap.add_argument('--x0', default=None)
     ap.add_argument('--max-rate', type=float, default=8.0, help='upper bound of the dip rate (1/s)')
     ap.add_argument('--max-shape', type=float, default=6.0, help='upper bound of the dip shape k')
+    ap.add_argument('--variant', choices=('default', 'standard'), default='default',
+                    help='standard: fast-rise NMDA, NMDA-dominated recurrence, ~40 Hz, tau_I 5 ms, no feed-forward '
+                         'inhibition (meanfield.model.STANDARD)')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     tg, hist = RF.load_targets()
     bounds = {k: v for k, v in F.BOUNDS_RATES.items() if k != 'log10_c'}
     bounds.update(dip_rate=(0.5, a.max_rate), dip_shape=(0.7, a.max_shape))
+    base = None
+    if a.variant == 'standard':
+        from meanfield import model as M
+        base = M.STANDARD
+        bounds['w_s'] = (1.4, 2.2)
     names = list(bounds)
     lo = np.array([bounds[k][0] for k in names]); hi = np.array([bounds[k][1] for k in names])
     rng = np.random.default_rng(a.seed)
@@ -43,7 +51,7 @@ def main():
 
     def f(u):
         th = theta(u)
-        out = RF.evaluate(th, tg, n_trials=a.n_trials, seed=a.seed)
+        out = RF.evaluate(th, tg, n_trials=a.n_trials, seed=a.seed, base=base)
         L, parts = RF.loss(out, tg, hist, parts=True)
         L += 10 * float(np.sum(np.clip(u - 1, 0, None) ** 2 + np.clip(-u, 0, None) ** 2))
         row = dict(theta=th, loss=L, parts=parts, mem=out['mem'],

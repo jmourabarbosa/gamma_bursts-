@@ -37,7 +37,14 @@ STRUCT = dict(
     cue_amp=1.0, cue_dur=50.0,
     t_pre=300.0, t_delay=1650.0,
     dt=0.5,
+    nmda_wang=0.0, gamma=0.641e-3,   # NMDA gating form (see _sim); gamma per Hz per ms (Wang 1999)
 )
+
+# "Standard" variant for the robustness check: fast-rise NMDA (Wang 1999), NMDA-dominated recurrence (80%),
+# active state ~40 Hz, inhibition tau 5 ms, no lagging feed-forward inhibition. Constants derived like STRUCT
+# (scripts/mf_design_standard.py); use as M.params(**STANDARD, **fitted).
+STANDARD = dict(nmda_wang=1.0, gamma=0.641e-3, kappa=0.15, r_max=60.0, w_a=0.0081, w_I=0.04, w_EI=0.5,
+                w_ff=0.0, I_0=0.3124, tau_I=5.0)           # w_s at the design point: 1.79 (tau_N = 100 ms)
 
 FIT_DEFAULTS = dict(
     tau_N=100.0,     # ms, NMDA decay
@@ -95,7 +102,7 @@ def ou_drive(n_tr, n, dt, sd, tau, rng, floor=0.0):
 @njit(cache=True)
 def _sim(m, cue_on, cued, xi, p_arr, rec_every):
     (r_max, theta, kappa, w_a, beta, w_I, I_0, tau_r, tau_I, w_EI, w_ff, tau_ff,
-     bg_max, bg_theta, bg_kappa, I_bg, cue_amp, dt, tau_N, w_s, sigma, sigma_bg) = p_arr
+     bg_max, bg_theta, bg_kappa, I_bg, cue_amp, dt, tau_N, w_s, sigma, sigma_bg, nmda_wang, gamma) = p_arr
     n_tr, n = m.shape
     n_rec = n // rec_every
     out = np.zeros((n_tr, n_rec, 6))    # rA, rB, r_bg, r_I, sA, sB
@@ -118,8 +125,12 @@ def _sim(m, cue_on, cued, xi, p_arr, rec_every):
             rbg += dt / tau_r * (fbg - rbg)
             rI += dt / tau_I * (fI - rI)
             q += dt / tau_ff * (mm - q)
-            sA += dt / tau_N * (-sA + beta * rA * (1.0 - sA))
-            sB += dt / tau_N * (-sB + beta * rB * (1.0 - sB))
+            if nmda_wang > 0.5:   # standard gating (Wang 1999): fast rise, decay tau_N
+                sA += dt * (-sA / tau_N + gamma * (1.0 - sA) * rA)
+                sB += dt * (-sB / tau_N + gamma * (1.0 - sB) * rB)
+            else:                 # normalised gating: steady state independent of tau_N, rise ~ tau_N
+                sA += dt / tau_N * (-sA + beta * rA * (1.0 - sA))
+                sB += dt / tau_N * (-sB + beta * rB * (1.0 - sB))
             if (i + 1) % rec_every == 0:
                 j = (i + 1) // rec_every - 1
                 out[k, j, 0] = rA; out[k, j, 1] = rB; out[k, j, 2] = rbg
@@ -158,7 +169,8 @@ def simulate(p, cued, seed=0, m=None, rec_ms=1.0):
     cue_on = (t >= p['t_pre']) & (t < p['t_pre'] + p['cue_dur'])
     xi = _ou_noise(n_tr, n, dt, p['tau_xi'], rng.standard_normal((n_tr, n, 3)))
     keys = ('r_max', 'theta', 'kappa', 'w_a', 'beta', 'w_I', 'I_0', 'tau_r', 'tau_I', 'w_EI', 'w_ff', 'tau_ff',
-            'bg_max', 'bg_theta', 'bg_kappa', 'I_bg', 'cue_amp', 'dt', 'tau_N', 'w_s', 'sigma', 'sigma_bg')
+            'bg_max', 'bg_theta', 'bg_kappa', 'I_bg', 'cue_amp', 'dt', 'tau_N', 'w_s', 'sigma', 'sigma_bg',
+            'nmda_wang', 'gamma')
     p_arr = np.array([float(p[k]) for k in keys])
     rec = int(round(rec_ms / dt))
     out = _sim(m, cue_on, cued, xi, p_arr, rec)
