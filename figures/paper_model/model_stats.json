@@ -10,7 +10,7 @@
  },
  "n_trials": 2112,
  "seed": 1,
- "example_trial": 39,
+ "example_trial": 139,
  "memory_correct": 0.9829545454545454,
  "sets": {
   "top/5": {

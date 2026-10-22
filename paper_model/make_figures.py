@@ -1,6 +1,6 @@
 """Paper figures of the best-fit model.
 
-Figure 1: A, an example trial: 2 s of delay with a constant common input, then dips switched on (pool rates
+Figure 1: A, an example trial: 1 s of delay with a constant common input, then dips switched on (pool rates
           and NMDA gating, decoding z from all units, with On/Off labels; common input below). B, right of A: all-unit Off and On
           length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
 Figure 2: On/Off statistics of every unit set, model vs data.
@@ -27,7 +27,7 @@ plt.rcParams.update({'figure.facecolor': 'white', 'axes.facecolor': 'white', 'sa
 
 
 FIG1_SET = ('all', 'session count')   # unit set whose read-out Figure 1 shows
-QUIET, DIPS = 2000, 1500      # example trial: delay without dips (ms after cue onset), then with dips
+QUIET, DIPS = 1000, 1500      # example trial: delay without dips (ms after cue onset), then with dips
 
 
 def example_trials(gain, n=300, seed=11):
@@ -53,18 +53,19 @@ def pick_trial(sim, tz, state):
     with typical lengths."""
     ok = M.memory_correct(sim)
     quiet = (tz >= 300) & (tz < QUIET)
-    best, score = 0, np.inf
+    best, score = None, np.inf
     for k in range(len(ok)):
         st = state[k]
         off = [(b - a) * R.STEP for a, b in R.runs(st == -1) if tz[a] >= QUIET]
         on = [(b - a) * R.STEP for a, b in R.runs(st == 1) if tz[a] >= QUIET]
-        strong = sim['rA'][k][-300:].max() > 80 and sim['sA'][k][-1] > 0.4 and min(
-            sim['sA'][k][int(sim['t_cue'] + QUIET):].min(), 1) > 0.25     # memory clearly held through the dips
+        strong = sim['rA'][k][-300:].max() > 80 and sim['sA'][k][-1] > 0.4     # cued pool clearly active at the end
         if not ok[k] or not strong or (st[quiet] == -1).any() or not 3 <= len(off) <= 5 or len(on) < 2 or max(off) > 300:
             continue
         sc = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (st[quiet] != 1).mean() * 5
         if sc < score:
             best, score = k, sc
+    if best is None:
+        raise RuntimeError('no example trial meets the criteria')
     return best
 
 
