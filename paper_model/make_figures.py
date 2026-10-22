@@ -60,7 +60,7 @@ def figure1(out, hist, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.70, top=0.86, bottom=0.15)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.74, top=0.86, bottom=0.15)
     gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.82, right=0.99, top=0.86, bottom=0.15)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
@@ -68,12 +68,10 @@ def figure1(out, hist, path):
     a.text(60, 0.04, 'cue', fontsize=6.5, color=INK2)
     a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK, lw=1.0)     # rates relative to the sigmoid ceiling
     a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN, lw=1.0)
-    a.set_ylim(0, 1.07); a.set_yticks([0, 0.5, 1]); a.set_ylabel('rate (a.u.)')
+    a.plot(t, tr['sc'], color=INK, lw=1.0, ls=':')
+    a.plot(t, tr['su'], color=C_UN, lw=1.0, ls=':')
+    a.set_ylim(0, 1.07); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('rate (a.u.), NMDA gating')
     a.text(QUIET + 15, 1.0, 'dips start', fontsize=6.5, color=INK2, va='top')
-    a2 = a.twinx(); a2.spines['right'].set_visible(True)
-    a2.plot(t, tr['sc'], color=INK, lw=1.0, ls=':')
-    a2.plot(t, tr['su'], color=C_UN, lw=1.0, ls=':')
-    a2.set_ylim(0, 1); a2.set_ylabel('NMDA gating s (dotted)')
     a.legend(handles=[Line2D([], [], color=INK, label='cued pool'), Line2D([], [], color=C_UN, label='uncued pool'),
                       Line2D([], [], color=INK2, ls=':', label='NMDA gating'),
                       plt.Rectangle((0, 0), 1, 1, color=C_ON, alpha=0.35, lw=0, label='On'),
