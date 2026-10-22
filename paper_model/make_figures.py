@@ -3,7 +3,8 @@
 Figure 1: A, an example trial: 1 s of delay with a constant common input, then dips switched on (pool rates
           and NMDA gating, decoding z from all units, with On/Off labels; common input below). B, right of A: all-unit Off and On
           length histograms (counts, states 0-1,400 ms after cue onset, as in the fit).
-Figure 2: On/Off statistics of every unit set, model vs data.
+Figure 2: On/Off statistics of every unit set, model vs data; dynamics fitted to model.FIT_SET only, the other
+          sets predicted by changing the read-out (gain from the data's mu_on, noise share).
 
 usage: python -m paper_model.make_figures [--n-trials 2112] [--seed 1] [--out figures/paper_model]
 """
@@ -161,10 +162,14 @@ def figure2(out, summ, path):
         a.plot(x, [out['sets'][s][mk] for s in R.SETS], 'o', ms=4.5, color=col, zorder=2)
         a.set_xticks(x); a.set_xticklabels(R.LABELS, rotation=60, fontsize=6.5)
         a.axvline(2.5, color=MUTED, lw=0.6); a.axvline(5.5, color=MUTED, lw=0.6)
+        j = R.SETS.index(M.FIT_SET)
+        a.axvspan(j - 0.45, j + 0.45, color=MUTED, alpha=0.3, lw=0, zorder=0)    # the set the dynamics were fitted to
+        a.get_xticklabels()[j].set_fontweight('bold')
         a.set_ylim(0, a.get_ylim()[1] * 1.05); a.tick_params(labelsize=6.5)
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± SEM over 25 sessions)'),
-                        Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model')],
-               loc='lower left', bbox_to_anchor=(0.1, 0.93), ncol=2, fontsize=7)
+                        Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
+                        plt.Rectangle((0, 0), 1, 1, color=MUTED, alpha=0.3, lw=0, label='fitted set (others predicted)')],
+               loc='lower left', bbox_to_anchor=(0.06, 0.93), ncol=3, fontsize=7)
     fig.savefig(path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 

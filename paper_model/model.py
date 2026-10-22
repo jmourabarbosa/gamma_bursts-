@@ -30,16 +30,17 @@ FIXED = dict(
     dt=0.5,
 )
 
-# best fit (CMA-ES, fit.py) to the lambda = 10,000 read-out table of 25 sessions: On/Off statistics and length
-# histograms of all 7 unit sets
+# best fit (CMA-ES, fit.py --fit-set 'top 20') to the On/Off statistics and length histograms of the top-20 unit set
+# only (lambda = 10,000 read-out table, 25 sessions); the other six unit sets are predictions
+FIT_SET = ('top', '20')
 FIT = dict(
-    tau_N=131.65,      # ms, NMDA decay
-    w_s=1.6095,         # NMDA recurrent strength
-    dip_rate=10.249,    # dips per s
-    dip_mean=118.56,   # ms, mean dip length
-    dip_shape=5.243,   # gamma shape of dip lengths
-    dip_depth=0.8426,  # fractional drop of the input in a dip
-    sigma=0.0115,      # fast noise on the pools
+    tau_N=150.00,      # ms, NMDA decay
+    w_s=1.5934,         # NMDA recurrent strength
+    dip_rate=11.370,    # dips per s
+    dip_mean=114.72,   # ms, mean dip length
+    dip_shape=3.938,   # gamma shape of dip lengths
+    dip_depth=0.7489,  # fractional drop of the input in a dip
+    sigma=0.0066,      # fast noise on the pools
 )
 
 BOUNDS = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0),
