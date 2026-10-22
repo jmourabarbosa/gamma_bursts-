@@ -157,19 +157,19 @@ def figure2(out, ses, path):
         a.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); a.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
         a.set_xlim(-0.6, len(R.SETS) - 0.4)
         a.set_xticks(x); a.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
-        a.set_ylim(0, top or a.get_ylim()[1] * 1.05)
+        a.set_ylim(0, top or np.ceil(a.get_ylim()[1]))     # top limit on an integer tick
         if top == 1:
             a.set_yticks([0, 0.5, 1], ['0', '0.5', '1'])
         a.set_ylabel(name)
         letter(a, 'abcdef'[k], x=-0.5, y=1.02)
-    for a in axs[0]:     # fitted (inside the grey bar) vs predicted (above the other sets), top row
+    for a in axs[0]:     # fitted (inside the grey bar) vs predicted (bracket over the other sets), top row
         a.text(j, 0.97, 'Fitted', transform=a.get_xaxis_transform(), ha='center', va='top', rotation=90, fontsize=7)
-        a.text(2.5, 1.02, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
-        a.plot([-0.4, -0.4, 5.4, 5.4], [0.97, 1.0, 1.0, 0.97], color=INK, lw=0.6,     # bracket over the predicted sets
-               transform=a.get_xaxis_transform(), clip_on=False)
-    for a, col in ((axs[0, 1], C_OFF), (axs[1, 1], C_ON)):     # legends inside the plots
+        a.text(2.5, 1.1, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
+        a.plot([0, 0, 5, 5], [1.06, 1.09, 1.09, 1.06], color=INK, lw=0.5, transform=a.get_xaxis_transform(), clip_on=False)
+    for a, col, y0, va in ((axs[0, 0], C_OFF, 0.05, 'bottom'), (axs[1, 0], C_ON, 0.97, 'top')):   # legends in empty corners
         for n, (txt, c) in enumerate((('Data', INK), ('Model', col), ('Sessions', GREY))):
-            a.text(0.04, 0.95 - n * 0.09, txt, color=c, transform=a.transAxes, va='top', fontsize=7)
+            y = y0 + (2 - n) * 0.09 if va == 'bottom' else y0 - n * 0.09
+            a.text(0.5, y, txt, color=c, transform=a.transAxes, va=va, fontsize=7)
     save(fig, path)
 
 
