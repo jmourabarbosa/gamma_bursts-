@@ -157,7 +157,7 @@ def figure2(out, summ, path):
             a.set_ylabel('% of trials', fontsize=7)
             continue
         if dk:
-            a.errorbar(x, [summ[s][dk] for s in R.SETS], yerr=[summ[s][dk + '_sem'] for s in R.SETS], fmt='s', ms=4,
+            a.errorbar(x, [summ[s][dk] for s in R.SETS], yerr=[2 * summ[s][dk + '_sem'] for s in R.SETS], fmt='s', ms=4,
                        mfc='white', mec=INK, ecolor=INK2, elinewidth=0.8, zorder=3)
         a.plot(x, [out['sets'][s][mk] for s in R.SETS], 'o', ms=4.5, color=col, zorder=2)
         a.set_xticks(x); a.set_xticklabels(R.LABELS, rotation=60, fontsize=6.5)
@@ -166,7 +166,7 @@ def figure2(out, summ, path):
         a.axvspan(j - 0.45, j + 0.45, color=MUTED, alpha=0.3, lw=0, zorder=0)    # the set the dynamics were fitted to
         a.get_xticklabels()[j].set_fontweight('bold')
         a.set_ylim(0, a.get_ylim()[1] * 1.05); a.tick_params(labelsize=6.5)
-    fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± SEM over 25 sessions)'),
+    fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± 2 SEM over 25 sessions, ≈95% CI)'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
                         plt.Rectangle((0, 0), 1, 1, color=MUTED, alpha=0.3, lw=0, label='fitted set (others predicted)')],
                loc='lower left', bbox_to_anchor=(0.06, 0.93), ncol=3, fontsize=7)
