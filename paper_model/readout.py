@@ -13,88 +13,54 @@ import csv
 import os
 
 import numpy as np
-from numba import njit
 from sklearn.mixture import GaussianMixture
 
 from . import model as M
 
 DATA = os.path.join(os.path.dirname(__file__), 'data')
 STEP, WIN = 10, 100
-SETS = (('top', '5'), ('top', '20'), ('top', '50'), ('random', '5'), ('random', '20'), ('random', '50'),
-        ('all', 'session count'))
-LABELS = ('top 5', 'top 20', 'top 50', 'rand 5', 'rand 20', 'rand 50', 'all')
+SETS = {'top 5': ('top', '5'), 'top 20': ('top', '20'), 'top 50': ('top', '50'), 'rand 5': ('random', '5'),
+        'rand 20': ('random', '20'), 'rand 50': ('random', '50'), 'all': ('all', 'session count')}
 RHO = {'top': 0.09, 'random': 0.11, 'all': 0.35}
-# (data column, model key, loss scale)
-STATS = (('off_per_trial', 'n_off', 0.3), ('off_mean_ms', 'off_mean', 20.0), ('frac_off', 'frac_off', 0.05),
-         ('on_per_trial', 'n_on', 0.3), ('on_mean_ms', 'on_mean', 20.0), ('frac_on', 'frac_on', 0.05))
-EDGES = np.arange(40, 620, 20)     # histogram bins (ms), plus a >= 600 ms bin
 
 
 def load_data():
-    """Data summary per unit set (dict of floats, incl. *_sem) and On/Off length histograms (probabilities)."""
-    rows = {(r['set'], r['k']): r for r in csv.DictReader(open(os.path.join(DATA, 'readout_summary_data_lam10000.csv')))}
-    summ = {s: {k: float(v) for k, v in rows[s].items() if k not in ('set', 'k') and v != ''} for s in SETS}
-    H = {}
-    for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv'))):
-        H.setdefault((r['set'], r['k'], r['state']), []).append((float(r['bin_lo_ms']), float(r['count'])))
-    hist = {}
-    for (s, k, state), v in H.items():
-        lo = np.array([a for a, _ in v]); c = np.array([b for _, b in v])
-        over = c[lo == 600].sum()
-        c = np.where(lo == 580, c - over, c)   # the 580 ms bin of the CSV also holds the clipped >= 600 ms states
-        inside = np.array([c[lo == e].sum() for e in EDGES[:-1]])
-        hist.setdefault((s, k), {})[state] = np.r_[inside, over] / (inside.sum() + over)
-    return summ, hist
-
-
-def load_sessions():
-    """Per-session data values for every unit set: {set: {column: array over sessions}}; random draws are averaged
-    within each session, as in the summary."""
+    """Per-session data values {set: {column: array over sessions}} (random draws averaged within sessions), and
+    pooled state-length counts {(set, 'on'/'off'): 20 ms bins from 0 to 600 ms, then >= 600 ms}."""
     rows = list(csv.DictReader(open(os.path.join(DATA, 'readout_per_session_data_lam10000.csv'))))
-    out = {}
-    for st in SETS:
-        sel = [r for r in rows if r['set'] == st[0] and (st[0] == 'all' or r['k'] == st[1])]
-        ses = sorted({r['session'] for r in sel})
-        out[st] = {c: np.array([np.mean([float(r[c]) for r in sel if r['session'] == x]) for x in ses])
-                   for c in sel[0] if c not in ('session', 'set', 'k', 'draw')}
-    return out
-
-
-def data_counts(st, state):
-    """Data state-length counts of one unit set in 20 ms bins from 0 to 600 ms, and the total number of states."""
-    v = [(float(r['bin_lo_ms']), float(r['count'])) for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv')))
-         if (r['set'], r['k'], r['state']) == (*st, state)]
-    lo = np.array([a for a, _ in v]); c = np.array([b for _, b in v])
-    over = c[lo == 600].sum()
-    c = np.where(lo == 580, c - over, c)
-    inside = np.array([c[lo == e].sum() for e in np.arange(0, 600, 20)])
-    return inside, inside.sum() + over
-
-
-def rate_diff(sim, t_from=-100):
-    """Cued minus uncued pool rate in 100 ms windows every 10 ms, centres from t_from ms relative to cue onset."""
-    d = np.where(sim['cued'][:, None] == 0, sim['rA'] - sim['rB'], sim['rB'] - sim['rA'])
-    c = np.cumsum(np.c_[np.zeros(len(d)), d], axis=1)
-    dw = ((c[:, WIN:] - c[:, :-WIN]) / WIN)[:, ::STEP]
-    tc = np.arange(dw.shape[1]) * STEP + WIN / 2 - sim['t_cue']
-    keep = tc >= t_from
-    return dw[:, keep], tc[keep]
-
-
-def window_noise(shape, rng):
-    k = WIN // STEP
-    e = rng.standard_normal((shape[0], shape[1] + k - 1))
-    c = np.cumsum(np.c_[np.zeros(shape[0]), e], axis=1)
-    return (c[:, k:] - c[:, :-k]) / np.sqrt(k)
-
-
-def noise(shape, rho, rng):
-    return np.sqrt(1 - rho) * window_noise(shape, rng) + np.sqrt(rho) * rng.standard_normal((shape[0], 1))
+    ses = {}
+    for lab, (s, k) in SETS.items():
+        sel = [r for r in rows if r['set'] == s and (s == 'all' or r['k'] == k)]
+        ids = sorted({r['session'] for r in sel})
+        ses[lab] = {c: np.array([np.mean([float(r[c]) for r in sel if r['session'] == i]) for i in ids])
+                    for c in sel[0] if c not in ('session', 'set', 'k', 'draw')}
+    hist = {(lab, st): np.zeros(31) for lab in SETS for st in ('on', 'off')}
+    for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv'))):
+        lab = next((lab for lab, sk in SETS.items() if sk == (r['set'], r['k'])), None)
+        if lab:
+            hist[lab, r['state']][int(r['bin_lo_ms']) // 20] += float(r['count'])
+    for h in hist.values():
+        h[29] -= h[30]      # the CSV's 580 ms bin also holds the clipped >= 600 ms states
+    return ses, hist
 
 
 def runs(mask):
-    a = np.r_[False, mask, False].astype(int)
-    return list(zip(np.where(np.diff(a) == 1)[0], np.where(np.diff(a) == -1)[0]))
+    a = np.diff(np.r_[0, mask.astype(int), 0])
+    return list(zip(np.where(a == 1)[0], np.where(a == -1)[0]))
+
+
+def rate_diff(sim, t_from=-100):
+    """Cued minus uncued pool rate in 100 ms windows every 10 ms; window centres from t_from ms after cue onset."""
+    c = np.cumsum(np.c_[np.zeros(len(sim['rc'])), sim['rc'] - sim['ru']], axis=1)
+    dw = ((c[:, WIN:] - c[:, :-WIN]) / WIN)[:, ::STEP]
+    tz = sim['t'][0] + np.arange(dw.shape[1]) * STEP + WIN / 2
+    return dw[:, tz >= t_from], tz[tz >= t_from]
+
+
+def noise(shape, rho, rng):
+    k = WIN // STEP
+    c = np.cumsum(np.c_[np.zeros(shape[0]), rng.standard_normal((shape[0], shape[1] + k - 1))], axis=1)
+    return np.sqrt(1 - rho) * (c[:, k:] - c[:, :-k]) / np.sqrt(k) + np.sqrt(rho) * rng.standard_normal((shape[0], 1))
 
 
 def null_threshold(shape, rho, rng, n_rep=3):
@@ -102,91 +68,57 @@ def null_threshold(shape, rho, rng, n_rep=3):
     return float(np.percentile(masses, 95))
 
 
-@njit(cache=True)
-def _label(z, valid, thr, min_off):
-    n_tr, n_b = z.shape
-    state = np.zeros((n_tr, n_b), np.int64)
-    for k in range(n_tr):
-        i = 0
-        while i < n_b:
-            if valid[i] and z[k, i] > 1.96:
-                j = i; m = 0.0
-                while j < n_b and valid[j] and z[k, j] > 1.96:
-                    m += z[k, j]; j += 1
-                if m > thr:
-                    state[k, i:j] = 1
-                i = j
-            else:
-                i += 1
-        i = 0
-        while i < n_b:
-            if valid[i] and z[k, i] < 0.84:
-                j = i
-                while j < n_b and valid[j] and z[k, j] < 0.84:
-                    j += 1
-                if j - i >= min_off:
-                    state[k, i:j] = -1
-                i = j
-            else:
-                i += 1
-    return state
-
-
-def label(z, valid, thr, min_off=5):
+def label(z, valid, thr):
     """+1 On, -1 Off, 0 unlabelled."""
-    return _label(np.ascontiguousarray(z), np.asarray(valid, np.bool_), float(thr), int(min_off))
+    state = np.zeros(z.shape, int)
+    for k, row in enumerate(z):
+        for a, b in runs((row > 1.96) & valid):
+            if row[a:b].sum() > thr:
+                state[k, a:b] = 1
+        for a, b in runs((row < 0.84) & valid):
+            if b - a >= 5:
+                state[k, a:b] = -1
+    return state
 
 
 def mu_on(z, rng, n_max=40000):
     v = z.ravel()
-    if len(v) > n_max:
-        v = rng.choice(v, n_max, replace=False)
+    v = rng.choice(v, n_max, replace=False) if len(v) > n_max else v
     return float(GaussianMixture(2, random_state=0).fit(v[:, None]).means_.max())
 
 
-def hist(dur):
-    dur = np.asarray(dur, float)
-    h, _ = np.histogram(dur, EDGES)
-    return np.r_[h, (dur >= EDGES[-1]).sum()] / max(1, (dur >= EDGES[0]).sum())
+def stats(state, delay):
+    """On/Off counts per trial, lengths (mean, median, counts in 20 ms bins) and fractions of the delay."""
+    out = {}
+    for name, lab in (('on', 1), ('off', -1)):
+        d = [[(b - a) * STEP for a, b in runs(s == lab)] for s in state]
+        dur = np.concatenate(d + [[]])
+        out.update({f'n_{name}': np.mean([len(x) for x in d]), f'frac_{name}': (state[:, delay] == lab).mean(),
+                    f'{name}_mean': dur.mean() if len(dur) else 0.0, f'{name}_median': np.median(dur) if len(dur) else 0.0,
+                    f'h_{name}': np.bincount(np.minimum(dur.astype(int) // 20, 30), minlength=31)})
+    return out
 
 
-def evaluate(theta=None, n_trials=1056, seed=0, summ=None, keep=False, sets=SETS):
-    """Simulate the model and read it out for every unit set. Returns memory correct and, per set, the gain,
-    accuracy, On/Off counts, mean lengths, fractions of time and length histograms."""
-    summ = summ or load_data()[0]
-    p = M.params(**(theta or {}))
-    sim = M.simulate(p, np.tile([0, 1], n_trials // 2), seed=seed * 100 + 1)
+def evaluate(p, ses, n_trials=1056, seed=0, sets=tuple(SETS)):
+    """Simulate the model and read it out for each unit set: memory correct, and per set the gain, z, state labels
+    and their statistics."""
+    sim = M.simulate(p, n_trials, seed=seed * 100 + 1)
     dw, tz = rate_diff(sim)
     rng = np.random.default_rng(seed * 100 + 2)
-    delay = (tz >= 500) & (tz <= 1400)
-    valid = (tz >= 0) & (tz <= 1400)
+    delay, valid = (tz >= 500) & (tz <= 1400), (tz >= 0) & (tz <= 1400)
     grid = 10 ** np.linspace(-2.6, -0.3, 10)
-    out = dict(mem=float(M.memory_correct(sim).mean()), sets={})
-    if keep:
-        out['sim'], out['tz'], out['dw'] = sim, tz, dw
+    out = dict(mem=float(M.memory_correct(sim).mean()), sim=sim, tz=tz, sets={})
     cache = {}
-    for st in sets:
-        rho = RHO[st[0]]
-        if rho not in cache:
+    for lab in sets:
+        rho = RHO[SETS[lab][0]]
+        if rho not in cache:     # sets of the same kind share the noise draw
             eta = noise(dw.shape, rho, rng)
             mus = np.maximum.accumulate([mu_on((c * dw + eta)[:, delay], rng) for c in grid])
-            cache[rho] = (eta, mus, null_threshold(dw.shape, rho, rng))
+            cache[rho] = eta, mus, null_threshold(dw.shape, rho, rng)
         eta, mus, thr = cache[rho]
-        target = summ[st]['mu_on']
+        target = ses[lab]['mu_on'].mean()
         c = float(10 ** np.interp(target, mus, np.log10(grid))) if mus[-1] > target else float(grid[-1])
         z = c * dw + eta
         state = label(z, valid, thr)
-        on = [[(b - a) * STEP for a, b in runs(s == 1)] for s in state]
-        off = [[(b - a) * STEP for a, b in runs(s == -1)] for s in state]
-        on_d, off_d = np.concatenate(on + [[]]), np.concatenate(off + [[]])
-        r = dict(gain=c, mu_on=mu_on(z[:, delay], np.random.default_rng(seed)),   # separate rng: check of the anchoring
-                 accuracy=float((z[:, delay] > 0).mean()),
-                 n_off=float(np.mean([len(x) for x in off])), n_on=float(np.mean([len(x) for x in on])),
-                 off_mean=float(off_d.mean()) if len(off_d) else 0.0, on_mean=float(on_d.mean()) if len(on_d) else 0.0,
-                 off_median=float(np.median(off_d)) if len(off_d) else 0.0, on_median=float(np.median(on_d)) if len(on_d) else 0.0,
-                 frac_off=float((state[:, delay] == -1).mean()), frac_on=float((state[:, delay] == 1).mean()),
-                 h_off=hist(off_d), h_on=hist(on_d))
-        if keep:
-            r.update(z=z, state=state)
-        out['sets'][st] = r
+        out['sets'][lab] = dict(gain=c, z=z, state=state, **stats(state, delay))
     return out
