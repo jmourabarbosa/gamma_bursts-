@@ -126,7 +126,7 @@ def figure1(out, path):
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'])
-        h.set_ylabel('Fraction of states', labelpad=1)
+        h.set_ylabel('Fraction\nof states', labelpad=-14)   # beside the unlabelled middle tick
         h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
         if j == 0:
             h.tick_params(labelbottom=False)
