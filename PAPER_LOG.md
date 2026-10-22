@@ -67,3 +67,8 @@ gating. The memory is carried by ordinary rate coding with fixed synapses.
   Short-Term Plasticity Can Support Working Memory":
   https://claude.ai/code/artifact/4cc2f6a8-f451-40d9-bc32-58838fb49369. Spiking and CCG numbers
   come from model 1 (`PAPER_COMPARISON.md`). The mean-field fit results are still placeholders.
+- **2026-10-22.** Scope cut to two figures from the `paper-model` branch: Fig. 1, an example trial
+  and On/Off length histograms; Fig. 2, On/Off statistics across unit sets, fitted to all units
+  and predicted for the others. The spiking model and CCG sections (outline points 3 and 4) are
+  dropped for now. Draft with abstract, intro, results and methods is in Google Drive:
+  https://docs.google.com/document/d/1RPDAQhO0hOeaVubnX7T1Gm1B7T0Wdco7jZFJiUdNxuQ/edit
