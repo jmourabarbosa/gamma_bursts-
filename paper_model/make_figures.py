@@ -175,7 +175,7 @@ def figure2(out, summ, path):
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± 2 SEM over 25 sessions, ≈95% CI)'),
                         Line2D([], [], ls='', marker='.', ms=5, color=INK2, alpha=0.4, label='sessions'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
-                        plt.Rectangle((0, 0), 1, 1, color=MUTED, alpha=0.3, lw=0, label='fitted set (others predicted)')],
+                        plt.Rectangle((0, 0), 1, 1, color=MUTED, alpha=0.3, lw=0, label='fitted (all units); other sets predicted')],
                loc='lower left', bbox_to_anchor=(0.02, 0.93), ncol=4, fontsize=6.5)
     fig.savefig(path, dpi=300, bbox_inches='tight')
     plt.close(fig)
@@ -191,7 +191,7 @@ def main():
     summ, hist = R.load_data()
     out = R.evaluate(n_trials=a.n_trials, seed=a.seed, summ=summ, keep=True)
     k = figure1(out, os.path.join(a.out, 'fig1_trial_histograms.png'))
-    figure2(out, summ, os.path.join(a.out, 'fig2_fit_all_sets.png'))
+    figure2(out, summ, os.path.join(a.out, 'fig2_unit_sets.png'))
     res = dict(theta=M.FIT, n_trials=a.n_trials, seed=a.seed, example_trial=int(k), memory_correct=out['mem'],
                sets={'/'.join(s): {kk: v for kk, v in r.items() if kk not in ('z', 'state', 'h_on', 'h_off')} for s, r in out['sets'].items()})
     json.dump(res, open(os.path.join(a.out, 'model_stats.json'), 'w'), indent=1)
