@@ -5,7 +5,7 @@ LaTeX version of the Google Doc draft
 
 - `main.tex`: text, figures and equations
 - `refs.bib`: references
-- `figures/`: Figures 1 and 2, copied from `figures/paper_model/` on the `paper-model` branch (commit a070922)
+- `figures/`: Figures 1 and 2, copied from `figures/paper_model/` on the `paper-model` branch (commit 11a4f65)
 - `main.pdf`: compiled output
 
 Build: `latexmk -pdf main.tex`
