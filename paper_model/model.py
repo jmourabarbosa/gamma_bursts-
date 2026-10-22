@@ -28,11 +28,11 @@ FIXED = dict(a=270.0, b=108.0, d=0.154, gamma=0.641, I_0=0.3297, sigma=0.009, ta
              cue_dur=50.0, t_pre=300.0, t_delay=1600.0, t_resp=300.0, go_rel=3.1, dt=0.5)
 
 # fitted (fit.py) to the On/Off statistics and length distributions of the all-units read-out only
-FIT = dict(dip_rate=10.0,     # 1/s, rate parameter of the gaps between dips
-           dip_mean=90.0,     # ms, mean dip length
-           dip_shape=8.0,     # gamma shape of dip lengths
-           dip_depth=0.6,     # fractional drop of the background current in a dip
-           w_ff=0.1)          # nA, feed-forward inhibition
+FIT = dict(dip_rate=3.390,    # 1/s, rate parameter of the gaps between dips
+           dip_mean=20.0,     # ms, mean dip length (at the lower bound)
+           dip_shape=10.00,    # gamma shape of dip lengths (at the upper bound)
+           dip_depth=0.1109,  # fractional drop of the background current in a dip
+           w_ff=0.5856)       # nA, feed-forward inhibition
 KEYS = ('a', 'b', 'd', 'gamma', 'J_s', 'J_c', 'I_0', 'w_ff', 'tau_ff', 'tau_S', 'cue_amp', 'dt')
 
 

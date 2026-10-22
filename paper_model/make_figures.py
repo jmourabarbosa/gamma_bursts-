@@ -22,6 +22,7 @@ from . import model as M, readout as R  # noqa: E402
 OUT = 'figures/paper_model'
 FIT_SET = 'all'                # unit set the dynamics were fitted to, and the read-out shown in Figure 1
 QUIET, DIPS = 1000, 1500       # example trial: delay without dips (ms after cue onset), then with dips
+RATE_SCALE = 25.0               # Hz shown as 1 on the rate axis
 CUE = 75                       # example trial only: longer cue for display (fitted trials: 50 ms, as in the task)
 # journal style (Nature Neuroscience-like): Arial-metric font, 6-7 pt text, thin black axes with outward ticks,
 # lowercase bold panel letters, sentence-case labels, text legends, grey epoch bars
@@ -54,13 +55,13 @@ def example_trial(gain, n=300, seed=11):
     dw, tz = R.rate_diff(sim, t_from=-250)
     z = gain * dw + R.noise(dw.shape, R.RHO['all'], rng)
     state = R.label(z, tz >= 0, R.null_threshold(dw.shape, R.RHO['all'], rng))
-    ok = M.memory_correct(sim) & (sim['rc'][:, -300:].max(1) > 80) & (sim['sc'][:, -1] > 0.4)
+    ok = M.memory_correct(sim) & (sim['sc'][:, -1] > 0.4)
     quiet = (tz >= 300) & (tz < QUIET)
     best, score = None, np.inf
     for k in np.where(ok)[0]:
         off = [(b - a) * R.STEP for a, b in R.runs(state[k] == -1) if tz[a] >= QUIET]
         on = [(b - a) * R.STEP for a, b in R.runs(state[k] == 1) if tz[a] >= QUIET]
-        if (state[k, quiet] == -1).any() or not 3 <= len(off) <= 5 or len(on) < 2 or max(off) > 300:
+        if not 2 <= len(off) <= 6 or len(on) < 1 or max(off) > 300:     # (Wong-Wang fit: Off states also before the dips)
             continue
         sc = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (state[k, quiet] != 1).mean() * 5
         if sc < score:
@@ -83,8 +84,8 @@ def figure1(out, path):
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, CUE, color=LIGHT, lw=0)
-    a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK)     # rates relative to the sigmoid ceiling (a.u.)
-    a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN)
+    a.plot(t, tr['rc'] / RATE_SCALE, color=INK)     # rates relative to the sigmoid ceiling (a.u.)
+    a.plot(t, tr['ru'] / RATE_SCALE, color=C_UN)
     a.plot(t, tr['sc'], color=INK, ls=(0, (1, 1.5)))
     a.plot(t, tr['su'], color=C_UN, ls=(0, (1, 1.5)))
     a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('Rate / NMDA')
@@ -95,7 +96,7 @@ def figure1(out, path):
         a.text(QUIET + dx * 180, 1.06, label, transform=xa, fontsize=7.5, va='center', ha='left' if dx > 0 else 'right')
     # direct labels on the traces, in the steady delay before the dips
     a.text(500, tr['sc'][(t > 400) & (t < 600)].max() + 0.04, 'NMDA', fontsize=7.5, ha='center', va='bottom')
-    a.text(500, tr['rc'][(t > 400) & (t < 600)].min() / M.FIXED['r_max'] - 0.04, 'Rate', fontsize=7.5, ha='center', va='top')
+    a.text(500, tr['rc'][(t > 400) & (t < 600)].min() / RATE_SCALE - 0.04, 'Rate', fontsize=7.5, ha='center', va='top')
     off0 = R.runs(state == -1)[0]
     on1 = next((a0, b0) for a0, b0 in R.runs(state == 1) if tz[a0] > QUIET)    # first On state with attention fluctuations
     a.text((tz[on1[0]] + tz[on1[1] - 1]) / 2, 0.96, 'On', color=C_ON, fontsize=7.5, va='top', ha='center')
