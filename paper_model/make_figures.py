@@ -22,7 +22,7 @@ from . import model as M, readout as R  # noqa: E402
 OUT = 'figures/paper_model'
 FIT_SET = 'all'                # unit set the dynamics were fitted to, and the read-out shown in Figure 1
 QUIET, DIPS = 1000, 1500       # example trial: delay without dips (ms after cue onset), then with dips
-CUE = 150                      # example trial only: longer cue for display (fitted trials: 50 ms, as in the task)
+CUE = 75                       # example trial only: longer cue for display (fitted trials: 50 ms, as in the task)
 C_ON, C_OFF, INK, INK2, MUTED, C_UN = '#eb6834', '#2a78d6', '#0b0b0b', '#52514e', '#b5b4ae', '#7a6be0'
 plt.rcParams.update({'axes.spines.top': False, 'axes.spines.right': False, 'font.size': 8, 'axes.edgecolor': INK2,
                      'axes.titlesize': 8, 'axes.titleweight': 'bold', 'axes.titlelocation': 'left',
