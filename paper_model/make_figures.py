@@ -1,7 +1,7 @@
 """Paper figures of the best-fit model.
 
-Figure 1: A, an example trial: 1 s of delay with a constant common input, then dips (pool rates and NMDA gating,
-          all-units decoding z with On/Off labels, common input). B: all-units Off and On length distributions
+Figure 1: A, an example trial: 1 s of delay with a constant common input, then dips (pool rates and NMDA gating;
+          common input; all-units decoding z with On/Off labels). B: all-units Off and On length distributions
           (states 0-1,400 ms after cue onset), model vs data.
 Figure 2: On/Off statistics of every unit set, model vs data. The dynamics were fitted to the all-units set only;
           the other sets are predicted by changing the read-out (gain from the data's mu_on, noise share).
@@ -60,9 +60,9 @@ def figure1(out, hist, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.6, 1.3, 0.9], hspace=0.15, left=0.06, right=0.58, top=0.86, bottom=0.15)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.58, top=0.86, bottom=0.15)
     gh = fig.add_gridspec(1, 2, wspace=0.1, left=0.7, right=0.99, top=0.86, bottom=0.15)
-    a, d, b = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
+    a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
     a.text(60, 6, 'cue', fontsize=6.5, color=INK2)
@@ -86,13 +86,15 @@ def figure1(out, hist, path):
         d.axhline(y, color=c, ls='--', lw=0.7)
     d.set_ylim(z.min() - 0.3, z.max() + 0.3); d.set_yticks(np.arange(0, z.max() + 0.3, 2))
     d.set_ylabel('decoding z\n(all units)')
-    b.plot(t, tr['m'], color=INK2, lw=1.0)
-    b.set_ylim(0, 1.15); b.set_yticks([0, 1]); b.set_ylabel('common\ninput m(t)')
-    b.set_xlabel('time from cue onset (ms)')
+    b.plot(t, tr['m'], color=INK2, lw=0.8)     # common input, minimal
+    b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
+    b.tick_params(bottom=False)
+    b.text(-0.01, 0.5, 'input', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK2)
+    d.set_xlabel('time from cue onset (ms)')
     for ax in (a, d, b):
         ax.axvline(QUIET, color=INK2, ls='--', lw=0.7)
         ax.set_xlim(-300, QUIET + DIPS)
-    for ax in (a, d):
+    for ax in (a, b):
         ax.tick_params(labelbottom=False)
     edges = np.arange(0, 620, 20)
     for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
