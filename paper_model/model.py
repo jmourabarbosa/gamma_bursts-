@@ -1,33 +1,39 @@
-"""Rate model of the memory network: two memory pools (cued c, uncued u) with shared inhibition I.
+"""Reduced two-pool model of Wong et al. (2007) [Wong & Wang (2006)], with two additions.
 
-    tau_r  dr_X/dt = -r_X + Phi( w_s*s_X + w_a*r_X - w_I*r_I + I_0*m(t) - w_ff*q + cue_X + sigma*xi_X )
-    tau_N  ds_X/dt = -s_X + beta*r_X*(1 - s_X)          NMDA gating
-    tau_I  dr_I/dt = -r_I + w_EI*(r_c + r_u)            shared inhibition (competition)
-    tau_ff dq/dt   = -q + m(t)                          feed-forward inhibition, lags the input
+    r_X     = f(I_X),  f(I) = (a I - b) / (1 - exp(-d (a I - b)))                       firing rate (Hz)
+    dS_X/dt = -S_X / tau_S + (1 - S_X) gamma r_X                                         NMDA gating
+    I_X     = J_s S_X - J_c S_Y + I_0 m(t) + w_ff (m(t) - q) + I_cue,X + I_noise,X       input current (nA)
+    tau_ff dq/dt = -q + m(t)                                                             lagging feed-forward inhibition
+    tau_n dI_noise,X/dt = -I_noise,X + eta(t) sqrt(tau_n) sigma                         OU noise
 
-Rates are nominally in Hz (sigmoid ceiling r_max; the figures show them as r / r_max, arbitrary units),
-time in ms. Phi(x) = r_max / (1 + exp(-(x - 1)/kappa)); xi are OU noises (tau_xi). m(t) is the
-common input: 1, except during dips (Poisson onsets, gamma-distributed lengths) where it drops to 1 - depth,
-with 10 ms ramps. When a dip ends, the lagging feed-forward inhibition gives both pools a brief kick and the
-pool with more residual NMDA wins the competition.
+X, Y in {cued c, uncued u}, X != Y. Published values (Wong et al. 2007, p. 2): a = 270 Hz/nA, b = 108 Hz,
+d = 0.154 s, gamma = 0.641, I_0 = 0.3297 nA, sigma = 0.009 nA, tau_n = 2 ms, cue J_A,ext mu_0 (1 + f) with
+J_A,ext = 1.1e-3 nA/Hz, mu_0 = 30 Hz, f = 0.45; couplings J_s = 0.3725 nA, J_c = 0.1137 nA at tau_S = 60 ms.
+Here tau_S = 150 ms (NMDA receptors with GluN2B) and both couplings are scaled by ALPHA = 0.56, the factor at which the
+resting state (~2 Hz) survives a whole trial and a 50 ms cue loads the memory (~17 Hz; scripts in the README).
+
+Additions: (1) the common input m(t) scales the background current: 1, except during dips (Poisson onsets,
+gamma-distributed lengths) where it drops to 1 - depth, with 10 ms ramps. (2) Feed-forward inhibition driven by
+m(t) with a lag tau_ff; it cancels at steady state (m = q), so at m = 1 the network is the published one. When a dip
+ends, excitation returns ~tau_ff before inhibition: both pools get a brief kick of ~w_ff * depth, and the pool with
+more NMDA gating wins.
 """
 import numpy as np
 from numba import njit
 
-FIXED = dict(r_max=150.0, kappa=0.06, w_a=0.0141, beta=0.02, w_I=0.04, w_EI=0.5, w_ff=0.8, tau_ff=15.0, I_0=1.496,
-             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, t_resp=300.0, go_amp=1.5,
-             dt=0.1)
+ALPHA = 0.56
+FIXED = dict(a=270.0, b=108.0, d=0.154, gamma=0.641, I_0=0.3297, sigma=0.009, tau_n=2.0,
+             J_s=0.3725 * ALPHA, J_c=0.1137 * ALPHA, tau_S=150.0,
+             cue_amp=1.1e-3 * 30.0 * 1.45, tau_ff=15.0,
+             cue_dur=50.0, t_pre=300.0, t_delay=1600.0, t_resp=300.0, go_rel=3.1, dt=0.5)
 
-# fitted (fit.py) to the On/Off statistics and length histograms of the all-units read-out only
-FIT = dict(tau_N=150.0,       # ms, NMDA decay
-           w_s=1.30,          # NMDA recurrent strength
-           dip_rate=10.207,   # dips per s
-           dip_mean=90.12,    # ms, mean dip length
-           dip_shape=8.70,    # gamma shape of dip lengths
-           dip_depth=0.5987,  # fractional drop of the input in a dip
-           sigma=0.0058)      # fast noise on the pools
-KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0', 'tau_r', 'tau_I', 'cue_amp',
-        'dt', 'tau_N', 'w_s', 'sigma')
+# fitted (fit.py) to the On/Off statistics and length distributions of the all-units read-out only
+FIT = dict(dip_rate=10.0,     # 1/s, rate parameter of the gaps between dips
+           dip_mean=90.0,     # ms, mean dip length
+           dip_shape=8.0,     # gamma shape of dip lengths
+           dip_depth=0.6,     # fractional drop of the background current in a dip
+           w_ff=0.1)          # nA, feed-forward inhibition
+KEYS = ('a', 'b', 'd', 'gamma', 'J_s', 'J_c', 'I_0', 'w_ff', 'tau_ff', 'tau_S', 'cue_amp', 'dt')
 
 
 def params(**over):
@@ -52,22 +58,25 @@ def common_input(n_tr, n, p, rng, ramp=10.0):
 
 
 @njit(cache=True)
-def _sim(m, cue, go, xi, p, rec):
-    r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_N, w_s, sigma = p
+def _f(I, a, b, d):
+    u = a * I - b
+    return u / (1 - np.exp(-d * u)) if abs(u) > 1e-9 else 1 / d
+
+
+@njit(cache=True)
+def _sim(m, cue, go, noise, p, rec):
+    a, b, d, gamma, J_s, J_c, I_0, w_ff, tau_ff, tau_S, cue_amp, dt = p
     n_tr, n = m.shape
     out = np.zeros((n_tr, n // rec, 4))    # rc, ru, sc, su every rec steps (1 ms)
     for k in range(n_tr):
-        rc = 1.0; ru = 1.0; rI = 1.0; sc = 0.0; su = 0.0; q = m[k, 0]
+        sc = 0.1; su = 0.1; q = m[k, 0]
         for i in range(n):
-            x = -w_I * rI + I_0 * m[k, i] - w_ff * q + go[i]
-            fc = r_max / (1 + np.exp(-(w_s * sc + w_a * rc + x + cue_amp * cue[i] + sigma * xi[k, i, 0] - 1) / kappa))
-            fu = r_max / (1 + np.exp(-(w_s * su + w_a * ru + x + sigma * xi[k, i, 1] - 1) / kappa))
-            rI += dt / tau_I * (w_EI * (rc + ru) - rI)
-            rc += dt / tau_r * (fc - rc)
-            ru += dt / tau_r * (fu - ru)
+            bg = I_0 * m[k, i] + w_ff * (m[k, i] - q) + go[i]
+            rc = _f(J_s * sc - J_c * su + bg + cue_amp * cue[i] + noise[k, i, 0], a, b, d)
+            ru = _f(J_s * su - J_c * sc + bg + noise[k, i, 1], a, b, d)
+            sc += dt * (-sc / tau_S + (1 - sc) * gamma * rc / 1000)
+            su += dt * (-su / tau_S + (1 - su) * gamma * ru / 1000)
             q += dt / tau_ff * (m[k, i] - q)
-            sc += dt / tau_N * (-sc + beta * rc * (1 - sc))
-            su += dt / tau_N * (-su + beta * ru * (1 - su))
             if i % rec == rec - 1:
                 j = i // rec
                 out[k, j, 0] = rc; out[k, j, 1] = ru; out[k, j, 2] = sc; out[k, j, 3] = su
@@ -85,31 +94,31 @@ def _ou(white, a):
 def simulate(p, n_tr, seed=0, quiet=0.0):
     """n_tr trials with pool c cued. Returns 1 ms traces (n_tr, n_t) rc, ru, sc, su, m over the pre-cue, cue and
     delay periods, the time t from cue onset, and the rates in the response period (rc_resp, ru_resp: t_resp ms
-    after the delay, attention held at 1). quiet: no dips during the first `quiet` ms after cue onset."""
+    after the delay, attention at 1, starting with a re-engagement transient go_rel times that at the end of a dip).
+    quiet: no dips during the first `quiet` ms after cue onset."""
     rng = np.random.default_rng(seed)
     dt = p['dt']
     n = int(round((p['t_pre'] + p['cue_dur'] + p['t_delay']) / dt))
     n_resp = int(round(p['t_resp'] / dt))
     m = common_input(n_tr, n, p, rng)
     m[:, :int((p['t_pre'] + quiet) / dt)] = 1.0
-    m = np.c_[m, np.ones((n_tr, n_resp))]                    # response period: attention on
-    cue = ((np.arange(n + n_resp) * dt >= p['t_pre']) & (np.arange(n + n_resp) * dt < p['t_pre'] + p['cue_dur'])).astype(float)
+    m = np.c_[m, np.ones((n_tr, n_resp))]
+    t = np.arange(n + n_resp) * dt
+    cue = ((t >= p['t_pre']) & (t < p['t_pre'] + p['cue_dur'])).astype(float)
     white = rng.standard_normal((n_tr, n, 2))
     white = np.concatenate([white, np.random.default_rng(seed + 10**6).standard_normal((n_tr, n_resp, 2))], axis=1)
-    xi = _ou(white, np.exp(-dt / p['tau_xi']))
+    noise = p['sigma'] * _ou(white, np.exp(-dt / p['tau_n']))      # stationary OU, SD sigma
+    tr = t - n * dt
+    go = np.where(tr >= 0, p['go_rel'] * p['w_ff'] * p['dip_depth'] * np.exp(-np.maximum(tr, 0) / p['tau_ff']), 0.0)
     rec = int(round(1 / dt))
-    # response onset: both pools get a transient like the one at the end of a dip (attention re-engages), but
-    # ~3x stronger (go_amp 1.5 vs w_ff * depth = 0.48); >= 1.3 is needed to keep >= 95% of trials correct
-    tr = np.arange(n + n_resp) * dt - n * dt
-    go = np.where(tr >= 0, p['go_amp'] * np.exp(-np.maximum(tr, 0) / p['tau_ff']), 0.0)
-    out = _sim(m, cue, go, xi, np.array([float(p[k]) for k in KEYS]), rec)
+    out = _sim(m, cue, go, noise, np.array([float(p[k]) for k in KEYS]), rec)
     k = n // rec
     return dict(rc=out[:, :k, 0], ru=out[:, :k, 1], sc=out[:, :k, 2], su=out[:, :k, 3], m=m[:, rec - 1:n:rec],
                 t=np.arange(k) - p['t_pre'], rc_resp=out[:, k:, 0], ru_resp=out[:, k:, 1])
 
 
 def memory_correct(sim):
-    """Memory correct: in the last 100 ms of the response period (attention on), the cued pool fires above 20 Hz and
-    above the uncued pool."""
+    """Memory correct: in the last 100 ms of the response period, the cued pool fires above 8 Hz (memory state ~17 Hz,
+    rest ~2 Hz) and above the uncued pool."""
     rc, ru = sim['rc_resp'][:, -100:].mean(1), sim['ru_resp'][:, -100:].mean(1)
-    return (rc > 20) & (rc > ru)
+    return (rc > 8) & (rc > ru)

@@ -15,8 +15,7 @@ import numpy as np
 from . import model as M, readout as R
 
 SET = 'all'
-BOUNDS = dict(tau_N=(50.0, 150.0), w_s=(1.30, 1.70), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0),
-              dip_shape=(0.7, 10.0), dip_depth=(0.3, 1.0), sigma=(0.005, 0.04))
+BOUNDS = dict(dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0), dip_shape=(0.7, 10.0), dip_depth=(0.02, 1.0), w_ff=(0.0, 1.0))
 # (data column, model key, scale)
 STATS = (('off_per_trial', 'n_off', 0.3), ('off_mean_ms', 'off_mean', 20.0), ('frac_off', 'frac_off', 0.05),
          ('on_per_trial', 'n_on', 0.3), ('on_mean_ms', 'on_mean', 20.0), ('frac_on', 'frac_on', 0.05))
