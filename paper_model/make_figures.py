@@ -60,8 +60,8 @@ def figure1(out, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.35, 2.0], hspace=0.2, left=0.06, right=0.74, top=0.86, bottom=0.15)
-    gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.82, right=0.99, top=0.86, bottom=0.15)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.35, 2.0], hspace=0.2, left=0.06, right=0.72, top=0.86, bottom=0.15)
+    gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.81, right=0.99, top=0.86, bottom=0.15)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
@@ -87,8 +87,9 @@ def figure1(out, path):
     b.text(-0.01, 0.5, 'attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK2)
     shade(d, tz, state)
     d.plot(tz, z, color=INK, lw=0.9)
-    for y, c in ((0, INK2), (1.96, C_ON), (0.84, C_OFF)):
+    for y, c, txt in ((0, INK2, ''), (1.96, C_ON, 'p < 0.05'), (0.84, C_OFF, 'p > 0.20')):
         d.axhline(y, color=c, ls='--', lw=0.7)
+        d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=6.5, va='center')
     d.set_ylim(z.min() - 0.3, 6); d.set_yticks([0, 3, 6], ['0', '', '6'])
     d.set_ylabel('decoding z')
     d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$',
@@ -106,11 +107,11 @@ def figure1(out, path):
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=18, align='edge', color=c, alpha=0.8, lw=0)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'])
-        h.tick_params(labelsize=6.5); h.set_ylabel('fraction of states', fontsize=7)
+        h.tick_params(labelsize=6.5); h.set_ylabel('fraction of states', fontsize=7, labelpad=-12)   # beside the unlabelled middle tick
         h.text(0.97, 0.88, f'{name.capitalize()} states', transform=h.transAxes, ha='right', color=c, weight='bold')
         if j == 0:
             h.tick_params(labelbottom=False)
-            h.text(-0.3, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
+            h.text(-0.2, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
         else:
             h.set_xlabel('state length (ms)')
     fig.savefig(path, dpi=300)
