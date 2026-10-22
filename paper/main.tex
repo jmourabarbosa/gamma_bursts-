@@ -26,16 +26,16 @@
 \maketitle
 
 \begin{abstract}
-On single trials, prefrontal decoding of working-memory content switches between high and change decoding, On states and Off states respectively.
-This has been taken as evidence that the memory is held in short-term synaptic plasticity during Off states.
-Here we show that a rate model with fixed synapses explains these states.
-Two memory pools with NMDA self-excitation compete through shared inhibition, and a common input to both populations representing attentional fluctuations drops briefly.
-Each drop silences the pools and decoding falls to chance.
-When the input returns, the pool with more residual NMDA gating restarts first, and the memory survives.
-We fitted the model to the mean On/Off statistics in 25 recording sessions.
-It matches the number and length of On and Off states quantitatively, holding the memory in 98\% of trials.
-With the dynamics fixed and the read-out calibrated directly from the data rather than fitted, it predicts how On/Off statistics change when decoding from smaller groups of neurons, either the most cue-selective ones or randomly chosen ones.
-Intermittent rate coding can therefore support working memory without short-term plasticity.
+Working memory is thought to rely either on persistent spiking activity, sustained by slow NMDA receptor currents, or on activity-silent synaptic traces.
+Recent prefrontal recordings showed that the remembered item can be decoded only intermittently on single trials, with Off periods in which decoding falls to chance.
+These Off periods have been taken as evidence that memories are carried by short-term synaptic plasticity when spiking activity fails to hold them.
+Here we show that intermittent decoding is also expected from a conventional attractor network with fixed synapses.
+When a shared input, such as fluctuating attention, briefly drops, the network falls silent and decoding fails.
+However, NMDA receptor currents, which decay over 150~ms as measured in cortical neurons, bridge the silence and the memory is reinstated when the attentional input returns.
+Fitted to the recordings, this model reproduces the number and duration of On and Off states while retaining the memory.
+In the data, we found that Off states are more frequent when fewer or less selective neurons are decoded, so their frequency partly reflects how well the recorded sample reads out the memory.
+Without refitting, the model predicts this dependence out of distribution for decoded populations it was never fitted to.
+Intermittent decoding is therefore compatible with persistent activity and does not, on its own, require activity-silent mechanisms.
 \end{abstract}
 
 \section{Introduction}
@@ -50,9 +50,10 @@ They concluded that persistent activity is not sufficient and that synaptic chan
 Here, we propose that intermittent decoding does not require short-term plasticity and is instead consistent with the NMDA account.
 In our model, the memory is held as attractor activity, and a common input, which we interpret as a fluctuating attentional signal, briefly drops and silences the network.
 Slow NMDA currents carry the memory across each silence, so the cued population resumes firing when the input returns.
-We fit this model to the On/Off statistics obtained by applying the same analysis to the recordings.
+We read out the model with the same decoding and On/Off criteria as \citet{panichello2024} and fit it to the On/Off statistics of the recordings.
 The model reproduces the number and length of On and Off states while keeping the memory in 98\% of trials, so Off states do not erase the memory.
-With the read-out calibrated from the data, the same dynamics also predict how these statistics change when decoding from the most cue-selective or from randomly chosen neurons.
+In the recordings, Off states are more frequent when fewer or less selective neurons are decoded, so their frequency partly reflects how well the recorded sample reads out the memory.
+Without refitting, the model predicts this dependence out of distribution for decoded populations it was never fitted to.
 Intermittent decoding is therefore compatible with persistent activity sustained by NMDA currents, without short-term plasticity.
 
 \section{Results}
