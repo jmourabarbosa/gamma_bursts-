@@ -22,6 +22,7 @@ from . import model as M, readout as R  # noqa: E402
 OUT = 'figures/paper_model'
 FIT_SET = 'all'                # unit set the dynamics were fitted to, and the read-out shown in Figure 1
 QUIET, DIPS = 1000, 1500       # example trial: delay without dips (ms after cue onset), then with dips
+CUE = 150                      # example trial only: longer cue for display (fitted trials: 50 ms, as in the task)
 C_ON, C_OFF, INK, INK2, MUTED, C_UN = '#eb6834', '#2a78d6', '#0b0b0b', '#52514e', '#b5b4ae', '#7a6be0'
 plt.rcParams.update({'axes.spines.top': False, 'axes.spines.right': False, 'font.size': 8, 'axes.edgecolor': INK2,
                      'axes.titlesize': 8, 'axes.titleweight': 'bold', 'axes.titlelocation': 'left',
@@ -31,7 +32,7 @@ plt.rcParams.update({'axes.spines.top': False, 'axes.spines.right': False, 'font
 def example_trial(gain, n=300, seed=11):
     """Long trials (QUIET ms without dips, then DIPS ms with dips) read out with FIT_SET's gain and noise; returns
     the most representative one: memory held, On throughout the quiet delay, 3-5 Off states once dips start."""
-    sim = M.simulate(M.params(t_delay=QUIET + DIPS - M.FIXED['cue_dur']), n, seed=seed + 1, quiet=QUIET)
+    sim = M.simulate(M.params(cue_dur=CUE, t_delay=QUIET + DIPS - CUE), n, seed=seed + 1, quiet=QUIET)
     rng = np.random.default_rng(seed)
     dw, tz = R.rate_diff(sim, t_from=-250)
     z = gain * dw + R.noise(dw.shape, R.RHO['all'], rng)
@@ -64,13 +65,13 @@ def figure1(out, path):
     gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.81, right=0.99, top=0.86, bottom=0.15)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
-    a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
-    a.text(60, 0.04, 'cue', fontsize=6.5, color=INK2)
+    a.axvspan(0, CUE, color=INK, alpha=0.12, lw=0)
+    a.text(CUE + 10, 0.04, 'cue', fontsize=6.5, color=INK2)
     a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK, lw=1.0)     # rates relative to the sigmoid ceiling (a.u.)
     a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN, lw=1.0)
     a.plot(t, tr['sc'], color=INK, lw=1.0, ls=':')
     a.plot(t, tr['su'], color=C_UN, lw=1.0, ls=':')
-    a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('rate (a.u.) / NMDA gating')
+    a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('rate (a.u.) / NMDA')
     for dx, label in ((1, 'with attention\nfluctuations'), (-1, 'without attention\nfluctuations')):
         a.annotate('', xy=(QUIET + dx * 220, 0.95), xytext=(QUIET + dx * 15, 0.95),
                    arrowprops=dict(arrowstyle='->', color=INK2, lw=0.8))
