@@ -5,7 +5,8 @@
     tau_I  dr_I/dt = -r_I + w_EI*(r_c + r_u)            shared inhibition (competition)
     tau_ff dq/dt   = -q + m(t)                          feed-forward inhibition, lags the input
 
-Rates in Hz, time in ms. Phi(x) = r_max / (1 + exp(-(x - 1)/kappa)); xi are OU noises (tau_xi). m(t) is the
+Rates are nominally in Hz (sigmoid ceiling r_max; the figures show them as r / r_max, arbitrary units),
+time in ms. Phi(x) = r_max / (1 + exp(-(x - 1)/kappa)); xi are OU noises (tau_xi). m(t) is the
 common input: 1, except during dips (Poisson onsets, gamma-distributed lengths) where it drops to 1 - depth,
 with 10 ms ramps. When a dip ends, the lagging feed-forward inhibition gives both pools a brief kick and the
 pool with more residual NMDA wins the competition.
