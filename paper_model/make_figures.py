@@ -60,8 +60,8 @@ def figure1(out, hist, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.58, top=0.86, bottom=0.15)
-    gh = fig.add_gridspec(1, 2, wspace=0.1, left=0.7, right=0.99, top=0.86, bottom=0.15)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.64, top=0.86, bottom=0.15)
+    gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.75, right=0.99, top=0.86, bottom=0.15)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
@@ -98,19 +98,20 @@ def figure1(out, hist, path):
         ax.tick_params(labelbottom=False)
     edges = np.arange(0, 620, 20)
     for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
-        h = fig.add_subplot(gh[j], sharey=fig.axes[-1] if j else None)
+        h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None, sharey=fig.axes[-1] if j else None)
         hm, hd = r['h_' + name], hist[FIT_SET, name]
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=18, align='edge', color=c, alpha=0.8, lw=0)
         h.step(edges, np.r_[hd[:-1], hd[-2]] / hd.sum(), where='post', color=INK, lw=1.0)
-        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600]); h.set_xlabel('state length (ms)'); h.tick_params(labelsize=6.5)
-        h.set_title(f'{name.capitalize()} states', color=c, loc='center')
+        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600]); h.tick_params(labelsize=6.5)
+        h.set_ylabel('fraction of states', fontsize=7)
+        h.text(0.97, 0.88, f'{name.capitalize()} states', transform=h.transAxes, ha='right', color=c, weight='bold')
         if j == 0:
-            h.set_ylabel('fraction of states')
-            h.text(-0.42, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
+            h.tick_params(labelbottom=False)
+            h.text(-0.3, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
             h.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=MUTED, lw=0, label='model'),
-                              Line2D([], [], color=INK, label='data')], loc='upper right', fontsize=6.5)
+                              Line2D([], [], color=INK, label='data')], loc='center right', fontsize=6.5)
         else:
-            h.tick_params(labelleft=False)
+            h.set_xlabel('state length (ms)')
     fig.savefig(path, dpi=300)
 
 
