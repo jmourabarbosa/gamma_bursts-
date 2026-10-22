@@ -1,0 +1,176 @@
+% LaTeX version of the Google Doc draft
+% (https://docs.google.com/document/d/1RPDAQhO0hOeaVubnX7T1Gm1B7T0Wdco7jZFJiUdNxuQ).
+% Build: latexmk -pdf main.tex
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage[labelfont=bf,font=small]{caption}
+\usepackage[round]{natbib}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+\newcommand{\cued}{\mathrm{cued}}
+\newcommand{\uncued}{\mathrm{uncued}}
+
+\title{Intermittent rate coding without short-term plasticity}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+On single trials, prefrontal decoding of working-memory content switches between high and change decoding, On states and Off states respectively.
+This has been taken as evidence that the memory is held in short-term synaptic plasticity during Off states.
+Here we show that a rate model with fixed synapses explains these states.
+Two memory pools with NMDA self-excitation compete through shared inhibition, and a common input to both populations representing attentional fluctuations drops briefly.
+Each drop silences the pools and decoding falls to chance.
+When the input returns, the pool with more residual NMDA gating restarts first, and the memory survives.
+We fitted the model to the mean On/Off statistics in 25 recording sessions.
+It matches the number and length of On and Off states quantitatively, holding the memory in 98\% of trials.
+With the dynamics fixed and the read-out calibrated directly from the data rather than fitted, it predicts how On/Off statistics change when decoding from smaller groups of neurons, either the most cue-selective ones or randomly chosen ones.
+Intermittent rate coding can therefore support working memory without short-term plasticity.
+\end{abstract}
+
+\section{Introduction}
+
+Two main mechanisms have been proposed to hold information in working memory.
+In persistent-activity models, recurrent excitation keeps a cue-selective population firing through the delay, and slow NMDA receptor currents make this activity stable \citep{amit1997,wang1999,wang2001,compte2000}.
+In activity-silent models, the memory is instead stored in short-term synaptic facilitation and needs no ongoing spikes \citep{mongillo2008,stokes2015}.
+
+\citet{panichello2024} found that decoding from prefrontal populations is intermittent on single trials.
+It alternates between On states, when the cue can be read out, and Off states, when it cannot.
+They concluded that persistent activity is not sufficient and that synaptic changes carry the memory through Off states.
+Here, we propose that intermittent decoding does not require short-term plasticity and is instead consistent with the NMDA account.
+In our model, the memory is held as attractor activity, and a common input, which we interpret as a fluctuating attentional signal, briefly drops and silences the network.
+Slow NMDA currents carry the memory across each silence, so the cued population resumes firing when the input returns.
+We fit this model to the On/Off statistics obtained by applying the same analysis to the recordings.
+The model reproduces the number and length of On and Off states while keeping the memory in 98\% of trials, so Off states do not erase the memory.
+With the read-out calibrated from the data, the same dynamics also predict how these statistics change when decoding from the most cue-selective or from randomly chosen neurons.
+Intermittent decoding is therefore compatible with persistent activity sustained by NMDA currents, without short-term plasticity.
+
+\section{Results}
+
+\subsection{Input dips produce Off states and NMDA carries the memory across them}
+
+The model has two memory pools, cued and uncued, with NMDA self-excitation and shared inhibition (Methods).
+After the cue, the cued pool stays active.
+With brief dips in the common input, which we interpret as fluctuations of an attention signal, both pools fall silent and decoding drops to chance (Fig.~\ref{fig:trial}a, after 1,000~ms).
+With a constant common input, decoding stays On for the whole delay (Fig.~\ref{fig:trial}a, first second after the cue).
+We show this case for illustration only; all other simulated trials, including those used for fitting, have dips throughout the delay.
+During each dip, the NMDA gating of the cued pool decays with a time constant of 150~ms but stays higher than that of the uncued pool.
+This value lies within the measured decay times of NMDA receptor currents, which are slowest for receptors containing the GluN2B (NR2B) subunit \citep{vicini1998}, and GluN2B-containing NMDA receptors are required for persistent firing in primate prefrontal cortex \citep{wangm2013}.
+When the input returns, lagging feed-forward inhibition gives both pools a brief kick, and the pool with more NMDA gating wins the competition.
+Off states therefore do not erase the memory: NMDA gating carries it across each silence, and the memory is still correct at the end of the delay in 98\% of trials.
+
+To compare the model with the data, we turned its activity into a decoding $z$ score: the difference between the cued and uncued pool rates in 100~ms windows, multiplied by a gain ($c$) and added to noise ($\eta$) with the statistics measured in the data (Methods).
+Importantly, the gain was not fitted to the On/Off statistics.
+Instead, it was calibrated on a single quantity measured in the data, the typical $z$ value when decoding is high, which we call the decoding strength (Methods).
+On and Off states (red and cyan in Fig.~\ref{fig:trial}a) are then labelled with the same thresholds as in \citet{panichello2024} (red and cyan dashed lines in Fig.~\ref{fig:trial}a).
+Read out this way, the model alternates between On and Off states (Fig.~\ref{fig:trial}a, bottom).
+Both length distributions peak near 100~ms and have long tails (Fig.~\ref{fig:trial}b), qualitatively like those in the recordings \citep{panichello2024}; we compare them quantitatively in the next section.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\textwidth]{fig1_trial_histograms.png}
+  \caption{\textbf{Input dips create On and Off states, and NMDA carries the memory.}
+  \textbf{a}, Example trial.
+  Top: rates of the cued (black) and uncued (grey) pools and their NMDA gating (dotted).
+  Middle: common input (attention signal), constant for the first 1,000~ms after the cue and with dips afterwards.
+  The dip-free first second is shown for illustration only; in all other simulated trials, dips occur throughout the delay.
+  Bottom: decoding $z$ score, with On (red) and Off (cyan) states.
+  Dashed lines: On threshold ($z = 1.96$) and Off threshold ($z = 0.84$), as in \citet{panichello2024}.
+  \textbf{b}, Length distributions of Off (top) and On (bottom) states in the model.}
+  \label{fig:trial}
+\end{figure}
+
+\subsection{On/Off statistics depend on which neurons are decoded}
+
+So far we considered decoders that use all recorded neurons.
+We found, however, that On/Off statistics depend strongly on which neurons the decoder uses, which we call the decoded population (Fig.~\ref{fig:sets}, black circles).
+Decoders using the most cue-selective neurons spend much more of the delay On, and less Off, than decoders using the same numbers of randomly chosen neurons, which also show more Off states per trial.
+The decoded populations differ mainly in decoding strength, which is much higher for the most selective neurons.
+How often a memory appears Off therefore depends partly on how well the recorded neurons read it out.
+This matters for interpreting Off states as evidence for activity-silent memory: a decoder trained on a limited sample of neurons can fall to chance while the memory is still present in the activity of other, unrecorded neurons.
+The measured fraction of Off states is therefore an upper bound on, not a measure of, how often the memory leaves spiking activity.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\textwidth]{fig2_unit_sets.png}
+  \caption{\textbf{The model predicts how On/Off statistics change with the decoded population.}
+  Decoders using the most cue-selective neurons (top 5, 20, 50) are On more often and Off less often than decoders using the same numbers of random neurons (rand 5, 20, 50).
+  Black circles: data, mean $\pm$ 95\% CI (2~SEM) over 25 sessions.
+  Grey dots: single sessions.
+  Cyan and red circles: model, Off and On statistics.
+  The model was fitted to all neurons only (grey bar); the other six decoded populations are predictions obtained by changing only the read-out gain and noise.}
+  \label{fig:sets}
+\end{figure}
+
+\subsection{A model fitted to all neurons predicts this dependence}
+
+Can our model explain this dependence?
+If Off states come from shared dips in network activity, the same dynamics, read out with a higher or lower decoding strength, should reproduce the change across decoded populations.
+To test this, we fitted seven parameters of the dynamics only to the decoder using all neurons in 25 sessions (Methods).
+The model matches the data in Off states per trial (3.1 vs 3.3), Off median length (110 vs 112~ms), On states per trial (1.9 vs 2.1) and On median length (140 vs 134~ms) (Fig.~\ref{fig:sets}, grey band).
+We then kept the dynamics fixed and, for each of the six other decoded populations, changed only the read-out without fitting any parameters: its gain was calibrated on that population's decoding strength, and its noise on that population's pre-cue $z$ (Methods).
+Without any refitting, the model predicts quantitatively the shift between selective and random neurons.
+
+\section{Methods}
+
+\subsection{Rate model}
+
+Two excitatory memory pools $X \in \{\cued, \uncued\}$ have rates $r_X$ and NMDA gating $s_X$.
+They share an inhibitory population $r_I$ and a feed-forward inhibition $q$ that follows the common input $m(t)$ with a lag:
+\begin{align}
+  \tau_r \frac{dr_X}{dt} &= -r_X + \Phi\bigl(w_s s_X + w_a r_X - w_I r_I + I_0\, m(t) - w_{\mathit{ff}}\, q + \mathrm{cue}_X + \sigma \xi_X\bigr), \\
+  \tau_N \frac{ds_X}{dt} &= -s_X + \beta\, r_X (1 - s_X), \\
+  \tau_I \frac{dr_I}{dt} &= -r_I + w_{EI} \left(r_\cued + r_\uncued\right), \\
+  \tau_{\mathit{ff}} \frac{dq}{dt} &= -q + m(t).
+\end{align}
+$\Phi(x) = r_{\max} / \bigl(1 + \exp(-(x - 1)/\kappa)\bigr)$, and $\xi_X$ are independent Ornstein--Uhlenbeck noises ($\tau_\xi = 10$~ms).
+Fixed parameters: $r_{\max} = 150$, $\kappa = 0.06$, $w_a = 0.0141$, $\beta = 0.02$, $w_I = 0.04$, $w_{EI} = 0.5$, $w_{\mathit{ff}} = 0.8$, $I_0 = 1.496$; $\tau_r = 10$~ms, $\tau_I = 1$~ms, $\tau_{\mathit{ff}} = 15$~ms.
+The cue is a 50~ms input of amplitude 1 to the cued pool, after 300~ms of baseline, followed by a 1,600~ms delay.
+Equations were integrated with Euler steps of 0.1~ms.
+The memory was scored correct when, in the last 100~ms, the NMDA gating of the cued pool exceeded the uncued pool's by more than 0.05.
+
+The common input $m(t)$ is 1 except during dips, where it drops to $1 - \delta$ with 10~ms ramps.
+Dip lengths are gamma-distributed (mean $\mu_d$, shape $k$), and the gaps between dips are exponential with mean $1/\lambda_d$.
+
+\subsection{Decoding read-out, On/Off labelling and statistics}
+
+The decoder $z$ score was modelled as $z(t) = c\, \Delta r(t) + \eta(t)$, where $\Delta r$ is the cued minus uncued rate in 100~ms windows stepped by 10~ms.
+The noise $\eta$ has unit variance, the autocorrelation of overlapping windows, and a slow per-trial offset whose variance share was measured from the pre-cue $z$ of the data (0.35 for all neurons, 0.09 for the most selective neurons, 0.11 for random neurons).
+The gain $c$ was not fitted: for each decoded population, it was chosen so that the upper mean of a two-component Gaussian mixture of delay $z$ values matched the data's.
+We call this upper mean the decoding strength.
+States were labelled as in \citet{panichello2024}.
+On states are runs of $z > 1.96$ whose summed $z$ exceeds the 95th percentile of the same quantity in pure noise.
+Off states are runs of at least 5 points (50~ms) with $z < 0.84$.
+States were counted from 0 to 1,400~ms after cue onset, and fractions of the delay spent On or Off from 500 to 1,400~ms.
+Model statistics were computed from 2,112 simulated trials (792 per evaluation during fitting).
+Data statistics are means over the 25 sessions; for random neurons, the 10 draws were first averaged within each session.
+
+\subsection{Data}
+
+We reanalysed the recordings of \citet{panichello2024}: 25 sessions, correct trials only, all cue locations (13,190 trials; 329 units per session on average).
+For each time bin, an L2-regularised logistic decoder ($\lambda = 10{,}000$) was evaluated with approximate leave-one-out and $z$-scored against 30 shuffled label sets per cue pair.
+Decoded populations were all neurons, the $k$ most cue-selective neurons (ranked by split-half ANOVA), and $k$ randomly chosen neurons (10 draws, averaged within sessions), with $k = 5$, 20 and 50.
+
+\subsection{Fitting}
+
+Seven parameters were fitted with CMA-ES to the decoder using all neurons only: $\tau_N$, $w_s$, $\lambda_d$, $\mu_d$, $k$, $\delta$ and $\sigma$.
+The loss combined the squared scaled errors of six statistics (On and Off states per trial, mean lengths and fractions of the delay), the squared Hellinger distance between model and data length distributions (states $\geq 40$~ms), and a penalty when the memory was correct in fewer than 98\% of trials.
+Best fit: $\tau_N = 150$~ms, $w_s = 1.30$, $\lambda_d = 10.2$/s, $\mu_d = 90$~ms, $k = 8.7$, $\delta = 0.60$, $\sigma = 0.006$.
+$\tau_N$ and $w_s$ ended at the bounds of the search (50--150~ms and 1.30--1.70).
+
+Code: \texttt{paper\_model/} on the \texttt{paper-model} branch of the \texttt{gamma\_bursts-} repository.
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
