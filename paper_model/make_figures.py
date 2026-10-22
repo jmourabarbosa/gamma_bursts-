@@ -6,7 +6,7 @@ Figure 1: a, an example trial: 1 s of delay with a constant common input (attent
 Figure 2: On/Off statistics of every unit set, model vs data. The dynamics were fitted to the all-units set only;
           the other sets are predicted by changing the read-out (gain from the data's mu_on, noise share).
 
-usage: python -m paper_model.make_figures       (writes figures/paper_model/)
+usage: python -m paper_model.make_figures       (writes PNG and SVG files to figures/paper_model/)
 """
 import json
 import os
@@ -33,7 +33,13 @@ plt.rcParams.update({'font.family': 'sans-serif', 'font.sans-serif': ['Arial', '
                      'axes.spines.top': False, 'axes.spines.right': False, 'axes.edgecolor': INK,
                      'axes.titlesize': 8, 'axes.titleweight': 'normal', 'lines.linewidth': 0.9,
                      'legend.frameon': False, 'legend.fontsize': 7.5, 'mathtext.fontset': 'custom',
-                     'mathtext.rm': 'Liberation Sans', 'mathtext.it': 'Liberation Sans:italic', 'pdf.fonttype': 42})
+                     'mathtext.rm': 'Liberation Sans', 'mathtext.it': 'Liberation Sans:italic', 'pdf.fonttype': 42, 'svg.fonttype': 'none'})
+
+
+def save(fig, path):
+    """PNG for viewing and SVG (editable text, e.g. in Illustrator or Inkscape)."""
+    fig.savefig(path, dpi=600)
+    fig.savefig(path.replace('.png', '.svg'))
 
 
 def letter(ax, txt, x=-0.08, y=1.06):
@@ -124,7 +130,7 @@ def figure1(out, path):
             letter(h, 'b', x=-0.55, y=1.0)
         else:
             h.set_xlabel('State length (ms)')
-    fig.savefig(path, dpi=600)
+    save(fig, path)
 
 
 def figure2(out, ses, path):
@@ -160,7 +166,7 @@ def figure2(out, ses, path):
                                   ('Model, On', C_ON))):
         fig.text(0.11 + [0, 0.25, 0.39, 0.55][n], 0.955, txt, color=c, fontsize=7.5)
     fig.text(0.11, 0.92, 'Grey bar: fitted set (all units); other sets predicted', color=GREY, fontsize=7.5)
-    fig.savefig(path, dpi=600)
+    save(fig, path)
 
 
 def main():
