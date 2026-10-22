@@ -1,3 +1,6 @@
+> Copied from the data analysis. In the CSV files here, the column `k` (number of decoded units) is renamed `n`,
+> since k denotes the gamma shape of the dip lengths in the model; `k` in this note means the same as `n`.
+
 # On/Off state statistics vs read-out, at λ = 10,000
 
 The same request as `results_readout/` (λ = 30), with λ chosen by saturation. Code: `readout_curve.py`. The λ choice is documented in `../results_saturation/saturation_note.md`, and the noise check in `../results_noise/noise_note.md`.

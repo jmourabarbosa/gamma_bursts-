@@ -1,4 +1,4 @@
-set,k,state,bin_lo_ms,bin_hi_ms,count,count_per_trial
+set,n,state,bin_lo_ms,bin_hi_ms,count,count_per_trial
 all,session count,on,0,20,25,0.0018953752843062926
 all,session count,on,20,40,177,0.013419257012888552
 all,session count,on,40,60,1534,0.11630022744503411

@@ -29,14 +29,14 @@ def load_data():
     pooled state-length counts {(set, 'on'/'off'): 20 ms bins from 0 to 600 ms, then >= 600 ms}."""
     rows = list(csv.DictReader(open(os.path.join(DATA, 'readout_per_session_data_lam10000.csv'))))
     ses = {}
-    for lab, (s, k) in SETS.items():
-        sel = [r for r in rows if r['set'] == s and (s == 'all' or r['k'] == k)]
+    for lab, (s, n) in SETS.items():     # n: decoded-population size
+        sel = [r for r in rows if r['set'] == s and (s == 'all' or r['n'] == n)]
         ids = sorted({r['session'] for r in sel})
         ses[lab] = {c: np.array([np.nanmean([float(r[c]) for r in sel if r['session'] == i]) for i in ids])
-                    for c in sel[0] if c not in ('session', 'set', 'k', 'draw')}
+                    for c in sel[0] if c not in ('session', 'set', 'n', 'draw')}
     hist = {(lab, st): np.zeros(31) for lab in SETS for st in ('on', 'off')}
     for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv'))):
-        lab = next((lab for lab, sk in SETS.items() if sk == (r['set'], r['k'])), None)
+        lab = next((lab for lab, sk in SETS.items() if sk == (r['set'], r['n'])), None)
         if lab:
             hist[lab, r['state']][int(r['bin_lo_ms']) // 20] += float(r['count'])
     for h in hist.values():
