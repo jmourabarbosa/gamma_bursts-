@@ -137,7 +137,7 @@ def hist(dur):
     return np.r_[h, (dur >= EDGES[-1]).sum()] / max(1, (dur >= EDGES[0]).sum())
 
 
-def evaluate(theta=None, n_trials=1056, seed=0, summ=None, keep=False):
+def evaluate(theta=None, n_trials=1056, seed=0, summ=None, keep=False, sets=SETS):
     """Simulate the model and read it out for every unit set. Returns memory correct and, per set, the gain,
     accuracy, On/Off counts, mean lengths, fractions of time and length histograms."""
     summ = summ or load_data()[0]
@@ -152,7 +152,7 @@ def evaluate(theta=None, n_trials=1056, seed=0, summ=None, keep=False):
     if keep:
         out['sim'], out['tz'], out['dw'] = sim, tz, dw
     cache = {}
-    for st in SETS:
+    for st in sets:
         rho = RHO[st[0]]
         if rho not in cache:
             eta = noise(dw.shape, rho, rng)
