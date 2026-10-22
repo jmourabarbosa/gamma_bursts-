@@ -47,6 +47,19 @@ def load_data():
     return summ, hist
 
 
+def load_sessions():
+    """Per-session data values for every unit set: {set: {column: array over sessions}}; random draws are averaged
+    within each session, as in the summary."""
+    rows = list(csv.DictReader(open(os.path.join(DATA, 'readout_per_session_data_lam10000.csv'))))
+    out = {}
+    for st in SETS:
+        sel = [r for r in rows if r['set'] == st[0] and (st[0] == 'all' or r['k'] == st[1])]
+        ses = sorted({r['session'] for r in sel})
+        out[st] = {c: np.array([np.mean([float(r[c]) for r in sel if r['session'] == x]) for x in ses])
+                   for c in sel[0] if c not in ('session', 'set', 'k', 'draw')}
+    return out
+
+
 def data_counts(st, state):
     """Data state-length counts of one unit set in 20 ms bins from 0 to 600 ms, and the total number of states."""
     v = [(float(r['bin_lo_ms']), float(r['count'])) for r in csv.DictReader(open(os.path.join(DATA, 'readout_histograms_data_lam10000.csv')))

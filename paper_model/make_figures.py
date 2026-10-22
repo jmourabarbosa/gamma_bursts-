@@ -140,6 +140,7 @@ def figure1(out, path):
 
 
 def figure2(out, summ, path):
+    ses = R.load_sessions()
     x = np.arange(len(R.SETS))
     panels = (('off_per_trial', 'n_off', 'Off states per trial', C_OFF), ('off_mean_ms', 'off_mean', 'Off length, mean (ms)', C_OFF),
               ('frac_off', 'frac_off', 'fraction of delay Off', C_OFF),
@@ -157,6 +158,10 @@ def figure2(out, summ, path):
             a.set_ylabel('% of trials', fontsize=7)
             continue
         if dk:
+            jit = np.random.default_rng(0).uniform(-0.18, 0.18, 25)
+            for i, st in enumerate(R.SETS):
+                v = ses[st][dk]
+                a.plot(i + jit[:len(v)], v, '.', ms=3, color=INK2, alpha=0.35, mew=0, zorder=1)
             a.errorbar(x, [summ[s][dk] for s in R.SETS], yerr=[2 * summ[s][dk + '_sem'] for s in R.SETS], fmt='s', ms=4,
                        mfc='white', mec=INK, ecolor=INK2, elinewidth=0.8, zorder=3)
         a.plot(x, [out['sets'][s][mk] for s in R.SETS], 'o', ms=4.5, color=col, zorder=2)
@@ -167,9 +172,10 @@ def figure2(out, summ, path):
         a.get_xticklabels()[j].set_fontweight('bold')
         a.set_ylim(0, a.get_ylim()[1] * 1.05); a.tick_params(labelsize=6.5)
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± 2 SEM over 25 sessions, ≈95% CI)'),
+                        Line2D([], [], ls='', marker='.', ms=5, color=INK2, alpha=0.4, label='sessions'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
                         plt.Rectangle((0, 0), 1, 1, color=MUTED, alpha=0.3, lw=0, label='fitted set (others predicted)')],
-               loc='lower left', bbox_to_anchor=(0.06, 0.93), ncol=3, fontsize=7)
+               loc='lower left', bbox_to_anchor=(0.02, 0.93), ncol=4, fontsize=6.5)
     fig.savefig(path, dpi=300, bbox_inches='tight')
     plt.close(fig)
 
