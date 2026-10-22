@@ -123,6 +123,59 @@ The model matches the data in Off states per trial (3.1 vs 3.3), Off median leng
 We then kept the dynamics fixed and, for each of the six other decoded populations, changed only the read-out without fitting any parameters: its gain was calibrated on that population's decoding strength, and its noise on that population's pre-cue $z$ (Methods).
 Without any refitting, the model predicts quantitatively the shift between selective and random neurons.
 
+\section{Discussion}
+
+\citet{panichello2024} showed that prefrontal decoding of a remembered item is intermittent on single trials, and took Off states as evidence that the memory leaves spiking activity and is held in short-term synaptic plasticity.
+We showed that the same On/Off statistics arise in a conventional attractor network with fixed synapses.
+Off states occur when a common input briefly drops, and the memory survives each silence because NMDA receptor currents decay slowly enough to bias which pool restarts.
+Fitted to the decoder that uses all recorded neurons, the model reproduced the number and length of On and Off states and kept the memory in 98\% of trials.
+Without refitting, it also predicted how these statistics change when fewer or less selective neurons are decoded.
+Intermittent decoding therefore does not, on its own, distinguish persistent activity from activity-silent storage.
+
+\paragraph{Off states depend on the decoded population.}
+In the recordings, Off states were more frequent and On states rarer when the decoder used random rather than selective neurons.
+The model captured this shift by changing only the read-out gain and noise, both calibrated from the data.
+A decoder falls to chance whenever the memory signal in its sample is weak relative to its noise, not only when the memory is absent from the network.
+The fraction of time Off measured from a limited sample is therefore an upper bound on how often the memory leaves spiking activity, and comparisons of Off-state statistics across studies or brain areas need to take the decoded population into account.
+
+\paragraph{A fluctuating attention signal as the common input.}
+We interpreted the common input as an attentional signal that is high when attention is deployed on the memorandum and drops during lapses.
+This links intermittent decoding to evidence that sustained attention samples rhythmically rather than continuously.
+In humans, detection of threshold stimuli depends on the phase of ongoing EEG oscillations near 7~Hz \citep{busch2009}, but only at attended locations \citep{busch2010}.
+When attention is divided between two locations, detection at each fluctuates at about 4~Hz, in antiphase between locations \citep{landau2012}, and sampling occurs at about 8~Hz within an attended object and at about 4~Hz between objects \citep{fiebelkorn2013}.
+In monkeys, frontal eye field and lateral intraparietal activity alternates at theta frequencies (3--8~Hz) between periods of enhanced perception and periods in which attention is more likely to shift \citep{fiebelkorn2018}, and human intracranial recordings show similar theta-rhythmic sampling in frontoparietal cortex \citep{helfrich2018}.
+These findings have been unified in a rhythmic theory of attention, in which theta rhythms alternate between sampling and shifting \citep{fiebelkorn2019}.
+Because attention and working memory share prefrontal mechanisms \citep{awh2001,panichello2021}, lapses of attention could plausibly reach the memory network.
+
+In the fitted model, the attention signal recovers about five times per second, one cycle every ${\sim}200$~ms.
+This is in the low theta range reported for attentional sampling \citep{landau2012,fiebelkorn2018,helfrich2018} and slower than the ${\sim}7$~Hz phase effects on detection \citep{busch2009,busch2010}.
+Attention episodes lasted 72~ms (median) and lapses 88~ms, so attention was deployed about half of the time.
+The fitted signal was not periodic: its power was flat up to ${\sim}4$~Hz and fell at higher frequencies, without a spectral peak.
+Consistent with this, intervals between successive Off-state onsets were irregular in both the model (coefficient of variation 0.59) and the recordings (0.62), although interval regularity was not part of the fit.
+The data therefore favour a quasi-rhythmic or irregular sampling process over a strict pacemaker.
+A direct test would be to ask whether Off-state onsets lock to the phase of theta activity in the prefrontal local field potential, or whether probes presented during Off states are detected less often.
+
+\paragraph{Relation to activity-silent mechanisms.}
+In our model, the memory is carried across each silence by NMDA gating.
+This is a synaptic variable, but it decays within ${\sim}150$~ms and reflects recent firing rather than plasticity.
+Off states last about 100~ms, within the time an NMDA trace can bridge, so no longer-lasting mechanism is needed to explain them.
+Activity-silent mechanisms may still matter on longer time scales, for example to carry information between trials, when prefrontal memory traces are reactivated before the next stimulus \citep{barbosa2020}.
+Persistent activity and slower silent traces are therefore not mutually exclusive; our results only show that intermittent decoding within a delay does not require the latter.
+
+\paragraph{Limitations.}
+First, the model restarts the memory with a brief transient: when the common input returns, excitation precedes lagging feed-forward inhibition by ${\sim}15$~ms.
+Without such a transient, pools silenced by a dip often failed to restart.
+We implemented it as feed-forward inhibition, a common circuit motif, but recovery of input synapses from depression during a dip would produce a similar onset overshoot.
+Second, two fitted parameters ended at the bounds of the search: the NMDA decay time ($\tau_N = 150$~ms, upper bound) and the recurrent NMDA strength ($w_s$, lower bound), so the model needs the slowest NMDA currents we considered plausible.
+Third, the model spent slightly less of the delay in both On and Off states than the data, underestimated the number of Off states for the most selective neurons, and predicted too few On states for small random populations.
+A single linear read-out of two pools may be too simple for decoders based on a few noisy neurons.
+Fourth, the common input silences both memory pools together, whereas attention modulates detection only at attended locations \citep{busch2010}.
+An attentional input acting selectively on the populations that carry the memory, rather than as a global silence, remains to be tested.
+
+\paragraph{Conclusion.}
+Intermittent decoding of working memory is expected from an attractor network with slow NMDA currents and a fluctuating, attention-like input, and its statistics depend on how well the recorded neurons read out the memory.
+These results reconcile intermittent rate coding with persistent-activity accounts and link Off states to the rhythmic, irregular nature of attentional sampling.
+
 \section{Methods}
 
 \subsection{Rate model}
