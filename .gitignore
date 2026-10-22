@@ -1,5 +1,2 @@
 __pycache__/
 *.pyc
-data/
-figures/*/part_*/
-figures/*/from_logs/
