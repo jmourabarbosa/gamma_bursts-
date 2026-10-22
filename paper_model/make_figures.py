@@ -170,7 +170,8 @@ def figure2(out, summ, path):
         j = R.SETS.index(M.FIT_SET)
         a.axvspan(j - 0.45, j + 0.45, color=MUTED, alpha=0.3, lw=0, zorder=0)    # the set the dynamics were fitted to
         a.get_xticklabels()[j].set_fontweight('bold')
-        a.set_ylim(0, a.get_ylim()[1] * 1.05); a.tick_params(labelsize=6.5)
+        a.set_ylim(0, 300 if mk in ('off_mean', 'on_mean') else a.get_ylim()[1] * 1.05)   # lengths: same axis, a few sessions clipped
+        a.tick_params(labelsize=6.5)
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± 2 SEM over 25 sessions, ≈95% CI)'),
                         Line2D([], [], ls='', marker='.', ms=5, color=INK2, alpha=0.4, label='sessions'),
                         Line2D([], [], ls='', marker='o', ms=4.5, color=INK2, label='model'),
