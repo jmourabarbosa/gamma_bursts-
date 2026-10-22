@@ -159,7 +159,7 @@ def figure2(out, ses, path):
         a.set_xticks(x); a.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
         a.set_ylim(0, top or np.ceil(a.get_ylim()[1]))     # top limit on an integer tick
         if top == 1:
-            a.set_yticks([0, 0.5, 1], ['0', '0.5', '1'])
+            a.set_yticks([0, 0.5, 1], ['0', '', '1'])
         a.set_ylabel(name)
         letter(a, 'abcdef'[k], x=-0.5, y=1.02)
     for a in axs[0]:     # fitted (inside the grey bar) vs predicted (bracket over the other sets), top row
