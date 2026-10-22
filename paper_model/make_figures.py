@@ -89,7 +89,7 @@ def figure1(out, path):
     d.plot(tz, z, color=INK, lw=0.9)
     for y, c in ((0, INK2), (1.96, C_ON), (0.84, C_OFF)):
         d.axhline(y, color=c, ls='--', lw=0.7)
-    d.set_ylim(z.min() - 0.3, 5); d.set_yticks([0, 2.5, 5], ['0', '', '5'])
+    d.set_ylim(z.min() - 0.3, 6); d.set_yticks([0, 3, 6], ['0', '', '6'])
     d.set_ylabel('decoding z')
     d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$',
                 fontsize=7, fontweight='normal', loc='left', pad=3, color=INK2)
