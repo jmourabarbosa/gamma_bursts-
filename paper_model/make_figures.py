@@ -95,6 +95,7 @@ def figure1(out, path):
         a.text(QUIET + dx * 180, 1.06, label, transform=xa, fontsize=7.5, va='center', ha='left' if dx > 0 else 'right')
     # direct labels on the traces, in the steady delay before the dips
     a.text(500, tr['sc'][(t > 400) & (t < 600)].max() + 0.04, 'NMDA', fontsize=7.5, ha='center', va='bottom')
+    a.text(500, tr['rc'][(t > 400) & (t < 600)].min() / M.FIXED['r_max'] - 0.04, 'Rate', fontsize=7.5, ha='center', va='top')
     off0 = R.runs(state == -1)[0]
     on1 = next((a0, b0) for a0, b0 in R.runs(state == 1) if tz[a0] > QUIET)    # first On state with attention fluctuations
     a.text((tz[on1[0]] + tz[on1[1] - 1]) / 2, 0.96, 'On', color=C_ON, fontsize=7.5, va='top', ha='center')
