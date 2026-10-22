@@ -15,7 +15,7 @@ import numpy as np
 from . import model as M, readout as R
 
 SET = 'all'
-BOUNDS = dict(dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0), dip_shape=(0.7, 10.0), dip_depth=(0.02, 1.0), w_ff=(0.0, 1.0))
+BOUNDS = dict(J_s=(0.15, 0.6), J_c=(0.0, 0.3), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0), dip_shape=(0.7, 10.0), dip_depth=(0.02, 1.0), w_ff=(0.0, 1.0))
 # (data column, model key, scale)
 STATS = (('off_per_trial', 'n_off', 0.3), ('off_mean_ms', 'off_mean', 20.0), ('frac_off', 'frac_off', 0.05),
          ('on_per_trial', 'n_on', 0.3), ('on_mean_ms', 'on_mean', 20.0), ('frac_on', 'frac_on', 0.05))
@@ -27,6 +27,11 @@ def loss(out, ses, hist):
     for st in ('on', 'off'):
         p, q = r['h_' + st][2:], hist[SET, st][2:]
         L += 50 * np.sum((np.sqrt(p / max(p.sum(), 1)) - np.sqrt(q / q.sum())) ** 2)
+    # resting state: neither pool active just before the cue (no memory without a cue)
+    sim = out['sim']
+    pre = (sim['t'] >= -100) & (sim['t'] < 0)
+    active = ((sim['rc'][:, pre].mean(1) > 8) | (sim['ru'][:, pre].mean(1) > 8)).mean()
+    L += 2e4 * max(0.0, active - 0.02) ** 2
     return L + 2e4 * max(0.0, 0.98 - out['mem']) ** 2
 
 

@@ -23,16 +23,18 @@ from numba import njit
 
 ALPHA = 0.56
 FIXED = dict(a=270.0, b=108.0, d=0.154, gamma=0.641, I_0=0.3297, sigma=0.009, tau_n=2.0,
-             J_s=0.3725 * ALPHA, J_c=0.1137 * ALPHA, tau_S=150.0,
+             tau_S=150.0,
              cue_amp=1.1e-3 * 30.0 * 1.45, tau_ff=15.0,
-             cue_dur=50.0, t_pre=300.0, t_delay=1600.0, t_resp=300.0, go_rel=3.1, dt=0.5)
+             cue_dur=50.0, t_pre=1000.0, t_delay=1600.0, t_resp=300.0, go_rel=3.1, dt=0.5)
 
 # fitted (fit.py) to the On/Off statistics and length distributions of the all-units read-out only
-FIT = dict(dip_rate=3.390,    # 1/s, rate parameter of the gaps between dips
-           dip_mean=20.0,     # ms, mean dip length (at the lower bound)
-           dip_shape=10.00,    # gamma shape of dip lengths (at the upper bound)
-           dip_depth=0.1109,  # fractional drop of the background current in a dip
-           w_ff=0.5856)       # nA, feed-forward inhibition
+FIT = dict(J_s=0.3725 * ALPHA,  # nA, NMDA self-coupling (fitted; published 0.3725 at tau_S = 60 ms)
+           J_c=0.1137 * ALPHA,  # nA, NMDA cross-coupling (fitted; published 0.1137)
+           dip_rate=10.0,       # 1/s, rate parameter of the gaps between dips
+           dip_mean=90.0,       # ms, mean dip length
+           dip_shape=8.0,       # gamma shape of dip lengths
+           dip_depth=0.3,       # fractional drop of the background current in a dip
+           w_ff=0.3)            # nA, feed-forward inhibition
 KEYS = ('a', 'b', 'd', 'gamma', 'J_s', 'J_c', 'I_0', 'w_ff', 'tau_ff', 'tau_S', 'cue_amp', 'dt')
 
 
