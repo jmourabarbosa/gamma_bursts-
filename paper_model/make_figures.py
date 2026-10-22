@@ -91,7 +91,7 @@ def figure1(out, path):
         d.axhline(y, color=c, ls='--', lw=0.7)
     d.set_ylim(z.min() - 0.3, 5); d.set_yticks([0, 2, 4])
     d.set_ylabel('decoding z')
-    d.set_title(r'$z(t) = c\,\langle r_\mathrm{cued} - r_\mathrm{uncued} \rangle_{100\,\mathrm{ms}}(t) + \eta(t)$',
+    d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$',
                 fontsize=7, fontweight='normal', loc='left', pad=3, color=INK2)
     d.set_xlabel('time from cue onset (ms)')
     for ax in (a, b, d):
