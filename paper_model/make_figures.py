@@ -50,11 +50,11 @@ def example_trial(gain, n=300, seed=11):
     """Long trials (QUIET ms without dips, then DIPS ms with dips) read out with FIT_SET's gain and noise; returns
     the most representative one: memory held, On throughout the quiet delay, 3-5 Off states once dips start."""
     sim = M.simulate(M.params(cue_dur=CUE, t_delay=QUIET + DIPS - CUE), n, seed=seed + 1, quiet=QUIET)
-    ok = M.memory_correct(sim) & (sim['rc'][:, -300:].max(1) > 80) & (sim['sc'][:, -1] > 0.4)
     rng = np.random.default_rng(seed)
     dw, tz = R.rate_diff(sim, t_from=-250)
     z = gain * dw + R.noise(dw.shape, R.RHO['all'], rng)
     state = R.label(z, tz >= 0, R.null_threshold(dw.shape, R.RHO['all'], rng))
+    ok = M.memory_correct(sim) & (sim['rc'][:, -300:].max(1) > 80) & (sim['sc'][:, -1] > 0.4)
     quiet = (tz >= 300) & (tz < QUIET)
     best, score = None, np.inf
     for k in np.where(ok)[0]:
@@ -65,10 +65,7 @@ def example_trial(gain, n=300, seed=11):
         sc = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (state[k, quiet] != 1).mean() * 5
         if sc < score:
             best, score = k, sc
-    # traces through the response period (attention on, re-engagement transient at its onset); decoding: delay only
-    tr = {key: np.r_[sim[key][best], sim[key + '_resp'][best]] for key in ('rc', 'ru', 'sc', 'su')}
-    tr['m'] = np.r_[sim['m'][best], 1 + sim['go_resp']]
-    return tr, np.r_[sim['t'], sim['t'][-1] + 1 + np.arange(len(sim['go_resp']))], tz, z[best], state[best]
+    return {key: v[best] for key, v in sim.items() if key != 't'}, sim['t'], tz, z[best], state[best]
 
 
 def shade(ax, tz, state):
@@ -97,8 +94,6 @@ def figure1(out, path):
                    arrowprops=dict(arrowstyle='-|>', color=INK, lw=0.6, mutation_scale=5), annotation_clip=False)
         a.text(QUIET + dx * 180, 1.06, label, transform=xa, fontsize=7.5, va='center', ha='left' if dx > 0 else 'right')
     # direct labels on the traces, in the steady delay before the dips
-    a.text(QUIET + DIPS + M.FIXED['t_resp'] / 2, 1.06, 'Response', transform=a.get_xaxis_transform(), fontsize=7.5,
-           ha='center', va='center')
     a.text(500, tr['sc'][(t > 400) & (t < 600)].max() + 0.04, 'NMDA', fontsize=7.5, ha='center', va='bottom')
     a.text(500, tr['rc'][(t > 400) & (t < 600)].min() / M.FIXED['r_max'] - 0.04, 'Rate', fontsize=7.5, ha='center', va='top')
     off0 = R.runs(state == -1)[0]
@@ -107,7 +102,7 @@ def figure1(out, path):
     a.text((tz[off0[0]] + tz[off0[1] - 1]) / 2, 0.96, 'Off', color=C_OFF, fontsize=7.5, va='top', ha='center')
     letter(a, 'a')
     b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
-    b.set_ylim(0, 2.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
+    b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
     b.tick_params(bottom=False)
     b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
     shade(d, tz, state)
@@ -121,8 +116,7 @@ def figure1(out, path):
     d.set_xlabel('Time from cue onset (ms)')
     for ax in (a, b, d):
         ax.axvline(QUIET, color=GREY, ls=(0, (3, 2)), lw=0.6)
-        ax.set_xlim(-300, QUIET + DIPS + M.FIXED['t_resp'])
-        ax.axvspan(QUIET + DIPS, QUIET + DIPS + M.FIXED['t_resp'], color=LIGHT, lw=0, zorder=0)
+        ax.set_xlim(-300, QUIET + DIPS)
     for ax in (a, b):
         ax.tick_params(labelbottom=False)
     edges = np.arange(0, 620, 20)

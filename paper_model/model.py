@@ -105,8 +105,7 @@ def simulate(p, n_tr, seed=0, quiet=0.0):
     out = _sim(m, cue, go, xi, np.array([float(p[k]) for k in KEYS]), rec)
     k = n // rec
     return dict(rc=out[:, :k, 0], ru=out[:, :k, 1], sc=out[:, :k, 2], su=out[:, :k, 3], m=m[:, rec - 1:n:rec],
-                t=np.arange(k) - p['t_pre'], rc_resp=out[:, k:, 0], ru_resp=out[:, k:, 1], sc_resp=out[:, k:, 2],
-                su_resp=out[:, k:, 3], go_resp=go[n + rec - 1::rec] / p['I_0'])    # transient in units of m
+                t=np.arange(k) - p['t_pre'], rc_resp=out[:, k:, 0], ru_resp=out[:, k:, 1])
 
 
 def memory_correct(sim):
