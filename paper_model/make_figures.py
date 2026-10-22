@@ -60,8 +60,8 @@ def figure1(out, hist, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.64, top=0.86, bottom=0.15)
-    gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.75, right=0.99, top=0.86, bottom=0.15)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.2, 0.35, 1.8], hspace=0.12, left=0.06, right=0.70, top=0.86, bottom=0.15)
+    gh = fig.add_gridspec(2, 1, hspace=0.35, left=0.82, right=0.99, top=0.86, bottom=0.15)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
