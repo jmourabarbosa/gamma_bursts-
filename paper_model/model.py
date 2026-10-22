@@ -15,7 +15,7 @@ import numpy as np
 from numba import njit
 
 FIXED = dict(r_max=150.0, kappa=0.06, w_a=0.0141, beta=0.02, w_I=0.04, w_EI=0.5, w_ff=0.8, tau_ff=15.0, I_0=1.496,
-             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, dt=0.5)
+             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, dt=0.1)
 
 # fitted (fit.py) to the On/Off statistics and length histograms of the all-units read-out only
 FIT = dict(tau_N=150.0,       # ms, NMDA decay
@@ -51,10 +51,10 @@ def common_input(n_tr, n, p, rng, ramp=10.0):
 
 
 @njit(cache=True)
-def _sim(m, cue, xi, p):
+def _sim(m, cue, xi, p, rec):
     r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_N, w_s, sigma = p
     n_tr, n = m.shape
-    out = np.zeros((n_tr, n // 2, 4))      # rc, ru, sc, su every 1 ms (dt = 0.5 ms)
+    out = np.zeros((n_tr, n // rec, 4))    # rc, ru, sc, su every rec steps (1 ms)
     for k in range(n_tr):
         rc = 1.0; ru = 1.0; rI = 1.0; sc = 0.0; su = 0.0; q = m[k, 0]
         for i in range(n):
@@ -67,8 +67,9 @@ def _sim(m, cue, xi, p):
             q += dt / tau_ff * (m[k, i] - q)
             sc += dt / tau_N * (-sc + beta * rc * (1 - sc))
             su += dt / tau_N * (-su + beta * ru * (1 - su))
-            if i % 2 == 1:
-                out[k, i // 2, 0] = rc; out[k, i // 2, 1] = ru; out[k, i // 2, 2] = sc; out[k, i // 2, 3] = su
+            if i % rec == rec - 1:
+                j = i // rec
+                out[k, j, 0] = rc; out[k, j, 1] = ru; out[k, j, 2] = sc; out[k, j, 3] = su
     return out
 
 
@@ -90,9 +91,10 @@ def simulate(p, n_tr, seed=0, quiet=0.0):
     m[:, :int((p['t_pre'] + quiet) / dt)] = 1.0
     cue = ((np.arange(n) * dt >= p['t_pre']) & (np.arange(n) * dt < p['t_pre'] + p['cue_dur'])).astype(float)
     xi = _ou(rng.standard_normal((n_tr, n, 2)), np.exp(-dt / p['tau_xi']))
-    out = _sim(m, cue, xi, np.array([float(p[k]) for k in KEYS]))
-    return dict(rc=out[..., 0], ru=out[..., 1], sc=out[..., 2], su=out[..., 3], m=m[:, 1::2],
-                t=np.arange(n // 2) - p['t_pre'])
+    rec = int(round(1 / dt))
+    out = _sim(m, cue, xi, np.array([float(p[k]) for k in KEYS]), rec)
+    return dict(rc=out[..., 0], ru=out[..., 1], sc=out[..., 2], su=out[..., 3], m=m[:, rec - 1::rec],
+                t=np.arange(n // rec) - p['t_pre'])
 
 
 def memory_correct(sim):
