@@ -1,8 +1,8 @@
 """Paper figures of the best-fit model.
 
-Figure 1: A, an example trial: 1 s of delay with a constant common input, then dips (pool rates and NMDA gating;
-          common input; all-units decoding z with On/Off labels). B: all-units Off and On length distributions
-          (states 0-1,400 ms after cue onset), model vs data.
+Figure 1: A, an example trial: 1 s of delay with a constant common input (attention signal), then dips (pool
+          rates and NMDA gating; attention signal; all-units decoding z with On/Off labels). B: the model's
+          all-units Off and On length distributions (states 0-1,400 ms after cue onset).
 Figure 2: On/Off statistics of every unit set, model vs data. The dynamics were fitted to the all-units set only;
           the other sets are predicted by changing the read-out (gain from the data's mu_on, noise share).
 
@@ -56,7 +56,7 @@ def shade(ax, tz, state):
             ax.axvspan(tz[a] - R.STEP / 2, tz[b - 1] + R.STEP / 2, color=c, alpha=0.18, lw=0)
 
 
-def figure1(out, hist, path):
+def figure1(out, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(10.0, 4.0))
@@ -66,48 +66,49 @@ def figure1(out, hist, path):
     shade(a, tz, state)
     a.axvspan(0, M.FIXED['cue_dur'], color=INK, alpha=0.12, lw=0)
     a.text(60, 0.04, 'cue', fontsize=6.5, color=INK2)
-    a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK, lw=1.0)     # rates relative to the sigmoid ceiling
+    a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK, lw=1.0)     # rates relative to the sigmoid ceiling (a.u.)
     a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN, lw=1.0)
     a.plot(t, tr['sc'], color=INK, lw=1.0, ls=':')
     a.plot(t, tr['su'], color=C_UN, lw=1.0, ls=':')
-    a.set_ylim(0, 1.07); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('rate (a.u.), NMDA gating')
-    a.text(QUIET + 15, 1.0, 'dips start', fontsize=6.5, color=INK2, va='top')
-    a.legend(handles=[Line2D([], [], color=INK, label='cued pool'), Line2D([], [], color=C_UN, label='uncued pool'),
+    a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1'])
+    for dx, label in ((1, 'with attention\nfluctuations'), (-1, 'without attention\nfluctuations')):
+        a.annotate('', xy=(QUIET + dx * 220, 0.95), xytext=(QUIET + dx * 15, 0.95),
+                   arrowprops=dict(arrowstyle='->', color=INK2, lw=0.8))
+        a.text(QUIET + dx * 20, 0.9, label, fontsize=6.5, color=INK2, va='top', ha='left' if dx > 0 else 'right')
+    a.legend(handles=[Line2D([], [], color=INK, label='rate of cued pool'), Line2D([], [], color=C_UN, label='rate of uncued pool'),
                       Line2D([], [], color=INK2, ls=':', label='NMDA gating'),
                       plt.Rectangle((0, 0), 1, 1, color=C_ON, alpha=0.35, lw=0, label='On'),
                       plt.Rectangle((0, 0), 1, 1, color=C_OFF, alpha=0.35, lw=0, label='Off')],
              loc='lower left', bbox_to_anchor=(0, 1.0), ncol=5, fontsize=7, borderaxespad=0.2, handlelength=1.5)
     a.text(-0.08, 1.09, 'A', transform=a.transAxes, fontsize=9, weight='bold')
+    b.plot(t, tr['m'], color=INK2, lw=0.8)     # common input, minimal
+    b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
+    b.tick_params(bottom=False)
+    b.text(-0.01, 0.5, 'attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK2)
     shade(d, tz, state)
     d.plot(tz, z, color=INK, lw=0.9)
     for y, c in ((0, INK2), (1.96, C_ON), (0.84, C_OFF)):
         d.axhline(y, color=c, ls='--', lw=0.7)
-    d.set_ylim(z.min() - 0.3, z.max() + 0.3); d.set_yticks(np.arange(0, z.max() + 0.3, 2))
-    d.set_ylabel('decoding z\n(all units)')
-    b.plot(t, tr['m'], color=INK2, lw=0.8)     # common input, minimal
-    b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
-    b.tick_params(bottom=False)
-    b.text(-0.01, 0.5, 'input', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK2)
+    d.set_ylim(z.min() - 0.3, 5); d.set_yticks([0, 2, 4])
+    d.set_ylabel('decoding z')
     d.set_xlabel('time from cue onset (ms)')
-    for ax in (a, d, b):
+    for ax in (a, b, d):
         ax.axvline(QUIET, color=INK2, ls='--', lw=0.7)
         ax.set_xlim(-300, QUIET + DIPS)
     for ax in (a, b):
         ax.tick_params(labelbottom=False)
     edges = np.arange(0, 620, 20)
     for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
-        h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None, sharey=fig.axes[-1] if j else None)
-        hm, hd = r['h_' + name], hist[FIT_SET, name]
+        h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None)
+        hm = r['h_' + name]
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=18, align='edge', color=c, alpha=0.8, lw=0)
-        h.step(edges, np.r_[hd[:-1], hd[-2]] / hd.sum(), where='post', color=INK, lw=1.0)
-        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600]); h.tick_params(labelsize=6.5)
-        h.set_ylabel('fraction of states', fontsize=7)
+        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
+        h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'])
+        h.tick_params(labelsize=6.5); h.set_ylabel('fraction of states', fontsize=7)
         h.text(0.97, 0.88, f'{name.capitalize()} states', transform=h.transAxes, ha='right', color=c, weight='bold')
         if j == 0:
             h.tick_params(labelbottom=False)
             h.text(-0.3, 1.09, 'B', transform=h.transAxes, fontsize=9, weight='bold')
-            h.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=MUTED, lw=0, label='model'),
-                              Line2D([], [], color=INK, label='data')], loc='center right', fontsize=6.5)
         else:
             h.set_xlabel('state length (ms)')
     fig.savefig(path, dpi=300)
@@ -148,9 +149,9 @@ def figure2(out, ses, path):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    ses, hist = R.load_data()
+    ses, _ = R.load_data()
     out = R.evaluate(M.params(), ses, n_trials=2112, seed=1)
-    figure1(out, hist, os.path.join(OUT, 'fig1_trial_histograms.png'))
+    figure1(out, os.path.join(OUT, 'fig1_trial_histograms.png'))
     figure2(out, ses, os.path.join(OUT, 'fig2_unit_sets.png'))
     keys = ('gain', 'n_off', 'off_mean', 'off_median', 'frac_off', 'n_on', 'on_mean', 'on_median', 'frac_on')
     stats = dict(fit=M.FIT, memory_correct=out['mem'],
