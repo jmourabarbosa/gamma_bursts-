@@ -8,6 +8,7 @@
 \usepackage{lmodern}
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{amsmath,amssymb}
+\usepackage{bm}
 \usepackage{graphicx}
 \usepackage[labelfont=bf,font=small]{caption}
 \usepackage[round]{natbib}
@@ -87,21 +88,37 @@ Intermittent decoding of working memory is expected from an attractor network wi
 \subsection{Rate model}
 
 Two excitatory memory pools $X \in \{\cued, \uncued\}$ have rates $r_X$ and NMDA gating $s_X$.
-They share an inhibitory population $r_I$ and a feed-forward inhibition $q$ that follows the common input $m(t)$ with a lag:
+They share an inhibitory population $r_I$ and a feed-forward inhibition $q$ that follows the common input $m(t)$ with a lag.
+Fitted parameters are shown in bold:
 \begin{align}
-  \tau_r \frac{dr_X}{dt} &= -r_X + \Phi\bigl(w_s s_X + w_a r_X - w_I r_I + I_0\, m(t) - w_{\mathit{ff}}\, q + \mathrm{cue}_X + \sigma \xi_X\bigr), \\
+  \tau_r \frac{dr_X}{dt} &= -r_X + \Phi\bigl(\bm{w_s} s_X + w_a r_X - w_I r_I + I_0\, m(t) - w_{\mathit{ff}}\, q + \mathrm{cue}_X + \bm{\sigma} \xi_X\bigr), \\
   \tau_N \frac{ds_X}{dt} &= -s_X + \beta\, r_X (1 - s_X), \\
   \tau_I \frac{dr_I}{dt} &= -r_I + w_{EI} \left(r_\cued + r_\uncued\right), \\
   \tau_{\mathit{ff}} \frac{dq}{dt} &= -q + m(t).
 \end{align}
 $\Phi(x) = r_{\max} / \bigl(1 + \exp(-(x - 1)/\kappa)\bigr)$, and $\xi_X$ are independent Ornstein--Uhlenbeck noises ($\tau_\xi = 10$~ms).
-Fixed parameters: $r_{\max} = 150$, $\kappa = 0.06$, $w_a = 0.0141$, $\beta = 0.02$, $w_I = 0.04$, $w_{EI} = 0.5$, $w_{\mathit{ff}} = 0.8$, $I_0 = 1.496$; $\tau_r = 10$~ms, $\tau_I = 1$~ms, $\tau_{\mathit{ff}} = 15$~ms.
+Fixed parameters: $r_{\max} = 150$, $\kappa = 0.06$, $w_a = 0.0141$, $\beta = 0.02$, $w_I = 0.04$, $w_{EI} = 0.5$, $w_{\mathit{ff}} = 0.8$, $I_0 = 1.496$; $\tau_r = 10$~ms, $\tau_I = 1$~ms, $\tau_{\mathit{ff}} = 15$~ms, $\tau_N = 150$~ms.
+The model has the structure of the reduced two-pool model of \citet{wong2006}, but these parameter values were not taken from it or from any other study.
+They were chosen by hand so that each pool is bistable, with a low state near 0~Hz and a high state of about 85~Hz, and so that shared inhibition allows only one pool to be active at a time.
 The cue is a 50~ms input of amplitude 1 to the cued pool, after 300~ms of baseline, followed by a 1,600~ms delay.
 Equations were integrated with Euler steps of 0.1~ms.
 The memory was scored correct when, in the last 100~ms, the NMDA gating of the cued pool exceeded the uncued pool's by more than 0.05.
 
-The common input $m(t)$ is 1 except during dips, where it drops to $1 - \delta$ with 10~ms ramps.
-Dip lengths are gamma-distributed (mean $\mu_d$, shape $k$), and the gaps between dips are exponential with mean $1/\lambda_d$.
+The common input $m(t)$ is 1 except during dips, where it drops to $1 - \bm{\delta}$ with 10~ms ramps.
+Dip lengths are gamma-distributed (mean $\bm{\mu_d}$, shape $\bm{k}$), and the gaps between dips are exponential with mean $1/\bm{\lambda_d}$.
+
+\subsection{Data}
+
+We reanalysed the recordings of \citet{panichello2024}: 25 sessions, correct trials only, all cue locations (13,190 trials; 329 units per session on average).
+For each time bin, an L2-regularised logistic decoder ($\lambda = 10{,}000$) was evaluated with approximate leave-one-out and $z$-scored against 30 shuffled label sets per cue pair.
+Decoded populations were all neurons, the $k$ most cue-selective neurons (ranked by split-half ANOVA), and $k$ randomly chosen neurons (10 draws, averaged within sessions), with $k = 5$, 20 and 50.
+
+\subsection{Fitting}
+
+Six parameters were fitted with CMA-ES to the decoder using all neurons: $\bm{w_s}$, $\bm{\lambda_d}$, $\bm{\mu_d}$, $\bm{k}$, $\bm{\delta}$ and $\bm{\sigma}$.
+The NMDA decay time was not fitted but fixed at $\tau_N = 150$~ms, within the range measured in cortex \citep{vicini1998,wangm2013}.
+The loss combined the squared scaled errors of six statistics (On and Off states per trial, mean lengths and fractions of the delay), the squared Hellinger distance between model and data length distributions (states $\geq 40$~ms), and a penalty when the memory was correct in fewer than 98\% of trials.
+Best fit: $\bm{w_s} = 1.30$, $\bm{\lambda_d} = 10.2$/s, $\bm{\mu_d} = 90$~ms, $\bm{k} = 8.7$, $\bm{\delta} = 0.60$, $\bm{\sigma} = 0.006$.
 
 \subsection{Decoding read-out, On/Off labelling and statistics}
 
@@ -115,21 +132,6 @@ Off states are runs of at least 5 points (50~ms) with $z < 0.84$.
 States were counted from 0 to 1,400~ms after cue onset, and fractions of the delay spent On or Off from 500 to 1,400~ms.
 Model statistics were computed from 2,112 simulated trials (792 per evaluation during fitting).
 Data statistics are means over the 25 sessions; for random neurons, the 10 draws were first averaged within each session.
-
-\subsection{Data}
-
-We reanalysed the recordings of \citet{panichello2024}: 25 sessions, correct trials only, all cue locations (13,190 trials; 329 units per session on average).
-For each time bin, an L2-regularised logistic decoder ($\lambda = 10{,}000$) was evaluated with approximate leave-one-out and $z$-scored against 30 shuffled label sets per cue pair.
-Decoded populations were all neurons, the $k$ most cue-selective neurons (ranked by split-half ANOVA), and $k$ randomly chosen neurons (10 draws, averaged within sessions), with $k = 5$, 20 and 50.
-
-\subsection{Fitting}
-
-Seven parameters were fitted with CMA-ES to the decoder using all neurons only: $\tau_N$, $w_s$, $\lambda_d$, $\mu_d$, $k$, $\delta$ and $\sigma$.
-The loss combined the squared scaled errors of six statistics (On and Off states per trial, mean lengths and fractions of the delay), the squared Hellinger distance between model and data length distributions (states $\geq 40$~ms), and a penalty when the memory was correct in fewer than 98\% of trials.
-Best fit: $\tau_N = 150$~ms, $w_s = 1.30$, $\lambda_d = 10.2$/s, $\mu_d = 90$~ms, $k = 8.7$, $\delta = 0.60$, $\sigma = 0.006$.
-$\tau_N$ and $w_s$ ended at the bounds of the search (50--150~ms and 1.30--1.70).
-
-Code: \texttt{paper\_model/} on the \texttt{paper-model} branch of the \texttt{gamma\_bursts-} repository.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
