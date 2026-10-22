@@ -7,8 +7,9 @@
     tau_n dI_noise,X/dt = -I_noise,X + eta(t) sqrt(tau_n) sigma                         OU noise
 
 X, Y in {cued c, uncued u}, X != Y. Published values (Wong et al. 2007, p. 2): a = 270 Hz/nA, b = 108 Hz,
-d = 0.154 s, gamma = 0.641, I_0 = 0.3297 nA, sigma = 0.009 nA, tau_n = 2 ms, cue J_A,ext mu_0 (1 + f) with
-J_A,ext = 1.1e-3 nA/Hz, mu_0 = 30 Hz, f = 0.45; couplings J_s = 0.3725 nA, J_c = 0.1137 nA at tau_S = 60 ms.
+d = 0.154 s, gamma = 0.641, I_0 = 0.3297 nA, sigma = 0.009 nA, tau_n = 2 ms; couplings J_s = 0.3725 nA,
+J_c = 0.1137 nA at tau_S = 60 ms. The cue is their target input, J_A,ext (50 + 100 exp(-t/tau_ad)) Hz with
+J_A,ext = 1.1e-3 nA/Hz and tau_ad = 40 ms, given to the cued pool for 50 ms.
 Here tau_S = 150 ms (NMDA receptors with GluN2B) and both couplings are scaled by ALPHA = 0.56, the factor at which the
 resting state (~2 Hz) survives a whole trial and a 50 ms cue loads the memory (~17 Hz; scripts in the README).
 
@@ -24,7 +25,7 @@ from numba import njit
 ALPHA = 0.56
 FIXED = dict(a=270.0, b=108.0, d=0.154, gamma=0.641, I_0=0.3297, sigma=0.009, tau_n=2.0,
              tau_S=150.0,
-             cue_amp=1.1e-3 * 30.0 * 1.45, tau_ff=15.0,
+             J_ext=1.1e-3, tau_ad=40.0, tau_ff=15.0,
              cue_dur=50.0, t_pre=1000.0, t_delay=1600.0, t_resp=300.0, go_rel=3.1, dt=0.5)
 
 # fitted (fit.py) to the On/Off statistics and length distributions of the all-units read-out only
@@ -35,7 +36,7 @@ FIT = dict(J_s=0.3725 * ALPHA,  # nA, NMDA self-coupling (fitted; published 0.37
            dip_shape=8.0,       # gamma shape of dip lengths
            dip_depth=0.3,       # fractional drop of the background current in a dip
            w_ff=0.3)            # nA, feed-forward inhibition
-KEYS = ('a', 'b', 'd', 'gamma', 'J_s', 'J_c', 'I_0', 'w_ff', 'tau_ff', 'tau_S', 'cue_amp', 'dt')
+KEYS = ('a', 'b', 'd', 'gamma', 'J_s', 'J_c', 'I_0', 'w_ff', 'tau_ff', 'tau_S', 'dt')
 
 
 def params(**over):
@@ -67,14 +68,14 @@ def _f(I, a, b, d):
 
 @njit(cache=True)
 def _sim(m, cue, go, noise, p, rec):
-    a, b, d, gamma, J_s, J_c, I_0, w_ff, tau_ff, tau_S, cue_amp, dt = p
+    a, b, d, gamma, J_s, J_c, I_0, w_ff, tau_ff, tau_S, dt = p
     n_tr, n = m.shape
     out = np.zeros((n_tr, n // rec, 4))    # rc, ru, sc, su every rec steps (1 ms)
     for k in range(n_tr):
         sc = 0.1; su = 0.1; q = m[k, 0]
         for i in range(n):
             bg = I_0 * m[k, i] + w_ff * (m[k, i] - q) + go[i]
-            rc = _f(J_s * sc - J_c * su + bg + cue_amp * cue[i] + noise[k, i, 0], a, b, d)
+            rc = _f(J_s * sc - J_c * su + bg + cue[i] + noise[k, i, 0], a, b, d)
             ru = _f(J_s * su - J_c * sc + bg + noise[k, i, 1], a, b, d)
             sc += dt * (-sc / tau_S + (1 - sc) * gamma * rc / 1000)
             su += dt * (-su / tau_S + (1 - su) * gamma * ru / 1000)
@@ -106,7 +107,8 @@ def simulate(p, n_tr, seed=0, quiet=0.0):
     m[:, :int((p['t_pre'] + quiet) / dt)] = 1.0
     m = np.c_[m, np.ones((n_tr, n_resp))]
     t = np.arange(n + n_resp) * dt
-    cue = ((t >= p['t_pre']) & (t < p['t_pre'] + p['cue_dur'])).astype(float)
+    tc = t - p['t_pre']        # cue: the target input of Wong et al. (2007), J_ext (50 + 100 exp(-t/tau_ad)) Hz
+    cue = np.where((tc >= 0) & (tc < p['cue_dur']), p['J_ext'] * (50 + 100 * np.exp(-np.maximum(tc, 0) / p['tau_ad'])), 0.0)
     white = rng.standard_normal((n_tr, n, 2))
     white = np.concatenate([white, np.random.default_rng(seed + 10**6).standard_normal((n_tr, n_resp, 2))], axis=1)
     noise = p['sigma'] * _ou(white, np.exp(-dt / p['tau_n']))      # stationary OU, SD sigma
