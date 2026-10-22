@@ -16,8 +16,7 @@ when the input returns, and the pool with more residual NMDA wins. The model is 
 Fitted to the all-units read-out only (its On/Off statistics and length histograms): τ_N 150 ms (upper bound),
 w_s 1.30 (lower bound), dips 10.2/s, mean length 90 ms (gamma shape 8.7), depth 60%, noise σ 0.006. The other six
 unit sets are predictions: the same dynamics, read out with each set's gain (from the data's μ_on) and noise share.
-Memory correct at the end of the delay: 98.6% (2,112 new trials). The alternative fit to the top-20 set only is in
-`fits/fit_top20.json`; its figures carry the suffix `_fit_top20`.
+Memory correct at the end of the delay: 98.6% (2,112 new trials).
 
 ```
 pip install numpy numba scikit-learn matplotlib cma

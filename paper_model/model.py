@@ -31,8 +31,7 @@ FIXED = dict(
 )
 
 # best fit (CMA-ES, fit.py --fit-set 'all') to the On/Off statistics and length histograms of the all-units read-out
-# only (lambda = 10,000 read-out table, 25 sessions); the other six unit sets are predictions. The top-20-only fit
-# is in fits/fit_top20.json
+# only (lambda = 10,000 read-out table, 25 sessions); the other six unit sets are predictions
 FIT_SET = ('all', 'session count')
 FIT = dict(
     tau_N=150.00,      # ms, NMDA decay

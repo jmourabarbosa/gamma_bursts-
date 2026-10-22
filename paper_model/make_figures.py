@@ -186,22 +186,15 @@ def main():
     ap.add_argument('--n-trials', type=int, default=2112)
     ap.add_argument('--seed', type=int, default=1)
     ap.add_argument('--out', default='figures/paper_model')
-    ap.add_argument('--theta', default=None, help="best.json of another fit (fit.py), instead of model.FIT")
-    ap.add_argument('--fit-set', default=None, choices=list(R.LABELS), help='the unit set that fit used')
-    ap.add_argument('--tag', default='', help='suffix for the output file names')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    if a.theta:
-        M.FIT.update(json.load(open(a.theta))['theta'])
-    if a.fit_set:
-        M.FIT_SET = R.SETS[R.LABELS.index(a.fit_set)]
     summ, hist = R.load_data()
     out = R.evaluate(n_trials=a.n_trials, seed=a.seed, summ=summ, keep=True)
-    k = figure1(out, os.path.join(a.out, f'fig1_trial_histograms{a.tag}.png'))
-    figure2(out, summ, os.path.join(a.out, f'fig2_fit_all_sets{a.tag}.png'))
+    k = figure1(out, os.path.join(a.out, 'fig1_trial_histograms.png'))
+    figure2(out, summ, os.path.join(a.out, 'fig2_fit_all_sets.png'))
     res = dict(theta=M.FIT, n_trials=a.n_trials, seed=a.seed, example_trial=int(k), memory_correct=out['mem'],
                sets={'/'.join(s): {kk: v for kk, v in r.items() if kk not in ('z', 'state', 'h_on', 'h_off')} for s, r in out['sets'].items()})
-    json.dump(res, open(os.path.join(a.out, f'model_stats{a.tag}.json'), 'w'), indent=1)
+    json.dump(res, open(os.path.join(a.out, 'model_stats.json'), 'w'), indent=1)
     print(json.dumps(dict(memory_correct=out['mem'], example_trial=int(k)), indent=1))
 
 
