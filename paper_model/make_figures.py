@@ -89,14 +89,18 @@ def figure1(out, path):
     a.plot(t, tr['sc'], color=INK, ls=(0, (1, 1.5)))
     a.plot(t, tr['su'], color=C_UN, ls=(0, (1, 1.5)))
     a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('Rate (a.u.) / NMDA')
-    for dx, label in ((1, 'With attention\nfluctuations'), (-1, 'Without attention\nfluctuations')):
-        a.annotate('', xy=(QUIET + dx * 200, 0.94), xytext=(QUIET + dx * 15, 0.94),
-                   arrowprops=dict(arrowstyle='-|>', color=INK, lw=0.6, mutation_scale=5))
-        a.text(QUIET + dx * 20, 0.88, label, fontsize=7.5, va='top', ha='left' if dx > 0 else 'right')
-    for xt, txt, c in ((0.0, 'Cued pool', INK), (0.14, 'Uncued pool', C_UN), (0.8, 'On', C_ON), (0.86, 'Off', C_OFF)):
-        a.text(xt, 1.04, txt, color=c, transform=a.transAxes, fontsize=7.5, va='bottom')
-    a.legend(handles=[Line2D([], [], color=INK, label='Rate'), Line2D([], [], color=INK, ls=(0, (1, 1.5)), label='NMDA')],
-             loc='lower left', bbox_to_anchor=(0.32, 0.995), ncol=2, handlelength=1.6, columnspacing=1.2, borderaxespad=0)
+    xa = a.get_xaxis_transform()     # x in data, y in axes fraction
+    for dx, label in ((1, 'With attention fluctuations'), (-1, 'Without attention fluctuations')):   # above the panel
+        a.annotate('', xy=(QUIET + dx * 160, 1.06), xytext=(QUIET + dx * 15, 1.06), xycoords=xa, textcoords=xa,
+                   arrowprops=dict(arrowstyle='-|>', color=INK, lw=0.6, mutation_scale=5), annotation_clip=False)
+        a.text(QUIET + dx * 180, 1.06, label, transform=xa, fontsize=7.5, va='center', ha='left' if dx > 0 else 'right')
+    # direct labels on the traces, in the steady delay before the dips
+    a.text(500, tr['sc'][(t > 400) & (t < 600)].max() + 0.04, 'Cued pool, NMDA', fontsize=7.5, ha='center', va='bottom')
+    a.text(500, tr['rc'][(t > 400) & (t < 600)].mean() / M.FIXED['r_max'] - 0.06, 'Cued pool, rate', fontsize=7.5, ha='center', va='top')
+    a.text(650, 0.04, 'Uncued pool', color=C_UN, fontsize=7.5, ha='center', va='bottom')
+    off0 = R.runs(state == -1)[0]
+    a.text(500, 0.96, 'On', color=C_ON, fontsize=7.5, va='top', ha='center')
+    a.text((tz[off0[0]] + tz[off0[1] - 1]) / 2, 0.96, 'Off', color=C_OFF, fontsize=7.5, va='top', ha='center')
     letter(a, 'a')
     b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
     b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
