@@ -165,7 +165,8 @@ def figure2(out, ses, path):
     for a in axs[0]:     # fitted (inside the grey bar) vs predicted (above the other sets), top row
         a.text(j, 0.97, 'Fitted', transform=a.get_xaxis_transform(), ha='center', va='top', rotation=90, fontsize=7)
         a.text(2.5, 1.02, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
-        a.plot([-0.4, 5.4], [1.0, 1.0], color=INK, lw=0.6, transform=a.get_xaxis_transform(), clip_on=False)
+        a.plot([-0.4, -0.4, 5.4, 5.4], [0.97, 1.0, 1.0, 0.97], color=INK, lw=0.6,     # bracket over the predicted sets
+               transform=a.get_xaxis_transform(), clip_on=False)
     for a, col in ((axs[0, 1], C_OFF), (axs[1, 1], C_ON)):     # legends inside the plots
         for n, (txt, c) in enumerate((('Data', INK), ('Model', col), ('Sessions', GREY))):
             a.text(0.04, 0.95 - n * 0.09, txt, color=c, transform=a.transAxes, va='top', fontsize=7)
