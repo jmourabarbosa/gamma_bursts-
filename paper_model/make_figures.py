@@ -143,7 +143,7 @@ def figure2(out, ses, path):
               ('on_median_ms', 'on_median', 'On length, median (ms)', C_ON, 250),
               ('frac_on', 'frac_on', 'Fraction of delay On', C_ON, 1))
     fig, axs = plt.subplots(2, 3, figsize=(6.2, 4.0), gridspec_kw=dict(hspace=0.65, wspace=0.6, left=0.11, right=0.98,
-                                                                       top=0.86, bottom=0.12))
+                                                                       top=0.92, bottom=0.12))
     j = list(R.SETS).index(FIT_SET)
     for k, (a, (dk, mk, name, col, top)) in enumerate(zip(axs.ravel(), panels)):
         a.axvspan(j - 0.45, j + 0.45, color=LIGHT, lw=0, zorder=0)
@@ -162,10 +162,13 @@ def figure2(out, ses, path):
             a.set_yticks([0, 0.5, 1], ['0', '0.5', '1'])
         a.set_ylabel(name)
         letter(a, 'abcdef'[k], x=-0.5, y=1.02)
-    for n, (txt, c) in enumerate((('Data (mean ± 95% CI)', INK), ('Sessions', GREY), ('Model, Off', C_OFF),
-                                  ('Model, On', C_ON))):
-        fig.text(0.11 + [0, 0.25, 0.39, 0.55][n], 0.955, txt, color=c, fontsize=7.5)
-    fig.text(0.11, 0.92, 'Grey bar: fitted set (all units); other sets predicted', color=GREY, fontsize=7.5)
+    for a in axs[0]:     # fitted (inside the grey bar) vs predicted (above the other sets), top row
+        a.text(j, 0.97, 'Fitted', transform=a.get_xaxis_transform(), ha='center', va='top', rotation=90, fontsize=7)
+        a.text(2.5, 1.02, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
+        a.plot([-0.4, 5.4], [1.0, 1.0], color=INK, lw=0.6, transform=a.get_xaxis_transform(), clip_on=False)
+    for a, col in ((axs[0, 1], C_OFF), (axs[1, 1], C_ON)):     # legends inside the plots
+        for n, (txt, c) in enumerate((('Data', INK), ('Model', col), ('Sessions', GREY))):
+            a.text(0.04, 0.95 - n * 0.09, txt, color=c, transform=a.transAxes, va='top', fontsize=7)
     save(fig, path)
 
 
