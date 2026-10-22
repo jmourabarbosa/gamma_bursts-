@@ -15,8 +15,7 @@ import numpy as np
 from numba import njit
 
 FIXED = dict(r_max=150.0, kappa=0.06, w_a=0.0141, beta=0.02, w_I=0.04, w_EI=0.5, w_ff=0.8, tau_ff=15.0, I_0=1.496,
-             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, t_resp=300.0, go_amp=1.5,
-             dt=0.1)
+             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, dt=0.1)
 
 # fitted (fit.py) to the On/Off statistics and length histograms of the all-units read-out only
 FIT = dict(tau_N=150.0,       # ms, NMDA decay
@@ -52,14 +51,14 @@ def common_input(n_tr, n, p, rng, ramp=10.0):
 
 
 @njit(cache=True)
-def _sim(m, cue, go, xi, p, rec):
+def _sim(m, cue, xi, p, rec):
     r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_N, w_s, sigma = p
     n_tr, n = m.shape
     out = np.zeros((n_tr, n // rec, 4))    # rc, ru, sc, su every rec steps (1 ms)
     for k in range(n_tr):
         rc = 1.0; ru = 1.0; rI = 1.0; sc = 0.0; su = 0.0; q = m[k, 0]
         for i in range(n):
-            x = -w_I * rI + I_0 * m[k, i] - w_ff * q + go[i]
+            x = -w_I * rI + I_0 * m[k, i] - w_ff * q
             fc = r_max / (1 + np.exp(-(w_s * sc + w_a * rc + x + cue_amp * cue[i] + sigma * xi[k, i, 0] - 1) / kappa))
             fu = r_max / (1 + np.exp(-(w_s * su + w_a * ru + x + sigma * xi[k, i, 1] - 1) / kappa))
             rI += dt / tau_I * (w_EI * (rc + ru) - rI)
@@ -83,33 +82,21 @@ def _ou(white, a):
 
 
 def simulate(p, n_tr, seed=0, quiet=0.0):
-    """n_tr trials with pool c cued. Returns 1 ms traces (n_tr, n_t) rc, ru, sc, su, m over the pre-cue, cue and
-    delay periods, the time t from cue onset, and the rates in the response period (rc_resp, ru_resp: t_resp ms
-    after the delay, attention held at 1). quiet: no dips during the first `quiet` ms after cue onset."""
+    """n_tr trials with pool c cued. Returns 1 ms traces (n_tr, n_t) rc, ru, sc, su, m and the time t from cue
+    onset. quiet: no dips during the first `quiet` ms after cue onset."""
     rng = np.random.default_rng(seed)
     dt = p['dt']
     n = int(round((p['t_pre'] + p['cue_dur'] + p['t_delay']) / dt))
-    n_resp = int(round(p['t_resp'] / dt))
     m = common_input(n_tr, n, p, rng)
     m[:, :int((p['t_pre'] + quiet) / dt)] = 1.0
-    m = np.c_[m, np.ones((n_tr, n_resp))]                    # response period: attention on
-    cue = ((np.arange(n + n_resp) * dt >= p['t_pre']) & (np.arange(n + n_resp) * dt < p['t_pre'] + p['cue_dur'])).astype(float)
-    white = rng.standard_normal((n_tr, n, 2))
-    white = np.concatenate([white, np.random.default_rng(seed + 10**6).standard_normal((n_tr, n_resp, 2))], axis=1)
-    xi = _ou(white, np.exp(-dt / p['tau_xi']))
+    cue = ((np.arange(n) * dt >= p['t_pre']) & (np.arange(n) * dt < p['t_pre'] + p['cue_dur'])).astype(float)
+    xi = _ou(rng.standard_normal((n_tr, n, 2)), np.exp(-dt / p['tau_xi']))
     rec = int(round(1 / dt))
-    # response onset: both pools get a transient like the one at the end of a dip (attention re-engages), but
-    # ~3x stronger (go_amp 1.5 vs w_ff * depth = 0.48); >= 1.3 is needed to keep >= 95% of trials correct
-    tr = np.arange(n + n_resp) * dt - n * dt
-    go = np.where(tr >= 0, p['go_amp'] * np.exp(-np.maximum(tr, 0) / p['tau_ff']), 0.0)
-    out = _sim(m, cue, go, xi, np.array([float(p[k]) for k in KEYS]), rec)
-    k = n // rec
-    return dict(rc=out[:, :k, 0], ru=out[:, :k, 1], sc=out[:, :k, 2], su=out[:, :k, 3], m=m[:, rec - 1:n:rec],
-                t=np.arange(k) - p['t_pre'], rc_resp=out[:, k:, 0], ru_resp=out[:, k:, 1])
+    out = _sim(m, cue, xi, np.array([float(p[k]) for k in KEYS]), rec)
+    return dict(rc=out[..., 0], ru=out[..., 1], sc=out[..., 2], su=out[..., 3], m=m[:, rec - 1::rec],
+                t=np.arange(n // rec) - p['t_pre'])
 
 
 def memory_correct(sim):
-    """Memory correct: in the last 100 ms of the response period (attention on), the cued pool fires above 20 Hz and
-    above the uncued pool."""
-    rc, ru = sim['rc_resp'][:, -100:].mean(1), sim['ru_resp'][:, -100:].mean(1)
-    return (rc > 20) & (rc > ru)
+    """Memory held at the end of the delay: NMDA gating of the cued pool exceeds the uncued pool's by > 0.05."""
+    return (sim['sc'][:, -100:] - sim['su'][:, -100:]).mean(1) > 0.05

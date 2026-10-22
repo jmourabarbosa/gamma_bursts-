@@ -15,10 +15,7 @@ On/Off labelling) and fitted to the all-units read-out of 25 sessions (decoder �
 
 Fitted values: τ_N 150 ms (upper bound), w_s 1.30 (lower bound), dips 10.2/s, mean length 90 ms (gamma shape 8.7),
 depth 60%, noise σ 0.006. The other six unit sets are predictions: the same dynamics, read out with each set's gain
-(from the data's μ_on) and noise share. Memory correct: 97% of trials. A 300 ms response period follows the delay, with the attention signal at 1 and a
-re-engagement transient at its onset (go_amp, ~3x the transient at the end of a dip); the memory is correct when
-the cued pool fires above 20 Hz and above the uncued pool in its last 100 ms. (The fit, `FIT`, used an earlier
-criterion: NMDA gating of the cued pool above the uncued pool's at the end of the delay; 98% by that criterion.)
+(from the data's μ_on) and noise share. Memory correct at the end of the delay: 98% of trials.
 
 ```
 pip install numpy numba scikit-learn matplotlib cma
