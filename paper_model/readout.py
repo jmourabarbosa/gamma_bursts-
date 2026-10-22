@@ -183,6 +183,7 @@ def evaluate(theta=None, n_trials=1056, seed=0, summ=None, keep=False, sets=SETS
                  accuracy=float((z[:, delay] > 0).mean()),
                  n_off=float(np.mean([len(x) for x in off])), n_on=float(np.mean([len(x) for x in on])),
                  off_mean=float(off_d.mean()) if len(off_d) else 0.0, on_mean=float(on_d.mean()) if len(on_d) else 0.0,
+                 off_median=float(np.median(off_d)) if len(off_d) else 0.0, on_median=float(np.median(on_d)) if len(on_d) else 0.0,
                  frac_off=float((state[:, delay] == -1).mean()), frac_on=float((state[:, delay] == 1).mean()),
                  h_off=hist(off_d), h_on=hist(on_d))
         if keep:

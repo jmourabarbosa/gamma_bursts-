@@ -142,9 +142,9 @@ def figure1(out, path):
 def figure2(out, summ, path):
     ses = R.load_sessions()
     x = np.arange(len(R.SETS))
-    panels = (('off_per_trial', 'n_off', 'Off states per trial', C_OFF), ('off_mean_ms', 'off_mean', 'Off length, mean (ms)', C_OFF),
+    panels = (('off_per_trial', 'n_off', 'Off states per trial', C_OFF), ('off_median_ms', 'off_median', 'Off length, median (ms)', C_OFF),
               ('frac_off', 'frac_off', 'fraction of delay Off', C_OFF),
-              ('on_per_trial', 'n_on', 'On states per trial', C_ON), ('on_mean_ms', 'on_mean', 'On length, mean (ms)', C_ON),
+              ('on_per_trial', 'n_on', 'On states per trial', C_ON), ('on_median_ms', 'on_median', 'On length, median (ms)', C_ON),
               ('frac_on', 'frac_on', 'fraction of delay On', C_ON))
     fig, axs = plt.subplots(2, 3, figsize=(6.6, 4.3), gridspec_kw=dict(hspace=0.75, wspace=0.42))
     for a, (dk, mk, name, col) in zip(axs.ravel(), panels):
@@ -170,7 +170,7 @@ def figure2(out, summ, path):
         j = R.SETS.index(M.FIT_SET)
         a.axvspan(j - 0.45, j + 0.45, color=MUTED, alpha=0.3, lw=0, zorder=0)    # the set the dynamics were fitted to
         a.get_xticklabels()[j].set_fontweight('bold')
-        a.set_ylim(0, 300 if mk in ('off_mean', 'on_mean') else a.get_ylim()[1] * 1.05)   # lengths: same axis, a few sessions clipped
+        a.set_ylim(0, 300 if mk in ('off_median', 'on_median') else a.get_ylim()[1] * 1.05)   # lengths: same axis
         a.tick_params(labelsize=6.5)
     fig.legend(handles=[Line2D([], [], ls='', marker='s', ms=4, mfc='white', mec=INK, label='data (mean ± 2 SEM over 25 sessions, ≈95% CI)'),
                         Line2D([], [], ls='', marker='.', ms=5, color=INK2, alpha=0.4, label='sessions'),
