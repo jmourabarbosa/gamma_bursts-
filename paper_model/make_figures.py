@@ -27,17 +27,17 @@ CUE = 75                       # example trial only: longer cue for display (fit
 # lowercase bold panel letters, sentence-case labels, text legends, grey epoch bars
 C_ON, C_OFF, INK, GREY, LIGHT, C_UN = '#e8474a', '#3cb4c9', '#000000', '#7f7f7f', '#d9d9d9', '#8c8c8c'
 plt.rcParams.update({'font.family': 'sans-serif', 'font.sans-serif': ['Arial', 'Helvetica', 'Liberation Sans'],
-                     'font.size': 7, 'axes.labelsize': 7, 'xtick.labelsize': 6, 'ytick.labelsize': 6,
+                     'font.size': 8.5, 'axes.labelsize': 8.5, 'xtick.labelsize': 7.5, 'ytick.labelsize': 7.5,
                      'axes.linewidth': 0.6, 'xtick.major.width': 0.6, 'ytick.major.width': 0.6,
                      'xtick.major.size': 2.5, 'ytick.major.size': 2.5, 'xtick.direction': 'out', 'ytick.direction': 'out',
                      'axes.spines.top': False, 'axes.spines.right': False, 'axes.edgecolor': INK,
-                     'axes.titlesize': 7, 'axes.titleweight': 'normal', 'lines.linewidth': 0.9,
-                     'legend.frameon': False, 'legend.fontsize': 6, 'mathtext.fontset': 'custom',
+                     'axes.titlesize': 8, 'axes.titleweight': 'normal', 'lines.linewidth': 0.9,
+                     'legend.frameon': False, 'legend.fontsize': 7.5, 'mathtext.fontset': 'custom',
                      'mathtext.rm': 'Liberation Sans', 'mathtext.it': 'Liberation Sans:italic', 'pdf.fonttype': 42})
 
 
 def letter(ax, txt, x=-0.08, y=1.06):
-    ax.text(x, y, txt, transform=ax.transAxes, fontsize=8, weight='bold', va='bottom')
+    ax.text(x, y, txt, transform=ax.transAxes, fontsize=10, weight='bold', va='bottom')
 
 
 def example_trial(gain, n=300, seed=11):
@@ -72,12 +72,12 @@ def figure1(out, path):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(7.2, 3.0))     # double column, 183 mm
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.35, 2.0], hspace=0.22, left=0.07, right=0.72, top=0.9, bottom=0.14)
-    gh = fig.add_gridspec(2, 1, hspace=0.45, left=0.81, right=0.99, top=0.9, bottom=0.14)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.35, 2.0], hspace=0.22, left=0.08, right=0.71, top=0.9, bottom=0.14)
+    gh = fig.add_gridspec(2, 1, hspace=0.45, left=0.85, right=0.99, top=0.9, bottom=0.14)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
     a.axvspan(0, CUE, color=LIGHT, lw=0)
-    a.text(CUE + 15, 0.04, 'Cue', fontsize=6)
+    a.text(CUE + 15, 0.04, 'Cue', fontsize=7.5)
     a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK)     # rates relative to the sigmoid ceiling (a.u.)
     a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN)
     a.plot(t, tr['sc'], color=INK, ls=(0, (1, 1.5)))
@@ -86,24 +86,24 @@ def figure1(out, path):
     for dx, label in ((1, 'With attention\nfluctuations'), (-1, 'Without attention\nfluctuations')):
         a.annotate('', xy=(QUIET + dx * 200, 0.94), xytext=(QUIET + dx * 15, 0.94),
                    arrowprops=dict(arrowstyle='-|>', color=INK, lw=0.6, mutation_scale=5))
-        a.text(QUIET + dx * 20, 0.88, label, fontsize=6, va='top', ha='left' if dx > 0 else 'right')
-    for xt, txt, c in ((0.0, 'Cued pool', INK), (0.11, 'Uncued pool', C_UN), (0.8, 'On', C_ON), (0.85, 'Off', C_OFF)):
-        a.text(xt, 1.04, txt, color=c, transform=a.transAxes, fontsize=6, va='bottom')
+        a.text(QUIET + dx * 20, 0.88, label, fontsize=7.5, va='top', ha='left' if dx > 0 else 'right')
+    for xt, txt, c in ((0.0, 'Cued pool', INK), (0.14, 'Uncued pool', C_UN), (0.8, 'On', C_ON), (0.86, 'Off', C_OFF)):
+        a.text(xt, 1.04, txt, color=c, transform=a.transAxes, fontsize=7.5, va='bottom')
     a.legend(handles=[Line2D([], [], color=INK, label='Rate'), Line2D([], [], color=INK, ls=(0, (1, 1.5)), label='NMDA')],
-             loc='lower left', bbox_to_anchor=(0.24, 0.995), ncol=2, handlelength=1.6, columnspacing=1.2, borderaxespad=0)
+             loc='lower left', bbox_to_anchor=(0.32, 0.995), ncol=2, handlelength=1.6, columnspacing=1.2, borderaxespad=0)
     letter(a, 'a')
     b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
     b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
     b.tick_params(bottom=False)
-    b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=6)
+    b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
     shade(d, tz, state)
     d.plot(tz, z, color=INK)
     for y, c, txt in ((0, GREY, ''), (1.96, C_ON, 'P < 0.05'), (0.84, C_OFF, 'P > 0.20')):
         d.axhline(y, color=c, ls=(0, (3, 2)), lw=0.6)
-        d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=6, va='center')
+        d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=7.5, va='center')
     d.set_ylim(z.min() - 0.3, 6); d.set_yticks([0, 3, 6], ['0', '', '6'])
     d.set_ylabel('Decoding z')
-    d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$', fontsize=6, loc='left', pad=2)
+    d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$', fontsize=7.5, loc='left', pad=2)
     d.set_xlabel('Time from cue onset (ms)')
     for ax in (a, b, d):
         ax.axvline(QUIET, color=GREY, ls=(0, (3, 2)), lw=0.6)
@@ -117,11 +117,11 @@ def figure1(out, path):
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'])
-        h.set_ylabel('Fraction of states', labelpad=-10)   # beside the unlabelled middle tick
-        h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=6)
+        h.set_ylabel('Fraction of states', labelpad=1)
+        h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
         if j == 0:
             h.tick_params(labelbottom=False)
-            letter(h, 'b', x=-0.32, y=1.0)
+            letter(h, 'b', x=-0.55, y=1.0)
         else:
             h.set_xlabel('State length (ms)')
     fig.savefig(path, dpi=600)
@@ -136,7 +136,7 @@ def figure2(out, ses, path):
               ('on_per_trial', 'n_on', 'On states per trial', C_ON, None),
               ('on_median_ms', 'on_median', 'On length, median (ms)', C_ON, 250),
               ('frac_on', 'frac_on', 'Fraction of delay On', C_ON, 1))
-    fig, axs = plt.subplots(2, 3, figsize=(5.4, 3.6), gridspec_kw=dict(hspace=0.6, wspace=0.55, left=0.12, right=0.98,
+    fig, axs = plt.subplots(2, 3, figsize=(6.2, 4.0), gridspec_kw=dict(hspace=0.65, wspace=0.6, left=0.11, right=0.98,
                                                                        top=0.86, bottom=0.12))
     j = list(R.SETS).index(FIT_SET)
     for k, (a, (dk, mk, name, col, top)) in enumerate(zip(axs.ravel(), panels)):
@@ -150,14 +150,16 @@ def figure2(out, ses, path):
         a.plot(x + 0.25, [out['sets'][lab][mk] for lab in R.SETS], 'o', ms=3, color=col, zorder=2)
         a.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); a.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
         a.set_xlim(-0.6, len(R.SETS) - 0.4)
-        a.set_xticks(x); a.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=5.5)
+        a.set_xticks(x); a.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
         a.set_ylim(0, top or a.get_ylim()[1] * 1.05)
+        if top == 1:
+            a.set_yticks([0, 0.5, 1], ['0', '0.5', '1'])
         a.set_ylabel(name)
-        letter(a, 'abcdef'[k], x=-0.42, y=1.0)
+        letter(a, 'abcdef'[k], x=-0.5, y=1.02)
     for n, (txt, c) in enumerate((('Data (mean ± 95% CI)', INK), ('Sessions', GREY), ('Model, Off', C_OFF),
                                   ('Model, On', C_ON))):
-        fig.text(0.12 + [0, 0.2, 0.32, 0.46][n], 0.955, txt, color=c, fontsize=6)
-    fig.text(0.12, 0.925, 'Grey bar: fitted set (all units); other sets predicted', color=GREY, fontsize=6)
+        fig.text(0.11 + [0, 0.25, 0.39, 0.55][n], 0.955, txt, color=c, fontsize=7.5)
+    fig.text(0.11, 0.92, 'Grey bar: fitted set (all units); other sets predicted', color=GREY, fontsize=7.5)
     fig.savefig(path, dpi=600)
 
 
