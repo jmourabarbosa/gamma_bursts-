@@ -70,7 +70,7 @@ def figure1(out, path):
     a.plot(t, tr['ru'] / M.FIXED['r_max'], color=C_UN, lw=1.0)
     a.plot(t, tr['sc'], color=INK, lw=1.0, ls=':')
     a.plot(t, tr['su'], color=C_UN, lw=1.0, ls=':')
-    a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1'])
+    a.set_ylim(0, 1); a.set_yticks([0, 0.5, 1], ['0', '', '1']); a.set_ylabel('rate (a.u.) / NMDA gating')
     for dx, label in ((1, 'with attention\nfluctuations'), (-1, 'without attention\nfluctuations')):
         a.annotate('', xy=(QUIET + dx * 220, 0.95), xytext=(QUIET + dx * 15, 0.95),
                    arrowprops=dict(arrowstyle='->', color=INK2, lw=0.8))
