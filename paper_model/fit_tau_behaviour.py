@@ -111,7 +111,7 @@ def main():
     bp = fig.add_subplot(gs[0, 1])
     for v, name, sym, col in MODELS:
         bp.plot(curves[v][2], prof[ex, v], color=col, label=name)
-    bp.set_xscale('log'); bp.set_xticks([50, 100, 300, 1000], ['50', '100', '300', '1000'])
+    bp.set_xscale('log'); bp.set_xticks([30, 100, 300, 1000], ['30', '100', '300', '1000'])
     bp.xaxis.set_minor_formatter(plt.NullFormatter()); bp.set_ylim(-20, 1); bp.set_xlabel('Time constant (ms)'); bp.set_ylabel('Log-likelihood\n(rel. to best NMDA/STP)')
     bp.set_title('Likelihood profile, same session', fontsize=7.5, pad=3)
     letter(bp, 'b', x=-0.35)
@@ -124,7 +124,7 @@ def main():
                color=[MONKEY_COL[m] for m in 'AHJ'], label=[f'Monkey {m}' for m in 'AHJ'])
         h.axvline(pooled[v], color=col, lw=1)
         h.set_xscale('log'); h.set_xlabel(f'Best {sym} (ms)'); h.set_ylabel('Sessions')
-        ticks = [50, 100, 200, 400] if v == 'nmda' else [100, 300, 1000]
+        ticks = [30, 100, 300, 1000]
         h.set_xticks(ticks, [str(t) for t in ticks]); h.xaxis.set_minor_formatter(plt.NullFormatter())
         h.set_ylim(0, h.get_ylim()[1] * 1.25)
         h.text(pooled[v] * 1.07, h.get_ylim()[1] * 0.98, f'pooled\n{pooled[v]:.0f} ms', color=col, fontsize=6.5, va='top', ha='left')
@@ -146,7 +146,8 @@ def main():
         tf = next(r for r in res if r['session'] == s_ and r['model'] == 'STP model')['tau_ms']
         fsc.plot(tn, tf, 'o', ms=3, color=MONKEY_COL[nm[s_]['monkey']])
     fsc.set_xscale('log'); fsc.set_yscale('log')
-    fsc.set_xticks([50, 100, 200, 400], ['50', '100', '200', '400']); fsc.set_yticks([300, 1000], ['300', '1000'])
+    fsc.set_xticks([30, 100, 300, 1000], ['30', '100', '300', '1000']); fsc.set_yticks([30, 100, 300, 1000], ['30', '100', '300', '1000'])
+    fsc.set_xlim(15, 2000); fsc.set_ylim(15, 2000); fsc.plot([15, 2000], [15, 2000], ':', color=GREY, lw=0.6)
     fsc.xaxis.set_minor_formatter(plt.NullFormatter()); fsc.yaxis.set_minor_formatter(plt.NullFormatter())
     fsc.set_xlabel(r'Best $\tau_N$ (ms)'); fsc.set_ylabel(r'Best $\tau_f$ (ms)')
     fsc.set_title('Same session, both models', fontsize=7.5, pad=3)
