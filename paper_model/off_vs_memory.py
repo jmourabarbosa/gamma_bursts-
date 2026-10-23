@@ -1,12 +1,13 @@
-"""Memory vs fraction of the delay Off, with the Off fraction controlled through the common input.
+"""Memory vs time Off in the delay (s), with the Off time controlled through the common input.
 
 The model fitted to the all-units read-out (model.FIT) is run with the dip statistics changed across trials. Each
 trial is read out with the fitted model's all-units gain (not re-calibrated) and the all-units noise, and labelled as
 in readout.py. Per trial: fraction of the delay (500-1,400 ms after cue onset, as frac_off) labelled Off, and memory
 held at the end of the delay (NMDA criterion, model.memory_correct). Definitions as the data's behaviour analysis
 (panichello repo, analysis/behaviour_handoff): per-trial fraction Off / On, number of Off periods (runs clipped to the
-delay) and mean Off length over the delay's 91 time points; memory vs Off fraction in windows [lo, lo + 0.025),
-lo = 0.05, 0.0525, ..., 0.975 (the last window includes 1.0), 95% Wilson intervals.
+delay) and mean Off length over the delay's 91 time points. Off time (s) = Off time points x 10 ms (at most 0.91 s);
+memory vs Off time in the data's windows converted to seconds: [lo, lo + 0.025 x 0.91 s), lo = 0.05 x 0.91 s in steps
+of 0.0025 x 0.91 s (the last window includes 0.91 s), 95% Wilson intervals.
 
 usage: python -m paper_model.off_vs_memory
 """
@@ -55,13 +56,13 @@ def run(key, levels, gain, seed):
     return np.concatenate(frac), np.concatenate(mem), np.concatenate(lev)
 
 
-def sliding(frac, ok, width=0.025, step=0.0025, start=0.05, n_min=30):
-    los = np.round(np.arange(start, 1 - width + 1e-9, step), 6)
+def sliding(frac, ok, width=0.025, step=0.0025, start=0.05, n_min=30, top=1.0):
+    los = np.round(np.arange(start, top - width + 1e-9, step), 6)
     c = los + width / 2
     p, lo, hi, n = [], [], [], []
     for x0 in los:
         x1 = x0 + width
-        sel = (frac >= x0 - 1e-9) & ((frac <= x1 + 1e-9) if x1 >= 1 - 1e-9 else (frac < x1 - 1e-9))
+        sel = (frac >= x0 - 1e-9) & ((frac <= x1 + 1e-9) if x1 >= top - 1e-9 else (frac < x1 - 1e-9))
         k, m = ok[sel].sum(), sel.sum()
         n.append(m)
         if m < n_min:
@@ -81,31 +82,33 @@ def main():
     summary = dict(gain_all=gain)
     for j, (name, (key, levels)) in enumerate(SWEEPS.items()):
         st, mem, lev = run(key, levels, gain, seed=j + 1)
-        frac = st[:, 0]
-        c, p, lo, hi, n = sliding(frac, mem)
+        T = 91 * R.STEP / 1000      # delay window 500-1,400 ms: 91 time points of 10 ms
+        frac = st[:, 0] * T         # Off time (s)
+        c, p, lo, hi, n = sliding(frac, mem, width=0.025 * T, step=0.0025 * T, start=0.05 * T, top=T)
         d_off = frac[~mem].mean() - frac[mem].mean() if (~mem).any() else np.nan
         summary[name] = dict(n_trials=int(len(mem)), memory=float(mem.mean()), errors=int((~mem).sum()))
+        summary[name]['off_time_s'] = dict(correct=float(frac[mem].mean()), error=float(frac[~mem].mean()))
         for i, sn in enumerate(('frac_off', 'n_off', 'off_len_ms', 'frac_on')):
             summary[name][sn] = dict(correct=float(np.nanmean(st[mem, i])), error=float(np.nanmean(st[~mem, i])))
         a = ax[0, j]
         a.fill_between(c, lo, hi, color='0.85', lw=0)
         a.plot(c, p, 'k', lw=1)
-        a.set_ylim(0.3, 1.02); a.set_xlim(0.05, 1.0)
-        a.set_title(f'{name}\n{len(mem)} trials, {(~mem).sum()} errors; Off fraction {d_off:+.3f} on errors', fontsize=8)
-        a.set_xlabel('fraction of delay Off (window centre)')
+        a.set_ylim(0.3, 1.02); a.set_xlim(0, T)
+        a.set_title(f'{name}\n{len(mem)} trials, {(~mem).sum()} errors; Off time {1000 * d_off:+.0f} ms on errors', fontsize=8)
+        a.set_xlabel('time Off in the delay (s, window centre)')
         a.set_ylabel('memory held (fraction of trials)' if j == 0 else '')
         b = ax[1, j]
         if len(set(levels)) > 1:
             u = np.unique(lev)
-            b.plot(u, [frac[lev == v].mean() for v in u], 'k.-', ms=3, lw=0.8, label='Off fraction')
+            b.plot(u, [frac[lev == v].mean() for v in u], 'k.-', ms=3, lw=0.8, label='Off time (s)')
             b.plot(u, [mem[lev == v].mean() for v in u], '.-', color='C3', ms=3, lw=0.8, label='memory held')
             b.set_xlabel(key.replace('_', ' ')); b.set_ylim(0, 1.02); b.legend(fontsize=7)
         else:
-            b.hist(frac, bins=np.linspace(0, 1, 41), color='0.5'); b.set_xlabel('fraction of delay Off'); b.set_ylabel('trials')
-    fig.suptitle('Model fitted to all units: memory (NMDA, end of delay) vs fraction of delay Off (all-units read-out, fixed gain)',
+            b.hist(frac, bins=np.linspace(0, T, 41), color='0.5'); b.set_xlabel('time Off in the delay (s)'); b.set_ylabel('trials')
+    fig.suptitle('Model fitted to all units: memory (NMDA, end of delay) vs time Off in the delay, 500-1,400 ms (all-units read-out, fixed gain)',
                  fontsize=9)
     fig.tight_layout()
-    fig.savefig(os.path.join(OUT, 'memory_vs_off_fraction.png'), dpi=200)
+    fig.savefig(os.path.join(OUT, 'memory_vs_off_time.png'), dpi=200)
     json.dump(summary, open(os.path.join(OUT, 'summary.json'), 'w'), indent=1)
     print(json.dumps(summary, indent=1))
 
