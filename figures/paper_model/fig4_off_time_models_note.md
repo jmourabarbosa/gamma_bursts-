@@ -166,6 +166,48 @@ The read-out and definitions are as above. This controls how long the network is
 
 **STP model:** memory is 100% at every dip time, up to 0.9 s of dips in the 0.9 s window.
 
+## NMDA time constant fitted to the monkeys' performance (`fig_tau_fit_pooled`)
+**Question.** If τ_N is left free, which value best explains how the monkeys' fraction correct falls with time Off?
+
+**Files:** `figures/paper_model/fig_tau_fit_pooled.png`, `.svg`, and `.csv` (best fit on the data, then one row per bootstrap sample). Script: `paper_model/fit_tau_pooled.py`.
+
+**Model curves:**
+- The global best-fit NMDA model, with its own fitted dips and all-units read-out, with only τ_N changed.
+- 17 values from 20 ms to 1.5 s, 30,000 trials each (`paper_model/tau_sweep.py`).
+- For each τ_N: P(memory held) in the 10 Off-fraction bins of Fig. 3b, interpolated in log τ_N.
+- Nothing else is refitted, so the On/Off statistics drift away from the fitted values as τ_N changes.
+
+**Data:** all 15,468 trials pooled, correct or error, Off time in 500–1,400 ms. The data file is copied to `paper_model/data/behaviour_per_trial_correct_and_error.csv`.
+
+**Link between model and behaviour:** P(correct) = p₀ × [P(held) + G × P(lost)].
+- **G = 1/8:** after the memory is lost, the monkey guesses among the 8 cue locations.
+- **p₀:** performance when the memory is held, one value for all trials (fitted 0.887). It absorbs every error that doesn't depend on Off time, such as saccades to a neighbouring location.
+- **The model makes no response itself.** It has two pools, cued and uncued, matching the decoder that separates a cue from the opposite cue. Its only output is whether the memory is held.
+
+**Fit and bootstrap:**
+- Maximum likelihood over τ_N and p₀.
+- Bootstrap over sessions: draw 25 sessions with replacement, pool their trials and refit, 1,000 times.
+
+**Results:**
+- **Best fit:** τ_N = 123 ms, a gain of 56 log-likelihood units over constant performance.
+  - The model curve follows the pooled fraction correct, from about 0.88 with little time Off to about 0.78 at 900 ms Off (panel a).
+- **Session bootstrap:** median 123 ms, quartiles 115–135 ms, 95% interval 101–190 ms.
+  - About 2% of samples fall on a weak second likelihood peak near 1 s (panel b, 24 log-likelihood units below the best). At very long τ_N, Off states become long and frequent enough that memory fails again.
+- **Conclusion:** the decay of performance with time Off asks for an NMDA-like trace of about 120 ms. That is close to measured NMDA kinetics and to the 150 ms of the model.
+
+**Sensitivity to the guessing assumption.** The data contain only correct or error, not the chosen location. If a monkey kept partial information after a "loss", its guesses would be correct more often than 1/8. That gives a higher G, so more losses are needed to explain the same drop, and the fitted τ_N comes out shorter. The effect is small:
+
+| G (P(correct) after a loss) | best τ_N | memory lost overall |
+|---|---|---|
+| 0 (always an error) | 129 ms | 3.9% |
+| 1/8 (random among 8; used) | 123 ms | 4.5% |
+| 1/4 | 118 ms | 5.2% |
+| 1/2 | 102 ms | 8.4% |
+
+For any plausible G, τ_N stays between about 100 and 130 ms, inside the bootstrap interval. With the chosen location on each trial, errors to neighbouring locations could be separated from true losses; these data don't allow it.
+
+**Caveat:** the bootstrap covers variability across sessions, not uncertainty in the model's other fitted parameters.
+
 ## Interpretation, for the text
 - **Both slow mechanisms reproduce the On/Off statistics**, but only the NMDA model reproduces the behavioural result.
 - **NMDA model:** the memory is bridged by a slow-but-short trace (about 150 ms). It is lost when an Off period outlasts the trace, by about 375 ms of silence. So errors come with more time Off, and memory declines with time Off.
@@ -187,5 +229,6 @@ In `paper_model/` on branch `paper-model`:
 | `single_dip_readout.py` | bottom-row trials |
 | `variant.py` | chooses the model: `PM_VARIANT=fac` for the STP model, the default for the NMDA model |
 | `model_ours_stp.py` | the STP model |
+| `tau_sweep.py`, `fit_tau_pooled.py` | τ_N sweep and pooled fit to the monkeys' performance |
 
 The STP fit script, `fit_ours_stp.py`, is on branch `paper-model-mongillo`.
