@@ -2,17 +2,16 @@
 
 Off time = fraction of the 91 delay time points (500-1,400 ms after cue onset, 10 ms apart) labelled Off x 900 ms,
 for the data and for the models alike.
-a, memory held against Off time in the NMDA and STP model (10 bins of 0.1 of the delay, 95% Wilson intervals),
-   with their own fitted dips (solid, 100,000 trials per model) and in the single-dip test (dashed, one dip of
-   0-1 s per trial, 12,300 trials per model).
+a, memory held against Off time in the NMDA and STP model, each with its own fitted dips (100,000 trials per model;
+   10 bins of 0.1 of the delay, 95% Wilson intervals).
 b, fraction correct against Off time (session mean +- SEM in the same bins), with the linear regression of each
    session's fraction correct on bin centre (red).
 c, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
 
-usage: python fig3_off_time.py <behaviour_handoff/data> <off_vs_memory dir with {nmda,fac}/{natural,single_dip}_readout_trials.npz> <out.png>
+usage: python fig3_off_time.py <behaviour_handoff/data> <off_vs_memory dir with {nmda,fac}/natural_readout_trials.npz> <out.png>
 data: jmourabarbosa/panichello, branch analysis-replication, analysis/behaviour_handoff/data
-models: figures/off_vs_memory on branch paper-model (paper_model/natural_readout.py, paper_model/single_dip_readout.py)
+models: figures/off_vs_memory on branch paper-model (paper_model/natural_readout.py)
 """
 import sys
 
@@ -67,10 +66,9 @@ glmm = pd.read_csv(f'{DATA}/joint_glmm.csv')
 sw = pd.read_csv(f'{DATA}/joint_glmm_session_weights.csv')
 trials = pd.read_csv(f'{DATA}/per_trial_correct_and_error.csv')
 model = {}
-for sim in ('natural', 'single_dip'):
-    for v in ('nmda', 'fac'):
-        d = np.load(f'{MODELS}/{v}/{sim}_readout_trials.npz')
-        model[sim, v] = (np.round(d['off_time_s'] / 0.01) / NPT, d['memory_held'].astype(bool))
+for v in ('nmda', 'fac'):
+    d = np.load(f'{MODELS}/{v}/natural_readout_trials.npz')
+    model[v] = (np.round(d['off_time_s'] / 0.01) / NPT, d['memory_held'].astype(bool))
 
 fig = plt.figure(figsize=(7.2, 2.35))
 gs = fig.add_gridspec(1, 3, width_ratios=[1, 1, 1.15], wspace=0.62, left=0.08, right=0.98, top=0.8, bottom=0.2)
@@ -119,34 +117,27 @@ b.tick_params(axis='y', length=0)
 b.set_xlabel('Odds ratio of an error per SD')
 letter(b, 'c', x=-0.62)
 
-# a: memory held against Off time in the two models, fitted dips (solid) and single-dip test (dashed)
-for sim, ls, mk in (('natural', '-', 'o'), ('single_dip', (0, (3, 1.5)), 'o')):
-    for v, col in (('nmda', INK), ('fac', C_STP)):
-        frac, held = model[sim, v]
-        i = np.digitize(frac, EDGES) - 1
-        k = np.array([held[i == j].sum() for j in range(len(CENT))])
-        m = np.array([(i == j).sum() for j in range(len(CENT))])
-        lo, hi = wilson(k, m)
-        ma.fill_between(W * CENT, lo, hi, color=col, alpha=0.18, lw=0)
-        ma.plot(W * CENT, k / m, ls=ls, marker=mk, color=col, ms=3, mfc=col if sim == 'natural' else 'white', mew=0.8)
+# a: memory held against Off time in the two models, each with its own fitted dips
+for v, name, col in (('nmda', 'NMDA model', INK), ('fac', 'STP model', C_STP)):
+    frac, held = model[v]
+    i = np.digitize(frac, EDGES) - 1
+    k = np.array([held[i == j].sum() for j in range(len(CENT))])
+    m = np.array([(i == j).sum() for j in range(len(CENT))])
+    lo, hi = wilson(k, m)
+    ma.fill_between(W * CENT, lo, hi, color=col, alpha=0.18, lw=0)
+    ma.plot(W * CENT, k / m, 'o-', color=col, ms=3, label=name)
 off_axis(ma, 'Fraction memory held')
-ma.set_ylim(0, 1.03); ma.set_yticks([0, 0.5, 1], ['0', '', '1'])
+ma.set_ylim(0.5, 1.01); ma.set_yticks([0.5, 0.75, 1], ['0.5', '', '1'])
 ma.yaxis.labelpad = -6
-from matplotlib.lines import Line2D  # noqa: E402
-handles = [Line2D([], [], color=INK, lw=1.2, label='NMDA model'), Line2D([], [], color=C_STP, lw=1.2, label='STP model'),
-           Line2D([], [], color=GREY, ls='-', marker='o', ms=3, label='Fitted dips'),
-           Line2D([], [], color=GREY, ls=(0, (3, 1.5)), marker='o', ms=3, mfc='white', label='Single dip')]
-ma.legend(handles=handles, loc='center right', bbox_to_anchor=(1.0, 0.55), handlelength=1.8, fontsize=6.5, frameon=False, labelspacing=0.3)
+ma.legend(loc='lower left', handlelength=1.2, fontsize=7, frameon=False)
 letter(ma, 'a')
 
 fig.savefig(OUT, dpi=300)
 fig.savefig(OUT.replace('.png', '.svg'))
 print('fraction correct by bin:', np.round(mu, 3).tolist(), 'sessions per bin:', n.tolist())
 print('regression: slope per 100 ms', 100 * reg.slope, 'p', reg.pvalue, 'n', ok.sum())
-for sim in ('natural', 'single_dip'):
-    for v in ('nmda', 'fac'):
-        frac, held = model[sim, v]
-        i = np.digitize(frac, EDGES) - 1
-        print(sim, v, 'held', held.mean(), 'by bin:', [round(held[i == j].mean(), 3) for j in range(len(CENT))],
-              'n by bin:', [int((i == j).sum()) for j in range(len(CENT))],
-              'mean Off held/lost (ms):', W * frac[held].mean(), W * frac[~held].mean() if (~held).any() else None)
+for v in ('nmda', 'fac'):
+    frac, held = model[v]
+    i = np.digitize(frac, EDGES) - 1
+    print(v, 'held', held.mean(), 'by bin:', [round(held[i == j].mean(), 4) for j in range(len(CENT))],
+          'mean Off held/lost (ms):', W * frac[held].mean(), W * frac[~held].mean() if (~held).any() else None)
