@@ -101,7 +101,7 @@ letter(a, 'b')
 
 # c: odds ratio of an error per SD of each statistic
 rows = [('frac_off', 'Total Off time', C_OFF), ('off_len_ms', 'Off length', C_OFF),
-        ('n_off', 'Off states', C_OFF), ('frac_on', 'Fraction On', C_ON)]
+        ('n_off', 'Off states', C_OFF), ('frac_on', 'Total On time', C_ON)]
 rng = np.random.default_rng(0)
 for k, (stat, name, col) in enumerate(rows):
     g = glmm[(glmm.group == 'all') & (glmm.model == f'M_single_{stat}')].iloc[0]
