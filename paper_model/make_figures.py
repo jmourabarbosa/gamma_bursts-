@@ -145,7 +145,7 @@ def figure2(out, ses, path):
               ('on_per_trial', 'n_on', 'On states per trial', C_ON, None),
               ('on_median_ms', 'on_median', 'On length, median (ms)', C_ON, 250),
               ('frac_on', 'frac_on', 'Fraction of delay On', C_ON, 1))
-    fig, axs = plt.subplots(2, 3, figsize=(6.2, 4.0), gridspec_kw=dict(hspace=0.65, wspace=0.6, left=0.11, right=0.98,
+    fig, axs = plt.subplots(2, 3, figsize=(6.2, 4.0), gridspec_kw=dict(hspace=0.8, wspace=0.6, left=0.11, right=0.98,
                                                                        top=0.92, bottom=0.12))
     j = list(R.SETS).index(FIT_SET)
     for k, (a, (dk, mk, name, col, top)) in enumerate(zip(axs.ravel(), panels)):
@@ -165,7 +165,7 @@ def figure2(out, ses, path):
             a.set_yticks([0, 0.5, 1], ['0', '', '1'])
         a.set_ylabel(name)
         letter(a, 'abcdef'[k], x=-0.5, y=1.02)
-    for a in axs[0]:     # fitted (inside the grey bar) vs predicted (bracket over the other sets), top row
+    for a in axs.ravel():     # fitted (inside the grey bar) vs predicted (bracket over the other sets)
         a.text(j, 0.97, 'Fitted', transform=a.get_xaxis_transform(), ha='center', va='top', rotation=90, fontsize=7)
         a.text(2.5, 1.1, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
         a.plot([0, 0, 5, 5], [1.06, 1.09, 1.09, 1.06], color=INK, lw=0.5, transform=a.get_xaxis_transform(), clip_on=False)
