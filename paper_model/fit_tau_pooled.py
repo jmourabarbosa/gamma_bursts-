@@ -5,7 +5,8 @@ for each tau_N from the global fit with its own dips (tau_sweep.py, 20-1,500 ms)
 interpolated in log tau (fit_tau_behaviour.model_curves).
 Link: P(correct) = p0 x [P(held) + G x (1 - P(held))]: a lost memory is a guess among the 8 cues (G = 1/8), p0 is the
 performance when the memory is held (one value for all trials). Maximum likelihood over tau_N and p0.
-Bootstrap: trials resampled with replacement N_BOOT times, refitted; distribution of the best tau_N.
+Bootstrap: sessions resampled with replacement N_BOOT times (all trials of each drawn session pooled), refitted;
+distribution of the best tau_N.
 Output: figures/paper_model/fig_tau_fit_pooled.{png,svg} and fig_tau_fit_pooled.csv (one row per bootstrap sample).
 
 usage: python -m paper_model.fit_tau_pooled
@@ -35,6 +36,10 @@ def main():
     rows = list(csv.DictReader(open(DATA)))
     b = bins(np.array([float(r['frac_off']) for r in rows]))
     c = np.array([int(r['correct']) for r in rows])
+    sess = np.array([r['session'] for r in rows])
+    names = np.unique(sess)
+    ks = np.array([np.bincount(b[sess == s], weights=c[sess == s], minlength=NB) for s in names])   # per session
+    ns = np.array([np.bincount(b[sess == s], minlength=NB) for s in names])
     k = np.bincount(b, weights=c, minlength=NB); n = np.bincount(b, minlength=NB)
     q = k.sum() / n.sum()
     ll0 = k.sum() * np.log(q) + (n - k).sum() * np.log(1 - q)
@@ -44,8 +49,8 @@ def main():
     rng = np.random.default_rng(0)
     boot = []
     for _ in range(N_BOOT):
-        idx = rng.integers(0, len(c), len(c))
-        ib, jb, llb = best(np.bincount(b[idx], weights=c[idx], minlength=NB), np.bincount(b[idx], minlength=NB), Hf)
+        idx = rng.integers(0, len(names), len(names))
+        ib, jb, llb = best(ks[idx].sum(0), ns[idx].sum(0), Hf)
         boot.append((fine[ib], P0[jb], llb.max()))
     t = np.array([x[0] for x in boot])
     med, lo95, hi95 = np.percentile(t, (50, 2.5, 97.5))
@@ -68,12 +73,15 @@ def main():
     bp.set_xlabel(r'$\tau_N$ (ms)'); bp.set_ylabel('Log-likelihood\n(rel. to best)')
     letter(bp, 'b', x=-0.35)
     h = fig.add_subplot(gs[2])
-    edges = np.exp(np.linspace(np.log(t.min() * 0.95), np.log(t.max() * 1.05), 25))
+    edges = np.exp(np.linspace(np.log(20), np.log(1500), 41))
     h.hist(t, bins=edges, color=COL, alpha=0.8)
     h.set_xscale('log'); h.xaxis.set_minor_formatter(plt.NullFormatter())
-    h.set_xticks(np.round([lo95, med, hi95]), [f'{x:.0f}' for x in (lo95, med, hi95)])
+    h.set_xticks([30, 100, 300, 1000], ['30', '100', '300', '1000']); h.set_xlim(20, 1500)
+    for x in (lo95, hi95):
+        h.axvline(x, color=COL, lw=0.6, ls=(0, (1, 1.5)))
     h.set_xlabel(r'Best $\tau_N$ (ms)'); h.set_ylabel('Bootstrap samples')
-    h.set_title(f'{N_BOOT} bootstraps: {med:.0f} ms (95% CI {lo95:.0f}-{hi95:.0f})', fontsize=7, pad=3)
+    h.axvline(tau, color=INK, lw=0.6, ls=(0, (3, 2)))
+    h.set_title(f'{N_BOOT} session bootstraps: {med:.0f} ms\n(95% CI {lo95:.0f}-{hi95:.0f})', fontsize=7, pad=3)
     letter(h, 'c', x=-0.35)
     save(fig, os.path.join(OUT, 'fig_tau_fit_pooled.png'))
     with open(os.path.join(OUT, 'fig_tau_fit_pooled.csv'), 'w', newline='') as f:
