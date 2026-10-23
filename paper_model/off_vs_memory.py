@@ -1,15 +1,15 @@
 """Memory vs time Off in the delay (s), with the Off time controlled through the common input.
 
-The model fitted to the all-units read-out (model.FIT) is run with the dip statistics changed across trials. Each
+The model fitted to the all-units read-out (variant.py: NMDA or facilitation) is run with the dip statistics changed across trials. Each
 trial is read out with the fitted model's all-units gain (not re-calibrated) and the all-units noise, and labelled as
 in readout.py. Per trial: fraction of the delay (500-1,400 ms after cue onset, as frac_off) labelled Off, and memory
-held at the end of the delay (NMDA criterion, model.memory_correct). Definitions as the data's behaviour analysis
+held at the end of the delay (memory_correct of the model). Definitions as the data's behaviour analysis
 (panichello repo, analysis/behaviour_handoff): per-trial fraction Off / On, number of Off periods (runs clipped to the
 delay) and mean Off length over the delay's 91 time points. Off time (s) = Off time points x 10 ms (at most 0.91 s);
 memory vs Off time in the data's windows converted to seconds: [lo, lo + 0.025 x 0.91 s), lo = 0.05 x 0.91 s in steps
 of 0.0025 x 0.91 s (the last window includes 0.91 s), 95% Wilson intervals.
 
-usage: python -m paper_model.off_vs_memory
+usage: [PM_VARIANT=fac] python -m paper_model.off_vs_memory
 """
 import json
 import os
@@ -19,9 +19,9 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import model as M, readout as R
+from . import readout as R, variant as M
 
-OUT = os.path.join('figures', 'off_vs_memory')
+OUT = M.OUT
 RHO = R.RHO['all']
 N_PER_LEVEL = 300
 SWEEPS = {'fitted model (no manipulation)': ('dip_rate', [M.FIT['dip_rate']] * 20),
@@ -105,7 +105,7 @@ def main():
             b.set_xlabel(key.replace('_', ' ')); b.set_ylim(0, 1.02); b.legend(fontsize=7)
         else:
             b.hist(frac, bins=np.linspace(0, T, 41), color='0.5'); b.set_xlabel('time Off in the delay (s)'); b.set_ylabel('trials')
-    fig.suptitle('Model fitted to all units: memory (NMDA, end of delay) vs time Off in the delay, 500-1,400 ms (all-units read-out, fixed gain)',
+    fig.suptitle(f'Model fitted to all units ({M.NAME}): memory (end of delay) vs time Off in the delay, 500-1,400 ms (all-units read-out, fixed gain)',
                  fontsize=9)
     fig.tight_layout()
     fig.savefig(os.path.join(OUT, 'memory_vs_off_time.png'), dpi=200)

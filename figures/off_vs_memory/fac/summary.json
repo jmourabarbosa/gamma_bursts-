@@ -1,0 +1,78 @@
+{
+ "gain_all": 0.05173063882005704,
+ "fitted model (no manipulation)": {
+  "n_trials": 6000,
+  "memory": 1.0,
+  "errors": 0,
+  "off_time_s": {
+   "correct": 0.3689900000000001,
+   "error": NaN
+  },
+  "frac_off": {
+   "correct": 0.4054835164835165,
+   "error": NaN
+  },
+  "n_off": {
+   "correct": 2.1438333333333333,
+   "error": NaN
+  },
+  "off_len_ms": {
+   "correct": 189.452332266477,
+   "error": NaN
+  },
+  "frac_on": {
+   "correct": 0.21284981684981683,
+   "error": NaN
+  }
+ },
+ "dip rate varied (0-30 per s)": {
+  "n_trials": 9300,
+  "memory": 1.0,
+  "errors": 0,
+  "off_time_s": {
+   "correct": 0.45868709677419356,
+   "error": NaN
+  },
+  "frac_off": {
+   "correct": 0.504051754696916,
+   "error": NaN
+  },
+  "n_off": {
+   "correct": 2.461505376344086,
+   "error": NaN
+  },
+  "off_len_ms": {
+   "correct": 213.36495716601064,
+   "error": NaN
+  },
+  "frac_on": {
+   "correct": 0.13388396549686873,
+   "error": NaN
+  }
+ },
+ "dip depth varied (0.3-1.0)": {
+  "n_trials": 8700,
+  "memory": 1.0,
+  "errors": 0,
+  "off_time_s": {
+   "correct": 0.37445747126436785,
+   "error": NaN
+  },
+  "frac_off": {
+   "correct": 0.41149172666414047,
+   "error": NaN
+  },
+  "n_off": {
+   "correct": 2.142413793103448,
+   "error": NaN
+  },
+  "off_len_ms": {
+   "correct": 191.63612836438924,
+   "error": NaN
+  },
+  "frac_on": {
+   "correct": 0.1997082228116711,
+   "error": NaN
+  }
+ }
+}

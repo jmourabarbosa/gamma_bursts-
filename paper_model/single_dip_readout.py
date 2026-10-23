@@ -2,9 +2,9 @@
 
 Every trial has one dip of length 0-1,000 ms starting 500 ms after cue onset (fitted depth, no other dips). Each trial
 is read out with the fitted model's all-units gain and noise and labelled as in readout.py; Off time = Off time points
-in 500-1,400 ms x 10 ms. Memory = NMDA criterion at the end of the delay. Sliding windows as off_vs_memory.py.
+in 500-1,400 ms x 10 ms. Memory = memory_correct of the model (variant.py) at the end of the delay. Sliding windows as off_vs_memory.py.
 
-usage: python -m paper_model.single_dip_readout
+usage: [PM_VARIANT=fac] python -m paper_model.single_dip_readout
 """
 import json
 import os
@@ -14,13 +14,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
-from . import model as M, readout as R
+from . import readout as R, variant as M
 from .off_vs_memory import OUT, RHO, reference, sliding
 from .single_dip import simulate_dip, LENGTHS, N_TR
 
 
 def main():
     ses, _ = R.load_data()
+    os.makedirs(OUT, exist_ok=True)
     gain = reference(ses)
     p = M.params()
     rng = np.random.default_rng(5)
@@ -59,12 +60,14 @@ def main():
     ax[2].hist(off[~mem], bins, color='C3', alpha=0.7, label='memory lost')
     ax[2].set_xlabel('time Off in the delay (s)'); ax[2].set_ylabel('trials'); ax[2].legend(fontsize=7)
     ax[2].set_title(f'Off time: held {off[mem].mean():.2f} s, lost {off[~mem].mean():.2f} s', fontsize=9)
-    fig.suptitle('One dip per trial (0-1 s, 500 ms after cue onset, fitted depth), read out with the all-units pipeline', fontsize=9)
+    fig.suptitle(f'{M.NAME}: one dip per trial (0-1 s, 500 ms after cue onset, fitted depth), read out with the all-units pipeline', fontsize=9)
     fig.tight_layout()
     fig.savefig(os.path.join(OUT, 'memory_vs_off_time_single_dip.png'), dpi=200)
     out = dict(off_time_held=float(off[mem].mean()), off_time_lost=float(off[~mem].mean()),
                by_length={int(v): dict(off_median=float(np.median(off[length == v])), memory=float(mem[length == v].mean())) for v in u})
     json.dump(out, open(os.path.join(OUT, 'single_dip_readout.json'), 'w'), indent=1)
+    np.savez(os.path.join(OUT, 'single_dip_readout_trials.npz'), off_time_s=off, memory_held=mem, dip_length_ms=length,
+             dip_depth=p['dip_depth'])
     print(json.dumps({k: v for k, v in out.items() if k != 'by_length'}))
     print(' '.join(f"{k}:{v['off_median']:.2f}/{v['memory']:.2f}" for k, v in out['by_length'].items()))
 

@@ -11,6 +11,10 @@ On/Off labelling) and fitted to the all-units read-out of 25 sessions (decoder �
 | `readout.py` | z = gain × (cued − uncued rate, 100 ms windows) + measured noise; gain set from the data's μ_on for each unit set; On/Off labelling; statistics; data loading |
 | `fit.py` | CMA-ES fit of `FIT` to the all-units On/Off statistics and length distributions, with memory ≥ 98% |
 | `make_figures.py` | Figure 1 (`fig1_trial_histograms`) and Figure 2 (`fig2_unit_sets`) as PNG and editable SVG, plus `model_stats.json` |
+| `model_ours_stp.py` | the same model with short-term facilitation (Tsodyks–Markram u, τ_f 1.5 s) in place of NMDA gating; `FIT_FAC` fitted on branch `paper-model-mongillo` |
+| `variant.py` | chooses the model for the Off-time analyses (`PM_VARIANT=nmda` default, or `fac`) |
+| `off_vs_memory.py`, `single_dip.py`, `single_dip_readout.py` | memory vs time Off in the delay: dip statistics varied, one dip of fixed length, and one dip read out like the data (`figures/off_vs_memory/<variant>/`) |
+| `fig_off_time_models.py` | Figure 4 (`fig4_off_time_models`): memory vs time Off, NMDA vs STP model; hand-off note `figures/paper_model/fig4_off_time_models_note.md` |
 | `data/` | the data's read-out per session and pooled state-length histograms (λ = 10,000), with the data agent's note |
 
 Fitted values: τ_N 150 ms (upper bound), w_s 1.30 (lower bound), dips 10.2/s, mean length 90 ms (gamma shape 8.7),
