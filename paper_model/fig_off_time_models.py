@@ -4,7 +4,8 @@ Input: figures/off_vs_memory/{nmda,fac}/single_dip_readout_trials.npz, written b
     python -m paper_model.single_dip_readout  and  PM_VARIANT=fac python -m paper_model.single_dip_readout
 (one dip of 0-1,000 ms per trial, 500 ms after cue onset, at each model's fitted depth; all-units read-out).
 a: memory held vs Off time (500-1,400 ms), sliding windows as the data (off_vs_memory.sliding), 95% Wilson intervals.
-b, c: Off time of trials with the memory held (grey) or lost (red), NMDA model and STP model.
+b, c: Off time of trials with the memory held (grey) or lost (red), NMDA model and STP model, as a fraction of all
+   trials of that model (grey and red bars together sum to 1).
 Output: figures/paper_model/fig4_off_time_models.{png,svg} and fig4_off_time_models_data.csv.
 
 usage: python -m paper_model.fig_off_time_models
@@ -42,11 +43,12 @@ def main():
         h = fig.add_subplot(gs[j + 1])
         hh, _ = np.histogram(off[mem], BINS)
         hl, _ = np.histogram(off[~mem], BINS)
-        h.bar(BINS[:-1], hh, width=np.diff(BINS), align='edge', color=GREY, alpha=0.75, lw=0, label='Memory held')
-        h.bar(BINS[:-1], hl, width=np.diff(BINS), align='edge', color=C_ON, alpha=0.75, lw=0, label='Memory lost')
-        rows += [dict(panel='bc'[j], model=name, bin_lo_s=round(b0, 4), bin_hi_s=round(b1, 4), n_held=int(x), n_lost=int(y))
+        h.bar(BINS[:-1], hh / len(mem), width=np.diff(BINS), align='edge', color=GREY, alpha=0.75, lw=0, label='Memory held')
+        h.bar(BINS[:-1], hl / len(mem), width=np.diff(BINS), align='edge', color=C_ON, alpha=0.75, lw=0, label='Memory lost')
+        rows += [dict(panel='bc'[j], model=name, bin_lo_s=round(b0, 4), bin_hi_s=round(b1, 4), n_held=int(x), n_lost=int(y),
+                     frac_held=x / len(mem), frac_lost=y / len(mem))
                  for b0, b1, x, y in zip(BINS[:-1], BINS[1:], hh, hl)]
-        h.set_xlim(0, T); h.set_xlabel('Time Off in delay (s)'); h.set_ylabel('Trials')
+        h.set_xlim(0, T); h.set_xlabel('Time Off in delay (s)'); h.set_ylabel('Fraction of trials')
         h.set_title(f'{name}: {mem.sum()} held, {(~mem).sum()} lost', fontsize=7.5, pad=3)
         h.legend(loc='upper center', handlelength=1, fontsize=7)
         letter(h, 'bc'[j], x=-0.3)
@@ -56,7 +58,7 @@ def main():
     letter(a, 'a', x=-0.3)
     os.makedirs(OUT, exist_ok=True)
     save(fig, os.path.join(OUT, 'fig4_off_time_models.png'))
-    keys = ['panel', 'model', 'x_off_time_s', 'memory_held', 'ci_lo', 'ci_hi', 'n_trials', 'bin_lo_s', 'bin_hi_s', 'n_held', 'n_lost']
+    keys = ['panel', 'model', 'x_off_time_s', 'memory_held', 'ci_lo', 'ci_hi', 'n_trials', 'bin_lo_s', 'bin_hi_s', 'n_held', 'n_lost', 'frac_held', 'frac_lost']
     with open(os.path.join(OUT, 'fig4_off_time_models_data.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, keys)
         w.writeheader()

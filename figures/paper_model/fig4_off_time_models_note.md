@@ -4,7 +4,7 @@ Files (all in `figures/paper_model/`):
 - `fig4_off_time_models.png` (600 dpi) and `.svg` (editable text)
 - `fig4_off_time_models_data.csv`: the plotted values
   - panel a: one row per window, with `memory_held`, the 95% CI and `n_trials`
-  - panels b and c: one row per bin, with `n_held` and `n_lost`
+  - panels b and c: one row per bin, with `n_held` and `n_lost` and the plotted fractions `frac_held` and `frac_lost`
 
 Reproduce (about 4 min):
 ```
@@ -35,6 +35,8 @@ python -m paper_model.fig_off_time_models
   - Shading: 95% Wilson interval.
   - Black: NMDA model. Blue: STP model.
 - **b, c:** distribution of time Off for trials with the memory held (grey) or lost (red), for the NMDA model (b) and the STP model (c).
+  - y axis: fraction of all trials of that model (12,300), so grey and red bars together sum to 1.
+  - Bins are 35 ms wide.
 
 ## The two models
 
