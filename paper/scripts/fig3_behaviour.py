@@ -18,7 +18,7 @@ import pandas as pd  # noqa: E402
 from scipy import stats  # noqa: E402
 
 DATA, OUT = sys.argv[1:3]
-W = 910   # ms: delay window 500-1,400 ms after cue onset, 91 points 10 ms apart; Off time = fraction Off x W
+W = 900   # ms: delay window 500-1,400 ms after cue onset (91 points 10 ms apart); Off time = fraction Off x W
 C_ON, C_OFF, INK, GREY, LIGHT = '#e8474a', '#3cb4c9', '#000000', '#7f7f7f', '#d9d9d9'
 plt.rcParams.update({'font.family': 'sans-serif', 'font.sans-serif': ['Arial', 'Helvetica', 'Liberation Sans'],
                      'font.size': 8.5, 'axes.labelsize': 8.5, 'xtick.labelsize': 7.5, 'ytick.labelsize': 7.5,
