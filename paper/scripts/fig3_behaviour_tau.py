@@ -2,8 +2,8 @@
 
 a, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
-b, log-likelihood of the fit of tau_N to the monkeys' fraction correct against Off time (all 15,468 trials pooled;
-   P(correct) = p0 x [P(held) + G x P(lost)], G = 1/8, a guess among the 8 cues), relative to the best.
+b, fraction correct against Off time, all 15,468 trials pooled (95% Wilson intervals), and the NMDA model with the
+   best-fitting tau_N (red): P(correct) = p0 x [P(held) + G x P(lost)], G = 1/8 (a guess among the 8 cues).
 c, best tau_N in 1,000 bootstraps over sessions, with the 95% interval (dotted) and the fit to all data (dashed).
 Model curves P(held | Off) for each tau_N come from the fitted NMDA model with its own dips, only tau_N changed
 (paper_model/tau_sweep.py); the fit follows paper_model/fit_tau_pooled.py.
@@ -22,7 +22,7 @@ import matplotlib  # noqa: E402
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 
-from paper_model.fit_tau_behaviour import DATA, NB, P0, bins, model_curves  # noqa: E402
+from paper_model.fit_tau_behaviour import DATA, EDGES, NB, P0, bins, model_curves, wilson  # noqa: E402
 from paper_model.fit_tau_pooled import best, G, N_BOOT  # noqa: E402
 
 GLMM, OUT = sys.argv[1:3]
@@ -69,7 +69,7 @@ med, lo95, hi95 = np.percentile(boot, (50, 2.5, 97.5))
 
 fig = plt.figure(figsize=(6.4, 2.25))
 gs = fig.add_gridspec(1, 3, width_ratios=[1.3, 1, 1], wspace=0.65, left=0.18, right=0.98, top=0.84, bottom=0.21)
-a, cx, dx = (fig.add_subplot(gs[0, q]) for q in range(3))
+a, bx, dx = (fig.add_subplot(gs[0, q]) for q in range(3))
 
 # a: odds ratio of an error per SD of each statistic
 glmm = pd.read_csv(f'{GLMM}/joint_glmm.csv')
@@ -93,11 +93,17 @@ a.tick_params(axis='y', length=0)
 a.set_xlabel('Odds ratio of an error per SD')
 letter(a, 'a', x=-0.62)
 
-# b: likelihood profile over tau_N
-cx.plot(fine, prof, color=C_FIT, lw=1.2)
-log_axis(cx); cx.set_ylim(-30, 1); cx.set_yticks([-30, -20, -10, 0])
-cx.set_xlabel(r'$\tau_N$ (ms)'); cx.set_ylabel('Log-likelihood\n(relative to best)')
-letter(cx, 'b')
+# b: fraction correct against Off time, data and best-fitting NMDA model
+cen = 900 * (EDGES[:-1] + np.minimum(EDGES[1:], 1)) / 2
+pk = k / n; lo, hi = wilson(k, n)
+bx.plot(cen, p0 * (Hf[i] + G * (1 - Hf[i])), color=C_FIT, lw=1.2)
+bx.errorbar(cen, pk, yerr=[pk - lo, hi - pk], fmt='o', ms=3, color=INK, elinewidth=0.6, capsize=0)
+bx.set_xlim(0, 900); bx.set_xticks([0, 300, 600, 900]); bx.set_ylim(0.5, 1)
+bx.set_yticks([0.5, 0.75, 1], ['0.5', '', '1']); bx.yaxis.labelpad = -6
+bx.set_xlabel('Off time in delay (ms)'); bx.set_ylabel('Fraction correct')
+bx.text(30, 0.62, 'Monkeys', fontsize=6.5, color=INK)
+bx.text(30, 0.54, rf'NMDA model, $\tau_N$ = {tau:.0f} ms', fontsize=6.5, color=C_FIT)
+letter(bx, 'b')
 
 # c: bootstrap over sessions
 edges = np.exp(np.linspace(np.log(20), np.log(1500), 41))
@@ -112,4 +118,5 @@ dx.text(0.62, 0.62, f'{tau:.0f} ms\n95% CI\n{lo95:.0f}-{hi95:.0f}', transform=dx
 letter(dx, 'c')
 
 fig.savefig(OUT, dpi=300)
-print(f'best tau_N {tau:.1f} ms, p0 {p0:.3f}; bootstrap median {med:.0f}, 95% CI {lo95:.0f}-{hi95:.0f}')
+print(f'best tau_N {tau:.1f} ms, p0 {p0:.3f}; bootstrap median {med:.0f}, 95% CI {lo95:.0f}-{hi95:.0f};'
+      f' fraction correct by bin {np.round(pk, 3).tolist()}')
