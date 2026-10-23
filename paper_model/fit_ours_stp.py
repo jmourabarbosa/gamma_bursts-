@@ -4,7 +4,7 @@ Fitted: the same seven parameters as fit.py, with facilitation tau_f in place of
 loss plus the resting-state penalty over 1 s before the cue). w_s range wider than in fit.py because resting
 facilitation (u ~ 0.5 at 1 Hz) already makes the recurrent synapses stronger than with NMDA.
 
-usage: python -m paper_model.fit_ours_stp --out fit_ours_stp_run0 --seed 0
+usage: python -m paper_model.fit_ours_stp --out fit_ours_stp_run0 --seed 0 [--no-depression]
 """
 import argparse
 import json
@@ -18,7 +18,7 @@ from .fit import SET
 from .fit_stp import loss, T_PRE
 
 R.M = H
-BOUNDS = dict(tau_f=(300.0, 3000.0), w_s=(0.5, 1.7), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0),
+BOUNDS = dict(tau_f=(100.0, 3000.0), w_s=(0.5, 1.7), dip_rate=(0.5, 12.0), dip_mean=(20.0, 300.0),
               dip_shape=(0.7, 10.0), dip_depth=(0.0, 1.0), sigma=(0.005, 0.04))
 
 
@@ -27,6 +27,7 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--maxfev', type=int, default=1000)
+    ap.add_argument('--no-depression', action='store_true', help='facilitation only (x = 1)')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     ses, hist = R.load_data()
@@ -36,7 +37,7 @@ def main():
 
     def f(u):
         th = theta(u)
-        out = R.evaluate(H.params(t_pre=T_PRE, **th), ses, n_trials=792, seed=a.seed, sets=(SET,))
+        out = R.evaluate(H.params(t_pre=T_PRE, depression=0.0 if a.no_depression else 1.0, **th), ses, n_trials=792, seed=a.seed, sets=(SET,))
         L = loss(out, ses, hist)
         L += 10 * np.sum(np.clip(u - 1, 0, None) ** 2 + np.clip(-u, 0, None) ** 2)   # stay inside the bounds
         if L < best[0]:

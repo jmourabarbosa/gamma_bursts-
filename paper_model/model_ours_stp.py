@@ -19,10 +19,10 @@ from numba import njit
 
 from .model import FIXED as FIXED_NMDA, FIT as FIT_NMDA, common_input, _ou
 
-FIXED = {**FIXED_NMDA, 'U': 0.3, 'tau_d': 300.0}
+FIXED = {**FIXED_NMDA, 'U': 0.3, 'tau_d': 300.0, 'depression': 1.0}   # depression 0: facilitation only (x = 1)
 FIT = {**{k: v for k, v in FIT_NMDA.items() if k != 'tau_N'}, 'tau_f': 1500.0}
 KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0', 'tau_r', 'tau_I', 'cue_amp',
-        'dt', 'tau_f', 'tau_d', 'U', 'w_s', 'sigma')
+        'dt', 'tau_f', 'tau_d', 'U', 'w_s', 'sigma', 'depression')
 
 
 def params(**over):
@@ -31,12 +31,12 @@ def params(**over):
 
 @njit(cache=True)
 def _sim(m, cue, xi, p, rec):
-    r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_f, tau_d, U, w_s, sigma = p
+    r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_f, tau_d, U, w_s, sigma, depr = p
     n_tr, n = m.shape
     out = np.zeros((n_tr, n // rec, 8))    # rc, ru, Sc, Su, uc, uu, xc, xu every rec steps (1 ms)
     for k in range(n_tr):
         rc = 1.0; ru = 1.0; rI = 1.0; q = m[k, 0]
-        uc = U * (1 + tau_f * 1e-3) / (1 + U * tau_f * 1e-3); xc = 1 / (1 + uc * tau_d * 1e-3)   # STP at rest (1 Hz)
+        uc = U * (1 + tau_f * 1e-3) / (1 + U * tau_f * 1e-3); xc = 1 / (1 + depr * uc * tau_d * 1e-3)   # STP at rest (1 Hz)
         uu = uc; xu = xc
         for i in range(n):
             gc = beta * rc * uc * xc / U; gu = beta * ru * uu * xu / U
@@ -46,8 +46,8 @@ def _sim(m, cue, xi, p, rec):
             fu = r_max / (1 + np.exp(-(w_s * Su + w_a * ru + x + sigma * xi[k, i, 1] - 1) / kappa))
             rI += dt / tau_I * (w_EI * (rc + ru) - rI)
             ruc = 1e-3 * rc; ruu = 1e-3 * ru      # Hz -> per ms
-            duc = (U - uc) / tau_f + U * (1 - uc) * ruc; dxc = (1 - xc) / tau_d - uc * xc * ruc
-            duu = (U - uu) / tau_f + U * (1 - uu) * ruu; dxu = (1 - xu) / tau_d - uu * xu * ruu
+            duc = (U - uc) / tau_f + U * (1 - uc) * ruc; dxc = (1 - xc) / tau_d - depr * uc * xc * ruc
+            duu = (U - uu) / tau_f + U * (1 - uu) * ruu; dxu = (1 - xu) / tau_d - depr * uu * xu * ruu
             uc += dt * duc; xc += dt * dxc; uu += dt * duu; xu += dt * dxu
             rc += dt / tau_r * (fc - rc)
             ru += dt / tau_r * (fu - ru)
