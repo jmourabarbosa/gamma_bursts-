@@ -3,9 +3,10 @@
 Off time = fraction of the 91 delay time points (500-1,400 ms after cue onset, 10 ms apart) labelled Off x 900 ms,
 for the data and for the models alike.
 a, memory held against Off time in the NMDA and STP model, each with its own fitted dips (100,000 trials per model;
-   10 bins of 0.1 of the delay, 95% Wilson intervals).
+   10 bins of 0.1 of the delay, 95% Wilson intervals); bars: distribution of NMDA-model trials with the memory lost
+   over the same bins (right axis).
 b, fraction correct against Off time (session mean +- SEM in the same bins), with the linear regression of each
-   session's fraction correct on bin centre (red).
+   session's fraction correct on bin centre (red); bars: distribution of error trials over the same bins (right axis).
 c, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
 
@@ -62,6 +63,21 @@ def off_axis(ax, ylabel=None):
         ax.set_ylabel(ylabel)
 
 
+def error_bars(ax, frac, err, label):
+    """Distribution of error (or memory-lost) trials over the Off-time bins, as bars on a right-hand axis."""
+    i = np.digitize(frac[err], EDGES) - 1
+    h = np.bincount(i, minlength=len(CENT))[:len(CENT)] / err.sum()
+    tw = ax.twinx()
+    tw.bar(W * CENT, h, width=0.8 * W * 0.1, color=C_ON, alpha=0.22, lw=0)
+    tw.set_ylim(0, 0.5); tw.set_yticks([0, 0.25, 0.5], ['0', '', '0.5'])
+    tw.spines['right'].set_visible(True)
+    tw.set_ylabel(label, color=C_ON, labelpad=-4)
+    tw.tick_params(axis='y', colors=C_ON)
+    tw.spines['right'].set_color(C_ON)
+    ax.set_zorder(tw.get_zorder() + 1); ax.patch.set_visible(False)
+    return h
+
+
 glmm = pd.read_csv(f'{DATA}/joint_glmm.csv')
 sw = pd.read_csv(f'{DATA}/joint_glmm_session_weights.csv')
 trials = pd.read_csv(f'{DATA}/per_trial_correct_and_error.csv')
@@ -71,7 +87,7 @@ for v in ('nmda', 'fac'):
     model[v] = (np.round(d['off_time_s'] / 0.01) / NPT, d['memory_held'].astype(bool))
 
 fig = plt.figure(figsize=(7.2, 2.35))
-gs = fig.add_gridspec(1, 3, width_ratios=[1, 1, 1.15], wspace=0.62, left=0.08, right=0.98, top=0.8, bottom=0.2)
+gs = fig.add_gridspec(1, 3, width_ratios=[1, 1, 1.15], wspace=0.85, left=0.08, right=0.98, top=0.8, bottom=0.2)
 ma, a, b = (fig.add_subplot(gs[0, j]) for j in range(3))   # ma: models; a, b: monkeys
 for axs, txt in (((ma, ma), 'Models'), ((a, b), 'Monkeys')):
     x = (axs[0].get_position().x0 + axs[1].get_position().x1) / 2
@@ -95,6 +111,7 @@ off_axis(a, 'Fraction correct')
 a.set_ylim(0.5, 1); a.set_yticks([0.5, 0.75, 1], ['0.5', '', '1'])
 a.yaxis.labelpad = -6
 a.text(30, 0.53, 'Mean ± SEM over sessions', fontsize=7)
+herr = error_bars(a, trials.frac_off.values, ~trials.correct.values.astype(bool), 'Fraction of error trials')
 letter(a, 'b')
 
 # c: odds ratio of an error per SD of each statistic
@@ -130,10 +147,13 @@ off_axis(ma, 'Fraction memory held')
 ma.set_ylim(0.5, 1.01); ma.set_yticks([0.5, 0.75, 1], ['0.5', '', '1'])
 ma.yaxis.labelpad = -6
 ma.legend(loc='lower left', handlelength=1.2, fontsize=7, frameon=False)
+frac, held = model['nmda']
+hlost = error_bars(ma, frac, ~held, 'Fraction of lost trials')
 letter(ma, 'a')
 
 fig.savefig(OUT, dpi=300)
 fig.savefig(OUT.replace('.png', '.svg'))
+print('error distribution:', np.round(herr, 3).tolist(), 'NMDA lost distribution:', np.round(hlost, 3).tolist())
 print('fraction correct by bin:', np.round(mu, 3).tolist(), 'sessions per bin:', n.tolist())
 print('regression: slope per 100 ms', 100 * reg.slope, 'p', reg.pvalue, 'n', ok.sum())
 for v in ('nmda', 'fac'):
