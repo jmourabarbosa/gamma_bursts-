@@ -146,6 +146,26 @@ The read-out and definitions are as above. This controls how long the network is
 - memory against dip length without the read-out;
 - dip rate varied from 0 to 30/s and dip depth from 0.3 to 1.0. The STP model holds the memory in all 24,000 trials, even when Off covers half the delay.
 
+## Supplementary: memory vs total dip time (`figS_dip_time_models`)
+**What it is.** The same fitted-dips trials as the top row, with a different x axis.
+- **x axis:** the total time the common input is in a dip during 500–1,400 ms, below the middle of the dip (1 − depth/2). This is the network's real silence, not the decoder's estimate.
+- **Files:** `figS_dip_time_models.png`, `.svg`, `_data.csv`. The data CSV keeps the column name `x_off_time_s`, which here holds the dip time.
+
+**NMDA model: memory depends steeply on dip time.**
+
+| dip time | memory held |
+|---|---|
+| up to 0.4 s | 99.7–99.8% |
+| 0.4–0.6 s | 98.6% |
+| 0.6–0.8 s | 89% |
+| about 0.75 s | about 50% (the last windows) |
+
+- Lost trials average 0.57 s of dip time, held trials 0.43 s.
+- **Time Off is a blurred proxy for dip time.** Decoded time Off correlates only moderately with dip time (r = 0.44), because 100 ms windows, read-out noise and the lagging kick blur the dips. That blurring flattens the relation in the main figure.
+- **Implication for the data:** the measured relation between time Off and errors may underestimate how strongly errors depend on the network's actual silences.
+
+**STP model:** memory is 100% at every dip time, up to 0.9 s of dips in the 0.9 s window.
+
 ## Interpretation, for the text
 - **Both slow mechanisms reproduce the On/Off statistics**, but only the NMDA model reproduces the behavioural result.
 - **NMDA model:** the memory is bridged by a slow-but-short trace (about 150 ms). It is lost when an Off period outlasts the trace, by about 375 ms of silence. So errors come with more time Off, and memory declines with time Off.

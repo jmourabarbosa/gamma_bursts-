@@ -28,15 +28,16 @@ BINS = np.linspace(0, T, 27)   # 35 ms bins
 N_MIN = 20                     # fewest lost trials for which their histogram is drawn
 
 
-def load(v, src):
+def load(v, src, key='off_time_s'):
     d = np.load(os.path.join('figures', 'off_vs_memory', v, src))
-    return d['off_time_s'], d['memory_held'].astype(bool)
+    return d[key], d['memory_held'].astype(bool)
 
 
-def row(fig, gs, src, title, letters, ylim, loc, rows):
+def row(fig, gs, src, title, letters, ylim, loc, rows, key='off_time_s', xlabel='Time Off in delay (s)',
+        hloc='upper center'):
     a = fig.add_subplot(gs[0])
     for j, (v, label, col) in enumerate(MODELS):
-        off, mem = load(v, src)
+        off, mem = load(v, src, key)
         c, p, lo, hi, n = sliding(off, mem, width=0.025 * T, step=0.0025 * T, start=0.05 * T, top=T)
         a.fill_between(c, lo, hi, color=col, alpha=0.18, lw=0)
         a.plot(c, p, color=col, label=label)
@@ -51,12 +52,12 @@ def row(fig, gs, src, title, letters, ylim, loc, rows):
             h.bar(BINS[:-1], hl / nl, width=np.diff(BINS), align='edge', color=C_ON, alpha=0.75, lw=0, label='Memory lost')
         rows += [dict(panel=letters[j + 1], model=label, bin_lo_s=round(b0, 4), bin_hi_s=round(b1, 4), n_held=int(x),
                       n_lost=int(y), frac_held=x / nh, frac_lost=y / nl) for b0, b1, x, y in zip(BINS[:-1], BINS[1:], hh, hl)]
-        h.set_xlim(0, T); h.set_xlabel('Time Off in delay (s)'); h.set_ylabel('Fraction of trials in group')
+        h.set_xlim(0, T); h.set_xlabel(xlabel); h.set_ylabel('Fraction of trials in group')
         h.set_title(f'{label}: {mem.sum():,} held, {(~mem).sum():,} lost', fontsize=7.5, pad=3)
-        h.legend(loc='upper center', handlelength=1, fontsize=7)
+        h.legend(loc=hloc, handlelength=1, fontsize=7)
         letter(h, letters[j + 1], x=-0.3)
     a.set_xlim(0, T); a.set_ylim(*ylim)
-    a.set_xlabel('Time Off in delay (s)'); a.set_ylabel('Memory held\n(fraction of trials)')
+    a.set_xlabel(xlabel); a.set_ylabel('Memory held\n(fraction of trials)')
     a.set_title(title, fontsize=8, weight='bold', loc='left', pad=3)
     a.legend(loc=loc, handlelength=1.2)
     letter(a, letters[0], x=-0.3)
@@ -78,5 +79,24 @@ def main():
         w.writerows(rows)
 
 
+
+def dip_time_figure():
+    """Supplementary: the fitted-dips row with the total dip time in 500-1,400 ms on the x axis instead of the decoded
+    time Off (the time the common input is below the middle of the dip; natural_readout.py)."""
+    fig = plt.figure(figsize=(7.2, 2.3))
+    gs = fig.add_gridspec(1, 3, wspace=0.5, left=0.1, right=0.98, bottom=0.2, top=0.86)
+    rows = []
+    row(fig, gs, 'natural_readout_trials.npz', 'Fitted dips', 'abc', (0.4, 1.01), 'lower left', rows,
+        key='dip_time_s', xlabel='Dip time in delay (s)', hloc='upper left')
+    save(fig, os.path.join(OUT, 'figS_dip_time_models.png'))
+    keys = ['panel', 'model', 'x_off_time_s', 'memory_held', 'ci_lo', 'ci_hi', 'n_trials', 'bin_lo_s', 'bin_hi_s',
+            'n_held', 'n_lost', 'frac_held', 'frac_lost']
+    with open(os.path.join(OUT, 'figS_dip_time_models_data.csv'), 'w', newline='') as f:
+        w = csv.DictWriter(f, keys)
+        w.writeheader()
+        w.writerows(rows)
+
+
 if __name__ == '__main__':
     main()
+    dip_time_figure()
