@@ -24,6 +24,10 @@ FIT = {**{k: v for k, v in FIT_NMDA.items() if k != 'tau_N'}, 'tau_f': 1500.0}
 KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0', 'tau_r', 'tau_I', 'cue_amp',
         'dt', 'tau_f', 'tau_d', 'U', 'w_s', 'sigma', 'depression')
 
+# facilitation only (depression 0), tau_f fixed at 1.5 s; fit_ours_stp --no-depression --tau-f 1500, seed 0
+FIT_FAC = dict(depression=0.0, tau_f=1500.0, w_s=0.6919, dip_rate=5.486, dip_mean=211.73, dip_shape=0.70, dip_depth=0.3936,
+               sigma=0.0050)
+
 
 def params(**over):
     return {**FIXED, **FIT, **over}
