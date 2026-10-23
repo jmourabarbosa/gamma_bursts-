@@ -133,10 +133,28 @@ off_axis(ma, 'Fraction memory held')
 ma.set_ylim(0, 1.03); ma.set_yticks([0, 0.5, 1], ['0', '', '1'])
 ma.yaxis.labelpad = -6
 from matplotlib.lines import Line2D  # noqa: E402
-handles = [Line2D([], [], color=INK, lw=1.2, label='NMDA model'), Line2D([], [], color=C_STP, lw=1.2, label='STP model'),
-           Line2D([], [], color=GREY, ls='-', marker='o', ms=3, label='Fitted dips'),
-           Line2D([], [], color=GREY, ls=(0, (3, 1.5)), marker='o', ms=3, mfc='white', label='Single dip')]
-ma.legend(handles=handles, loc='center right', bbox_to_anchor=(1.0, 0.55), handlelength=1.8, fontsize=6.5, frameon=False, labelspacing=0.3)
+handles = [Line2D([], [], color=INK, lw=1.2, label='NMDA model'), Line2D([], [], color=C_STP, lw=1.2, label='STP model')]
+ma.legend(handles=handles, loc='lower center', bbox_to_anchor=(0.5, 1.0), ncol=2, handlelength=1.2, columnspacing=0.8,
+          fontsize=6.5, frameon=False, borderaxespad=0.2)
+ma.text(190, 0.93, 'Fitted dips (solid)', fontsize=6.5, va='top')
+ma.text(30, 0.04, 'Single dip (dashed)', fontsize=6.5, va='bottom')
+# inset: zoom on the fitted-dips curves at long Off times
+zx, zy = (600, 900), (0.92, 1.005)
+ins = ma.inset_axes([0.55, 0.38, 0.42, 0.4])
+for v, col in (('nmda', INK), ('fac', C_STP)):
+    frac, held = model['natural', v]
+    i = np.digitize(frac, EDGES) - 1
+    k = np.array([held[i == j].sum() for j in range(len(CENT))])
+    m = np.array([(i == j).sum() for j in range(len(CENT))])
+    lo, hi = wilson(k, m)
+    ins.fill_between(W * CENT, lo, hi, color=col, alpha=0.18, lw=0)
+    ins.plot(W * CENT, k / m, 'o-', color=col, ms=2.5, lw=0.8)
+ins.set_xlim(zx[0] - 20, zx[1]); ins.set_ylim(*zy)
+ins.set_xticks([600, 900]); ins.set_yticks([0.92, 1], ['0.92', '1'])
+ins.tick_params(labelsize=6, length=1.8, pad=1)
+for sp in ('top', 'right'):
+    ins.spines[sp].set_visible(True)
+ma.indicate_inset_zoom(ins, edgecolor=GREY, lw=0.5)
 letter(ma, 'a')
 
 fig.savefig(OUT, dpi=300)
