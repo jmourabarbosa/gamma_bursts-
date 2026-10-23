@@ -2,8 +2,8 @@
 
 a, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots.
-b, fraction correct against Off time in the delay (session mean +- SEM in 0.1 bins), with the trial-level
-   linear regression of correct (0/1) on Off time (red).
+b, fraction correct against Off time in the delay (session mean +- SEM in 0.1 bins), with the linear
+   regression of session fraction correct on bin centre over the non-overlapping bins (red).
 
 usage: python fig3_behaviour.py <behaviour_handoff/data> <out.png>
 data: jmourabarbosa/panichello, branch analysis-replication, analysis/behaviour_handoff/data
@@ -58,7 +58,7 @@ for k, (stat, name, col) in enumerate(rows):
     b.plot(s.session_or, k + rng.uniform(-0.18, 0.18, len(s)), '.', ms=2.5, color=GREY, alpha=0.5, mew=0)
     b.plot([g.or_ci_lo, g.or_ci_hi], [k, k], color=col, lw=1.4, solid_capstyle='butt')
     b.plot(g.odds_ratio_per_sd, k, 'o', ms=4, color=col)
-    b.text(2.3, k + (0.1 if g.p_lrt < 0.05 else 0), stars(g.p_lrt), va='center', fontsize=7.5)
+    b.text(g.odds_ratio_per_sd, k - (0.2 if g.p_lrt < 0.05 else 0.34), stars(g.p_lrt), ha='center', va='center', fontsize=7.5)
 b.axvline(1, color=GREY, ls=(0, (3, 2)), lw=0.6)
 b.set_xscale('log'); b.set_xlim(0.5, 2.2)
 b.set_xticks([0.5, 1, 2], ['0.5', '1', '2']); b.xaxis.set_minor_locator(matplotlib.ticker.NullLocator())
@@ -80,7 +80,8 @@ mu, n = np.nanmean(per, 0), np.sum(~np.isnan(per), 0)
 se = np.nanstd(per, 0, ddof=1) / np.sqrt(n)
 c.fill_between(W * cent, mu - se, mu + se, color=LIGHT, lw=0)
 c.plot(W * cent, mu, 'o-', color=INK, ms=3)
-reg = stats.linregress(W * trials.frac_off, trials.correct)
+ok = ~np.isnan(per)   # regression on the non-overlapping bins: one point per session and bin
+reg = stats.linregress(np.broadcast_to(W * cent, per.shape)[ok], per[ok])
 c.plot([0, W], [reg.intercept, reg.intercept + reg.slope * W], color=C_ON, lw=1.2)
 c.text(W * 0.97, 0.97, p_text(reg.pvalue), ha='right', va='top', fontsize=7.5, color=C_ON)
 c.set_xlim(0, W); c.set_xticks([0, 300, 600, 900])
@@ -93,4 +94,4 @@ fig.savefig(OUT, dpi=300)
 fig.savefig(OUT.replace('.png', '.pdf'))
 print('per-bin n sessions:', n.tolist())
 print('fraction correct by bin:', np.round(mu, 3).tolist())
-print('regression: slope per 100 ms', 100 * reg.slope, 'intercept', reg.intercept, 'p', reg.pvalue, 'n', len(trials))
+print('regression: slope per 100 ms', 100 * reg.slope, 'intercept', reg.intercept, 'p', reg.pvalue, 'n', ok.sum())
