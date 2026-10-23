@@ -28,6 +28,10 @@ KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0',
 FIT_FAC = dict(depression=0.0, tau_f=1500.0, w_s=0.6919, dip_rate=5.486, dip_mean=211.73, dip_shape=0.70, dip_depth=0.3936,
                sigma=0.0050)
 
+# with depression (tau_d 300 ms), tau_f fitted; fit_ours_stp seed 1, the best of 3 (all-units loss 37, poor fit)
+FIT_DEP = dict(depression=1.0, tau_f=1295.7, w_s=0.5747, dip_rate=12.000, dip_mean=171.06, dip_shape=1.281, dip_depth=0.4277,
+               sigma=0.0050)
+
 
 def params(**over):
     return {**FIXED, **FIT, **over}
