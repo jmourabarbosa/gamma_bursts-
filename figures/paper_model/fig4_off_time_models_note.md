@@ -77,6 +77,16 @@ The paper model (`model.py`, `model.FIT`).
   - depth 0.39
   - σ = 0.005 (lower bound)
 - Resting facilitation (u ≈ 0.5 at 1 Hz) already strengthens the recurrent synapses, hence the lower w_s.
+- **Two more fits with other seeds agree** (scored on new trials):
+
+  | seed | all-units loss | all 7 sets | memory held | dips |
+  |---|---|---|---|---|
+  | 1 | 10.9 | 76.0 | 100% | 4.9/s, mean 300 ms (bound), depth 0.44 |
+  | 2 | 10.7 | 72.4 | 99.9% | 8.0/s, mean 164 ms, shape 0.7, depth 0.95, nearly full |
+
+  - The dip statistics differ between seeds, but every fit holds the memory in practically all trials.
+  - Seed 2 has frequent, long, nearly full dips and still keeps 99.9%, so the STP result doesn't depend on the seed.
+  - The figure uses seed 0.
 
 ### Both fit the On/Off statistics about equally well
 Scored on 2,112 new trials:
