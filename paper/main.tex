@@ -87,24 +87,29 @@ In sum, intermittent decoding of working memory is expected from an attractor ne
 
 \subsection{Rate model}
 
-Two excitatory memory pools $X \in \{\cued, \uncued\}$ have rates $r_X$ and NMDA gating $s_X$.
-They share an inhibitory population $r_I$ and a feed-forward inhibition $q$ that follows the common input $m(t)$ with a lag.
-Fitted parameters are shown in bold:
+The network is the reduced two-pool attractor model of \citet{wong2006}, with the changes described below.
+Two excitatory memory pools, $i \in \{\cued, \uncued\}$, have rates $r_i$ and NMDA gating $s_i$.
+They share an inhibitory population $r_I$ and receive a feed-forward inhibition $q$ that follows the common input $m(t)$ with a lag.
+Parameters in bold were free during fitting; all others were fixed.
 \begin{align}
-  \tau_r \frac{dr_X}{dt} &= -r_X + \Phi\bigl(\bm{w_s} s_X + w_a r_X - w_I r_I + I_0\, m(t) - w_{\mathit{ff}}\, q + \mathrm{cue}_X + \bm{\sigma} \xi_X\bigr), \\
-  \tau_N \frac{ds_X}{dt} &= -s_X + \beta\, r_X (1 - s_X), \\
+  \tau_r \frac{dr_i}{dt} &= -r_i + \varphi(x_i), \\
+  x_i &= \bm{w_s} s_i + w_a r_i - w_I r_I + I_0\, m(t) - w_{\mathit{ff}}\, q + \mathrm{cue}_i + \bm{\sigma} \xi_i, \\
+  \tau_N \frac{ds_i}{dt} &= -s_i + \beta\, r_i (1 - s_i), \\
   \tau_I \frac{dr_I}{dt} &= -r_I + w_{EI} \left(r_\cued + r_\uncued\right), \\
   \tau_{\mathit{ff}} \frac{dq}{dt} &= -q + m(t).
 \end{align}
-$\Phi(x) = r_{\max} / \bigl(1 + \exp(-(x - 1)/\kappa)\bigr)$, and $\xi_X$ are independent Ornstein--Uhlenbeck noises ($\tau_\xi = 10$~ms).
+The transfer function $\varphi$ is a logistic sigmoid, $\varphi(x) = r_{\max} / \bigl(1 + \exp(-(x - 1)/\kappa)\bigr)$, with maximum rate $r_{\max}$, threshold 1 and slope $\kappa$, and $\xi_i$ are independent Ornstein--Uhlenbeck noises ($\tau_\xi = 10$~ms).
 Fixed parameters: $r_{\max} = 150$, $\kappa = 0.06$, $w_a = 0.0141$, $\beta = 0.02$, $w_I = 0.04$, $w_{EI} = 0.5$, $w_{\mathit{ff}} = 0.8$, $I_0 = 1.496$; $\tau_r = 10$~ms, $\tau_I = 1$~ms, $\tau_{\mathit{ff}} = 15$~ms, $\tau_N = 150$~ms.
-The model has the structure of the reduced two-pool model of \citet{wong2006}, but these parameter values were not taken from it or from any other study.
-They were chosen by hand so that each pool is bistable, with a low state near 0~Hz and a high state of about 85~Hz, and so that shared inhibition allows only one pool to be active at a time.
+The implementation differs from \citet{wong2006} in three respects: the transfer function is a saturating sigmoid, competition between the pools goes through an explicit inhibitory population, and a lagging feed-forward inhibition is added.
+Parameter values could therefore not be taken directly from their study.
+We chose them by hand so that each pool is bistable, with a low state near 0~Hz and a high state of about 85~Hz, and so that shared inhibition allows only one pool to be active at a time.
 The cue is a 50~ms input of amplitude 1 to the cued pool, after 300~ms of baseline, followed by a 1,600~ms delay.
 Equations were integrated with Euler steps of 0.1~ms.
 The memory was scored correct when, in the last 100~ms, the NMDA gating of the cued pool exceeded the uncued pool's by more than 0.05.
+We scored NMDA gating rather than rates because the network may be silent at the end of the delay; a strong attentional input during the response period would then restart the pool with more NMDA gating and recover the correct response.
 
-The common input $m(t)$ is 1 except during dips, where it drops to $1 - \bm{\delta}$ with 10~ms ramps.
+Our main modification to this model is the common input $m(t)$ to both pools, which represents fluctuating attention.
+It is 1 except during dips, where it drops to $1 - \bm{\delta}$ with 10~ms ramps.
 Dip lengths are gamma-distributed (mean $\bm{\mu_d}$, shape $\bm{k}$), and the gaps between dips are exponential with mean $1/\bm{\lambda_d}$.
 
 \subsection{Data}
