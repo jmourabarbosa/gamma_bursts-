@@ -1,15 +1,13 @@
-"""Figure 3: time Off and memory, in the monkeys (top) and in the two models (bottom).
+"""Figure 3: time Off and memory, model predictions (a) and monkey data (b, c).
 
 Off time = fraction of the 91 delay time points (500-1,400 ms after cue onset, 10 ms apart) labelled Off x 900 ms,
 for the data and for the models alike.
-a, fraction correct against Off time (session mean +- SEM in 10 bins of 0.1 of the delay), with the linear
-   regression of each session's fraction correct on bin centre (red).
-b, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
+a, memory held against Off time in single-dip trials, NMDA and STP model (10 bins of 0.1 of the delay,
+   95% Wilson intervals).
+b, fraction correct against Off time (session mean +- SEM in the same bins), with the linear regression of each
+   session's fraction correct on bin centre (red).
+c, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
-c, Off time of correct (grey) and error (red) trials, as a fraction of all trials (bins of 4 time points).
-d, memory held against Off time in single-dip trials, NMDA and STP model (same bins as a, 95% Wilson intervals).
-e, f, Off time of single-dip trials with the memory held (grey) or lost (red), STP model (e) and NMDA model (f),
-   as a fraction of all trials of that model.
 
 usage: python fig3_off_time.py <behaviour_handoff/data> <off_vs_memory dir with {nmda,fac}/single_dip_readout_trials.npz> <out.png>
 data: jmourabarbosa/panichello, branch analysis-replication, analysis/behaviour_handoff/data
@@ -33,10 +31,8 @@ plt.rcParams.update({'font.family': 'sans-serif', 'font.sans-serif': ['Arial', '
                      'xtick.major.size': 2.5, 'ytick.major.size': 2.5, 'xtick.direction': 'out', 'ytick.direction': 'out',
                      'axes.spines.top': False, 'axes.spines.right': False, 'axes.edgecolor': INK,
                      'lines.linewidth': 0.9, 'pdf.fonttype': 42, 'svg.fonttype': 'none'})
-EDGES = np.r_[np.arange(0, 1.0, 0.1), 1.0001]           # 10 bins of the fraction Off (a, d)
+EDGES = np.r_[np.arange(0, 1.0, 0.1), 1.0001]           # 10 bins of the fraction Off
 CENT = (EDGES[:-1] + EDGES[1:]) / 2
-HEDGES = (np.arange(0, NPT + 2, 4) - 0.5) / NPT           # histogram bins of 4 time points (c, e, f)
-HEDGES[-1] = 1.0001
 
 
 def letter(ax, txt, x=-0.3, y=1.04):
@@ -66,17 +62,6 @@ def off_axis(ax, ylabel=None):
         ax.set_ylabel(ylabel)
 
 
-def histogram(ax, frac, good, n_all, labels):
-    hg, _ = np.histogram(frac[good], HEDGES)
-    hb, _ = np.histogram(frac[~good], HEDGES)
-    x, w = W * np.clip(HEDGES[:-1], 0, None), W * np.diff(np.clip(HEDGES, 0, 1))
-    ax.bar(x, hg / n_all, width=w, align='edge', color=GREY, alpha=0.75, lw=0, label=labels[0])
-    ax.bar(x, hb / n_all, width=w, align='edge', color=C_ON, alpha=0.75, lw=0, label=labels[1])
-    off_axis(ax, 'Fraction of trials')
-    ax.legend(loc='upper center', handlelength=1, fontsize=7, frameon=False)
-    return hg, hb
-
-
 glmm = pd.read_csv(f'{DATA}/joint_glmm.csv')
 sw = pd.read_csv(f'{DATA}/joint_glmm_session_weights.csv')
 trials = pd.read_csv(f'{DATA}/per_trial_correct_and_error.csv')
@@ -85,15 +70,14 @@ for v in ('nmda', 'fac'):
     d = np.load(f'{MODELS}/{v}/single_dip_readout_trials.npz')
     model[v] = (np.round(d['off_time_s'] / 0.01) / NPT, d['memory_held'].astype(bool))
 
-fig = plt.figure(figsize=(7.2, 4.6))
-gs = fig.add_gridspec(2, 3, width_ratios=[1, 1.15, 1], wspace=0.62, hspace=0.75,
-                      left=0.1, right=0.98, top=0.9, bottom=0.1)
-a, b, c = (fig.add_subplot(gs[0, j]) for j in range(3))
-d, e, f = (fig.add_subplot(gs[1, j]) for j in range(3))
-for ax, txt in ((a, 'Monkeys'), (d, 'Models')):
-    ax.text(-0.42, 1.25, txt, transform=ax.transAxes, fontsize=9, weight='bold', va='bottom')
+fig = plt.figure(figsize=(7.2, 2.35))
+gs = fig.add_gridspec(1, 3, width_ratios=[1, 1, 1.15], wspace=0.62, left=0.08, right=0.98, top=0.8, bottom=0.2)
+d, a, b = (fig.add_subplot(gs[0, j]) for j in range(3))   # d: models; a, b: monkeys (lettered a, b, c below)
+for axs, txt in (((d, d), 'Models'), ((a, b), 'Monkeys')):
+    x = (axs[0].get_position().x0 + axs[1].get_position().x1) / 2
+    fig.text(x, 0.93, txt, fontsize=9, weight='bold', ha='center', va='bottom')
 
-# a: fraction correct against Off time, with the regression over the non-overlapping bins
+# b: fraction correct against Off time, with the regression over the non-overlapping bins
 per = []
 for _, t in trials.groupby('session'):
     i = np.digitize(t.frac_off, EDGES) - 1
@@ -111,9 +95,9 @@ off_axis(a, 'Fraction correct')
 a.set_ylim(0.5, 1); a.set_yticks([0.5, 0.75, 1], ['0.5', '', '1'])
 a.yaxis.labelpad = -6
 a.text(30, 0.53, 'Mean ± SEM over sessions', fontsize=7)
-letter(a, 'a')
+letter(a, 'b')
 
-# b: odds ratio of an error per SD of each statistic
+# c: odds ratio of an error per SD of each statistic
 rows = [('frac_off', 'Total Off time', C_OFF), ('off_len_ms', 'Off length', C_OFF),
         ('n_off', 'Off states', C_OFF), ('frac_on', 'Fraction On', C_ON)]
 rng = np.random.default_rng(0)
@@ -131,15 +115,9 @@ b.set_xticks([0.5, 1, 2], ['0.5', '1', '2']); b.xaxis.set_minor_locator(matplotl
 b.set_yticks(range(len(rows)), [r[1] for r in rows]); b.set_ylim(len(rows) - 0.5, -0.5)
 b.tick_params(axis='y', length=0)
 b.set_xlabel('Odds ratio of an error per SD')
-letter(b, 'b', x=-0.62)
+letter(b, 'c', x=-0.62)
 
-# c: Off time of correct and error trials
-correct = trials.correct.values.astype(bool)
-hc, he = histogram(c, trials.frac_off.values, correct, len(trials), ('Correct', 'Error'))
-c.set_title(f'{correct.sum():,} correct, {(~correct).sum():,} errors', fontsize=7.5, pad=3)
-letter(c, 'c')
-
-# d: memory held against Off time in the two models
+# a: memory held against Off time in the two models
 for v, name, col in (('nmda', 'NMDA model', INK), ('fac', 'STP model', C_STP)):
     frac, held = model[v]
     i = np.digitize(frac, EDGES) - 1
@@ -152,14 +130,7 @@ off_axis(d, 'Fraction memory held')
 d.set_ylim(0, 1.02); d.set_yticks([0, 0.5, 1], ['0', '', '1'])
 d.yaxis.labelpad = -6
 d.legend(loc='center right', handlelength=1.2, fontsize=7, frameon=False)
-letter(d, 'd')
-
-# e, f: Off time of model trials with the memory held or lost
-for ax, v, name, L in ((e, 'fac', 'STP model', 'e'), (f, 'nmda', 'NMDA model', 'f')):
-    frac, held = model[v]
-    histogram(ax, frac, held, len(held), ('Memory held', 'Memory lost'))
-    ax.set_title(f'{name.split()[0]}: {held.sum():,} held, {(~held).sum():,} lost', fontsize=7.5, pad=3)
-    letter(ax, L)
+letter(d, 'a')
 
 fig.savefig(OUT, dpi=300)
 fig.savefig(OUT.replace('.png', '.svg'))
@@ -170,4 +141,3 @@ for v in ('nmda', 'fac'):
     i = np.digitize(frac, EDGES) - 1
     print(v, 'memory held by bin:', [round(held[i == j].mean(), 3) for j in range(len(CENT))],
           'mean Off held/lost (ms):', W * frac[held].mean(), W * frac[~held].mean() if (~held).any() else None)
-print('data mean Off correct/error (ms):', W * trials.frac_off[correct].mean(), W * trials.frac_off[~correct].mean())
