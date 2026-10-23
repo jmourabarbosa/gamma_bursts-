@@ -1,27 +1,30 @@
 # Hand-off: memory vs time Off in the delay (NMDA model vs STP model)
 
 ## For the paper agent: what changed
-The model panel of paper Figure 3 should now use the **fitted models with their own random dips**, not the single-dip test.
+The model figure now shows **both simulations**, one per row:
+- **Top row (a–c): fitted dips.** Each fitted model with its own random dips, 100,000 trials per model.
+- **Bottom row (d–f): single dip.** One dip of 0–1 s per trial.
 
-**Why.** In the single-dip test, dip lengths are spread evenly up to 1 s, far beyond the fitted dips (mean 90 ms in the NMDA model). So 63% of trials lose the memory by design, and memory falls to about 5%. That exaggerates how fast performance decays. With the fitted dips, the NMDA model stays near the data's level and declines with time Off, while the STP model stays at 100%.
+In both, the STP model holds the memory, while the NMDA model loses it with long silences.
+
+**Why both.**
+- **The single-dip test alone exaggerates how fast performance decays.** Dip lengths are spread evenly up to 1 s, far beyond the fitted dips (mean 90 ms in the NMDA model), so 63% of trials lose the memory by design.
+- **The fitted-dips simulation is the comparison with the data.** The NMDA model stays near the data's level and declines with time Off; the STP model stays at 100%.
+- **The single-dip test shows the mechanism.** The NMDA model has a cut-off at about 375 ms of continuous silence; the STP model has none.
 
 **What to change in `paper/scripts/fig3_off_time.py`:**
-- Load `figures/off_vs_memory/{nmda,fac}/natural_readout_trials.npz` instead of `single_dip_readout_trials.npz`.
-- The keys and units are the same: `off_time_s` in seconds and `memory_held`, now with 20,000 trials per model.
-- Keep the single-dip test as a supplementary figure or a sentence in the Methods.
+- Its model panel reads `figures/off_vs_memory/{nmda,fac}/single_dip_readout_trials.npz`, which is unchanged.
+- Add `natural_readout_trials.npz` from the same folders. It has the same keys and units: `off_time_s` in seconds and `memory_held`, with 100,000 trials per model.
 
-**Reference figures:**
-- Main figure, fitted models with their own dips: `figures/paper_model/fig4_off_time_models.png` (panels as below).
-- Supplementary, single-dip test: `figures/paper_model/figS_off_time_models_single_dip.png`.
+**Reference figure:** `figures/paper_model/fig4_off_time_models.png`, panels as below.
 
 ## Files
 All files are in `figures/paper_model/`.
 
 | file | content |
 |---|---|
-| `fig4_off_time_models.png` (600 dpi), `.svg` (editable text) | main figure |
-| `fig4_off_time_models_data.csv` | the plotted values: panel a, one row per window (`memory_held`, 95% CI, `n_trials`); panels b and c, one row per bin (`n_held`, `n_lost`, and the plotted `frac_held`, `frac_lost`) |
-| `figS_off_time_models_single_dip.png`, `.svg`, `_data.csv` | the single-dip test |
+| `fig4_off_time_models.png` (600 dpi), `.svg` (editable text) | the figure |
+| `fig4_off_time_models_data.csv` | the plotted values: panels a and d, one row per window (`memory_held`, 95% CI, `n_trials`); panels b, c, e and f, one row per bin (`n_held`, `n_lost`, and the plotted `frac_held`, `frac_lost`) |
 
 ## Reproduce (about 10 min)
 ```
@@ -32,11 +35,11 @@ PM_VARIANT=fac python -m paper_model.single_dip_readout
 python -m paper_model.fig_off_time_models
 ```
 
-## Main figure: what it shows
+## Top row (a–c), fitted dips: what it shows
 **The question.** In the fitted models, is the memory lost more often in trials with more time Off, as in the data?
 
 **Simulation**, the same for both models:
-- 20,000 trials of each fitted model, with its own random dips of the common input (the fitted dip statistics). Nothing is manipulated.
+- 100,000 trials of each fitted model, with its own random dips of the common input (the fitted dip statistics). Nothing is manipulated.
 - Each trial is read out like the data with the all-units read-out:
   - the fitted model's all-units gain;
   - the all-units noise, with a 0.35 slow share;
@@ -47,14 +50,14 @@ python -m paper_model.fig_off_time_models
 - **Memory held:** the network itself, not the decoder. At the end of the delay (last 100 ms), the cued pool's slow variable exceeds the uncued pool's by more than 0.05. The slow variable is NMDA gating in the NMDA model and facilitation u in the STP model.
   - In the NMDA model, a lost memory means neither pool re-ignites after a dip; the uncued item is never held.
 
-**Panels:**
+**Panels** (the bottom row d–f has the same layout for the single-dip test):
 - **a:** fraction of trials with the memory held against time Off. Black: NMDA model. Blue: STP model.
   - Sliding windows as the behavioural analysis, converted to seconds: 23 ms wide, steps of 2.3 ms, from 45 ms. Shading: 95% Wilson interval.
-  - The y axis runs from 0.75 to 1.
+  - The y axis runs from 0.75 to 1 (0 to 1 in panel d).
 - **b, c:** distribution of time Off for trials with the memory held (grey) or lost (red), for the NMDA model (b) and the STP model (c).
   - Each group is normalised to its own number of trials, because lost trials are few.
   - 35 ms bins.
-  - The STP model has a single lost trial, so its histogram is not drawn.
+  - Lost trials are drawn only if there are at least 20 of them. The STP model has 9 lost trials of 100,000 in the top row and none in the bottom row.
 
 ## The two models
 
@@ -89,30 +92,31 @@ Scored on 2,112 new trials:
 - **Data:** Off 3.25 / 186 ms / 0.45; On 2.10 / 172 ms / 0.21.
 - The STP model's version of Fig. 2 is in `figures/off_vs_memory/fac/fig2_unit_sets.png`. It is similar to the NMDA model's, with On states in the top-unit sets about 50 ms too long.
 
-## Key numbers (main figure)
+## Key numbers, fitted dips (top row)
 
 ### NMDA model
-- **Overall:** 19,703 of 20,000 trials held (98.5%).
+- **Overall:** 98,517 of 100,000 trials held (98.5%).
 - **Memory held by time Off:**
 
   | time Off | memory held |
   |---|---|
   | 0–0.1 s | 99.8% |
-  | 0.4–0.5 s | 98.9% |
-  | 0.6–0.7 s | 97.4% |
-  | 0.8–0.91 s | 93.4% |
+  | 0.2–0.3 s | 99.4% |
+  | 0.4–0.5 s | 98.8% |
+  | 0.6–0.7 s | 97.3% |
+  | 0.8–0.91 s | 94.3% |
 
-- **Lost trials have more time Off:** mean 0.62 s, against 0.36 s for held trials.
+- **Lost trials have more time Off:** mean 0.60 s, against 0.36 s for held trials.
 
 ### STP model
-- **Overall:** 19,999 of 20,000 trials held. Memory is 100% at every time Off, including 0.8–0.91 s.
+- **Overall:** 99,991 of 100,000 trials held. Memory is about 100% at every time Off.
 - **Mean time Off:** 0.37 s.
 
 ### Data, for comparison
 - About 91% correct with almost no time Off, falling to about 76% when nearly the whole delay is Off.
 - The model's baseline (about 100%) is higher because it has no errors other than memory loss. The comparison is about the decline with time Off.
 
-## Supplementary: the single-dip test (`figS_off_time_models_single_dip`)
+## Bottom row (d–f): the single-dip test
 **What it is.** Each trial has exactly one dip of fixed length, and no other dips:
 - length 0–1,000 ms in 25 ms steps, 300 trials per length (12,300 per model);
 - starting 500 ms after cue onset;
@@ -148,9 +152,9 @@ In `paper_model/` on branch `paper-model`:
 
 | file | role |
 |---|---|
-| `fig_off_time_models.py` | both figures |
-| `natural_readout.py` | main-figure trials |
-| `single_dip_readout.py` | single-dip trials |
+| `fig_off_time_models.py` | the figure |
+| `natural_readout.py` | top-row trials |
+| `single_dip_readout.py` | bottom-row trials |
 | `variant.py` | chooses the model: `PM_VARIANT=fac` for the STP model, the default for the NMDA model |
 | `model_ours_stp.py` | the STP model |
 

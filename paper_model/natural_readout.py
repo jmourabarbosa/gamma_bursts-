@@ -13,7 +13,7 @@ import numpy as np
 from . import readout as R, variant as M
 from .off_vs_memory import RHO, reference
 
-N_TRIALS, BATCH = 20000, 1000
+N_TRIALS, BATCH = 100000, 1000
 
 
 def main():
