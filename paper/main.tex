@@ -69,6 +69,17 @@ So far we considered decoders that use all recorded neurons. We found, however, 
 
 If Off states come from shared dips in network activity, the same dynamics, read out with a higher or lower decoding strength, should reproduce the change across decoded populations. To test this, we fitted the dynamics only to the decoder using all neurons in 25 sessions (Methods). The model matches the data well in Off states per trial (3.1 vs 3.3), Off median length (110 vs 112~ms), On states per trial (1.9 vs 2.1) and On median length (140 vs 134~ms) (Fig.~2, grey band). We then kept the dynamics fixed and, for each of the six other decoded populations, changed only the read-out without refitting any parameters. Its gain was calibrated on that population's decoding strength and its noise on that population's pre-cue $z$ (Methods). Without any refitting, the model predicts quantitatively the shift between selective and random neurons.
 
+\subsection{More time Off predicts errors}
+
+Our account also makes a behavioural prediction. If the memory survives each Off state only because NMDA gating decays slowly, it should be more fragile when the network spends more time silent, since the gating decays throughout each silence. We therefore asked whether On/Off statistics differ between correct and error trials, which were excluded so far (Methods). Within sessions, the odds of an error increased with the total Off time in the delay and with the mean length of Off states, and decreased with the fraction of the delay On, but did not depend on the number of Off states (Fig.~3a). Accordingly, the fraction of correct trials fell steadily with Off time, from 91\% in trials with almost no Off time to 76\% in trials Off for nearly the whole delay (Fig.~3b). The effect was present in two of the three monkeys (Methods). Errors are thus associated with more time silent, not with more frequent silences, as expected if the memory is occasionally lost when the NMDA trace decays too far during a silence. Because error trials were decoded with decoders trained on correct trials, part of their Off time could also reflect a wrong remembered location rather than a lapse.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.75\textwidth]{fig3_behaviour.png}
+  \caption{\textbf{Errors follow more time in Off states.} \textbf{a}, Odds ratio of an error per within-session SD of four statistics of the delay (500--1,400~ms after cue onset): total Off time, mean Off-state length, number of Off states and fraction of the delay On. Coloured circles and lines: fixed effect and 95\% CI of a logistic mixed model, fitted separately for each statistic to all 25 sessions (Methods). Grey dots: single sessions (fixed effect plus the session's random slope). Likelihood-ratio tests: total Off time, $p = 1\times10^{-5}$; Off length, $p = 7\times10^{-5}$; number of Off states, $p = 0.89$; fraction On, $p = 0.001$. ***$p < 0.001$, **$p < 0.01$, n.s.\ not significant. \textbf{b}, Fraction correct against Off time in the delay, in 91~ms bins. Mean $\pm$ SEM over 25 sessions.}
+  \label{fig:3}
+\end{figure}
+
 \section{Discussion}
 
 Recent large-scale recordings agree that prefrontal decoding of a remembered item is intermittent on single trials, but differ on whether Off states mean that the memory leaves spiking activity and is held in short-term synaptic plasticity \citep{panichello2024,tao2024,mozumder2026}. We showed that the same On/Off statistics arise in a conventional attractor network with fixed synapses. In the model, Off states occur when a common input briefly drops, and the memory survives each silence because NMDA receptor currents decay slowly enough to bias which pool restarts. Fitted to the decoder trained on the empirical data, the model reproduced the number and length of On and Off states and kept the memory in 98\% of trials.
@@ -106,7 +117,7 @@ We chose them by hand so that each pool is bistable, with a low state near 0~Hz 
 The cue is a 50~ms input of amplitude 1 to the cued pool, after 300~ms of baseline, followed by a 1,600~ms delay.
 Equations were integrated with Euler steps of 0.1~ms.
 The memory was scored correct when, in the last 100~ms, the NMDA gating of the cued pool exceeded the uncued pool's by more than 0.05.
-We scored NMDA gating rather than rates because the network may be silent at the end of the delay; a strong attentional input during the response period would then restart the pool with more NMDA gating and recover the correct response.
+We scored NMDA gating rather than rates because the network may be silent at the end of the delay, but a strong attentional input during the response period can restart the pool with more NMDA gating and recover the correct response with virtually no memory loss (not shown).
 
 Our main modification to this model is the common input $m(t)$ to both pools, which represents fluctuating attention.
 It is 1 except during dips, where it drops to $1 - \bm{\delta}$ with 10~ms ramps.
@@ -114,9 +125,13 @@ Dip lengths are gamma-distributed (mean $\bm{\mu_d}$, shape $\bm{k}$), and the g
 
 \subsection{Data}
 
-We reanalysed the recordings of \citet{panichello2024}: 25 sessions, correct trials only, all cue locations (13,190 trials; 329 units per session on average).
+We reanalysed the recordings of \citet{panichello2024}: 25 sessions, correct trials only (error trials were used only in the behavioural analysis), all cue locations (13,190 trials; 329 units per session on average).
 For each time bin, an L2-regularised logistic decoder ($\lambda = 10{,}000$) was evaluated with approximate leave-one-out and $z$-scored against 30 shuffled label sets per cue pair.
 Decoded populations were all neurons, the $k$ most cue-selective neurons (ranked by split-half ANOVA), and $k$ randomly chosen neurons (10 draws, averaged within sessions), with $k = 5$, 20 and 50.
+
+\subsection{Behavioural analysis}
+
+To relate On/Off states to behaviour, we also labelled error trials (15,468 trials in total, 2,278 errors). Error trials were decoded with decoders fitted on all correct trials of the same cue pair, so they were also out of sample, and their rates were $z$-scored with the mean and SD of correct trials. For each trial, we computed the total Off time and the fraction of time On in the delay (500--1,400~ms after cue onset), the number of Off states and their mean length (13,962 trials with at least one Off state). For each statistic, the probability of an error was modelled with a logistic mixed model, $\text{error} \sim z(\text{stat}) + t + t^2 + \text{monkey} + (1 + z(\text{stat}) \,\|\, \text{session})$, where $z(\text{stat})$ is the statistic $z$-scored within each session, so that only within-session variation is used, $t$ is the time within the session, and each session has a random intercept and an uncorrelated random slope. Monkey was a fixed effect, as three monkeys are too few to estimate a random effect. Models were fitted with the Laplace approximation and tested with likelihood-ratio tests against the same model without the statistic. Fitted to each monkey separately, the odds ratio of an error per SD of total Off time was 1.11 ($p = 0.13$), 1.61 ($p = 1\times10^{-4}$) and 1.68 ($p = 0.005$) in monkeys A, H and J. In Fig.~3b, trials were binned by Off time in 91~ms bins (one tenth of the delay window), and fraction correct was computed for each session in bins with at least 5 trials.
 
 \subsection{Fitting}
 
