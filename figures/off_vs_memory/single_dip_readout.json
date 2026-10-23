@@ -1,0 +1,170 @@
+{
+ "off_time_held": 0.18269021146718992,
+ "off_time_lost": 0.654839880720861,
+ "by_length": {
+  "0": {
+   "off_median": 0.0,
+   "memory": 1.0
+  },
+  "25": {
+   "off_median": 0.0,
+   "memory": 1.0
+  },
+  "50": {
+   "off_median": 0.0,
+   "memory": 1.0
+  },
+  "75": {
+   "off_median": 0.0,
+   "memory": 1.0
+  },
+  "100": {
+   "off_median": 0.0,
+   "memory": 1.0
+  },
+  "125": {
+   "off_median": 0.060000000000000005,
+   "memory": 1.0
+  },
+  "150": {
+   "off_median": 0.09,
+   "memory": 1.0
+  },
+  "175": {
+   "off_median": 0.1,
+   "memory": 1.0
+  },
+  "200": {
+   "off_median": 0.14,
+   "memory": 1.0
+  },
+  "225": {
+   "off_median": 0.19,
+   "memory": 1.0
+  },
+  "250": {
+   "off_median": 0.23,
+   "memory": 1.0
+  },
+  "275": {
+   "off_median": 0.24000000000000002,
+   "memory": 1.0
+  },
+  "300": {
+   "off_median": 0.38,
+   "memory": 1.0
+  },
+  "325": {
+   "off_median": 0.51,
+   "memory": 1.0
+  },
+  "350": {
+   "off_median": 0.655,
+   "memory": 1.0
+  },
+  "375": {
+   "off_median": 0.66,
+   "memory": 0.29
+  },
+  "400": {
+   "off_median": 0.68,
+   "memory": 0.0
+  },
+  "425": {
+   "off_median": 0.69,
+   "memory": 0.0
+  },
+  "450": {
+   "off_median": 0.69,
+   "memory": 0.0
+  },
+  "475": {
+   "off_median": 0.69,
+   "memory": 0.0
+  },
+  "500": {
+   "off_median": 0.69,
+   "memory": 0.0
+  },
+  "525": {
+   "off_median": 0.7100000000000001,
+   "memory": 0.0
+  },
+  "550": {
+   "off_median": 0.7000000000000001,
+   "memory": 0.0
+  },
+  "575": {
+   "off_median": 0.72,
+   "memory": 0.0
+  },
+  "600": {
+   "off_median": 0.7100000000000001,
+   "memory": 0.0
+  },
+  "625": {
+   "off_median": 0.7150000000000001,
+   "memory": 0.0
+  },
+  "650": {
+   "off_median": 0.72,
+   "memory": 0.0
+  },
+  "675": {
+   "off_median": 0.7050000000000001,
+   "memory": 0.0
+  },
+  "700": {
+   "off_median": 0.69,
+   "memory": 0.0
+  },
+  "725": {
+   "off_median": 0.72,
+   "memory": 0.0
+  },
+  "750": {
+   "off_median": 0.7150000000000001,
+   "memory": 0.0
+  },
+  "775": {
+   "off_median": 0.7000000000000001,
+   "memory": 0.0
+  },
+  "800": {
+   "off_median": 0.7000000000000001,
+   "memory": 0.0
+  },
+  "825": {
+   "off_median": 0.72,
+   "memory": 0.0
+  },
+  "850": {
+   "off_median": 0.7050000000000001,
+   "memory": 0.0
+  },
+  "875": {
+   "off_median": 0.7300000000000001,
+   "memory": 0.0
+  },
+  "900": {
+   "off_median": 0.7150000000000001,
+   "memory": 0.0
+  },
+  "925": {
+   "off_median": 0.7000000000000001,
+   "memory": 0.0
+  },
+  "950": {
+   "off_median": 0.7100000000000001,
+   "memory": 0.0
+  },
+  "975": {
+   "off_median": 0.72,
+   "memory": 0.0
+  },
+  "1000": {
+   "off_median": 0.75,
+   "memory": 0.0
+  }
+ }
+}
