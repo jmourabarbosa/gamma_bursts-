@@ -34,6 +34,8 @@ FIT = dict(tau_N=150.0,       # ms, NMDA decay
 KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0', 'tau_r', 'tau_I', 'cue_amp',
         'dt', 'tau_N', 'w_s', 'sigma', 'ff_mode')
 OVERSHOOT = dict(ff_mode=1.0)    # attention overshoot on recovery instead of the lagging feed-forward inhibition
+# fitted with OVERSHOOT (fit.py --overshoot, best of 3 seeds on the all-units read-out)
+FIT_OVERSHOOT = dict(tau_N=137.16, w_s=1.3144, dip_rate=11.421, dip_mean=96.20, dip_shape=8.349, dip_depth=0.6843, sigma=0.0107)
 
 
 def params(**over):

@@ -10,7 +10,7 @@ b, c, e, f: time Off of trials with the memory held (grey) or lost (red), NMDA m
    to its own number of trials. Lost trials are drawn only if there are at least N_MIN of them.
 Output: figures/paper_model/fig4_off_time_models.{png,svg} and fig4_off_time_models_data.csv.
 
-usage: python -m paper_model.fig_off_time_models
+usage: [PM_FIG4_NMDA=os] python -m paper_model.fig_off_time_models
 """
 import csv
 import os
@@ -20,7 +20,9 @@ import numpy as np
 from .make_figures import plt, save, letter, INK, GREY, C_ON, OUT
 from .off_vs_memory import sliding
 
-MODELS = (('nmda', 'NMDA model', INK), ('fac', 'STP model', '#2b83ba'))
+NMDA_V = os.environ.get('PM_FIG4_NMDA', 'nmda')    # 'os': the overshoot version of the NMDA model
+SUFFIX = '' if NMDA_V == 'nmda' else f'_{NMDA_V}'
+MODELS = ((NMDA_V, 'NMDA model', INK), ('fac', 'STP model', '#2b83ba'))
 SIMS = (('natural_readout_trials.npz', 'Fitted dips', 'abc', (0.75, 1.005), 'lower left'),
         ('single_dip_readout_trials.npz', 'Single dip, 0-1 s', 'def', (-0.02, 1.02), 'center right'))
 T = 0.91                       # delay window 500-1,400 ms: 91 time points of 10 ms
@@ -70,10 +72,10 @@ def main():
     for k, (src, title, letters, ylim, loc) in enumerate(SIMS):
         row(fig, outer[k].subgridspec(1, 3, wspace=0.5), src, title, letters, ylim, loc, rows)
     os.makedirs(OUT, exist_ok=True)
-    save(fig, os.path.join(OUT, 'fig4_off_time_models.png'))
+    save(fig, os.path.join(OUT, f'fig4_off_time_models{SUFFIX}.png'))
     keys = ['panel', 'model', 'x_off_time_s', 'memory_held', 'ci_lo', 'ci_hi', 'n_trials', 'bin_lo_s', 'bin_hi_s',
             'n_held', 'n_lost', 'frac_held', 'frac_lost']
-    with open(os.path.join(OUT, 'fig4_off_time_models_data.csv'), 'w', newline='') as f:
+    with open(os.path.join(OUT, f'fig4_off_time_models{SUFFIX}_data.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, keys)
         w.writeheader()
         w.writerows(rows)
@@ -88,10 +90,10 @@ def dip_time_figure():
     rows = []
     row(fig, gs, 'natural_readout_trials.npz', 'Fitted dips', 'abc', (0.4, 1.01), 'lower left', rows,
         key='dip_time_s', xlabel='Dip time in delay (s)', hloc='upper left')
-    save(fig, os.path.join(OUT, 'figS_dip_time_models.png'))
+    save(fig, os.path.join(OUT, f'figS_dip_time_models{SUFFIX}.png'))
     keys = ['panel', 'model', 'x_off_time_s', 'memory_held', 'ci_lo', 'ci_hi', 'n_trials', 'bin_lo_s', 'bin_hi_s',
             'n_held', 'n_lost', 'frac_held', 'frac_lost']
-    with open(os.path.join(OUT, 'figS_dip_time_models_data.csv'), 'w', newline='') as f:
+    with open(os.path.join(OUT, f'figS_dip_time_models{SUFFIX}_data.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, keys)
         w.writeheader()
         w.writerows(rows)

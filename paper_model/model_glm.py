@@ -10,7 +10,7 @@ Also at the data's sample size: N_DRAWS random draws of N_DATA = 15,468 model tr
 refitted; median odds ratio with the 2.5-97.5 percentiles over draws, and the fraction of draws with p_LRT < 0.05
 (fig_model_glm_matched.{png,svg,csv}).
 
-usage: python -m paper_model.model_glm
+usage: [PM_FIG4_NMDA=os] python -m paper_model.model_glm
 """
 import csv
 import os
@@ -20,7 +20,9 @@ from scipy import stats
 
 from .make_figures import plt, save, INK, GREY, C_ON, C_OFF, OUT
 
-MODELS = (('nmda', 'NMDA model', INK), ('fac', 'STP model', '#2b83ba'))
+NMDA_V = os.environ.get('PM_FIG4_NMDA', 'nmda')    # 'os': the overshoot version of the NMDA model
+SUFFIX = '' if NMDA_V == 'nmda' else f'_{NMDA_V}'
+MODELS = ((NMDA_V, 'NMDA model', INK), ('fac', 'STP model', '#2b83ba'))
 ROWS = (('frac_off', 'Total Off time', C_OFF), ('off_len_ms', 'Off length', C_OFF),
         ('n_off', 'Off states', C_OFF), ('frac_on', 'Total On time', C_ON))
 
@@ -78,8 +80,8 @@ def main():
     ax.tick_params(axis='y', length=0)
     ax.set_xlabel('Odds ratio of memory loss per SD')
     ax.legend(loc='lower center', bbox_to_anchor=(0.4, 1.0), ncol=2, handlelength=0.8, fontsize=6.5, columnspacing=0.8)
-    save(fig, os.path.join(OUT, 'fig_model_glm.png'))
-    with open(os.path.join(OUT, 'fig_model_glm.csv'), 'w', newline='') as f:
+    save(fig, os.path.join(OUT, f'fig_model_glm{SUFFIX}.png'))
+    with open(os.path.join(OUT, f'fig_model_glm{SUFFIX}.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, list(res[0]))
         w.writeheader()
         w.writerows(res)
@@ -153,8 +155,8 @@ def matched_figure():
     ax.tick_params(axis='y', length=0)
     ax.set_xlabel('Odds ratio of memory loss per SD')
     ax.legend(loc='lower center', bbox_to_anchor=(0.45, 1.0), ncol=2, handlelength=0.8, fontsize=6.5, columnspacing=0.8)
-    save(fig, os.path.join(OUT, 'fig_model_glm_matched.png'))
-    with open(os.path.join(OUT, 'fig_model_glm_matched.csv'), 'w', newline='') as f:
+    save(fig, os.path.join(OUT, f'fig_model_glm_matched{SUFFIX}.png'))
+    with open(os.path.join(OUT, f'fig_model_glm_matched{SUFFIX}.csv'), 'w', newline='') as f:
         w = csv.DictWriter(f, list(res[0]))
         w.writeheader()
         w.writerows(res)
