@@ -3,7 +3,8 @@
 N_TRIALS trials with the fitted dips, read out with the all-units read-out (fitted gain, all-units noise) and labelled
 as in readout.py; states and dips 0-1,400 ms after cue onset. A dip = common input below the middle of the dip
 (1 - depth / 2), at 1 ms. A dip is detected if an Off state overlaps it; an Off state is explained if a dip overlaps it.
-a, b: dip lengths and gaps between dips (input statistics); c: dip vs Off-state lengths; d: P(dip detected as Off) vs
+a, b: dip lengths and gaps between dips, from the fitted distributions (gamma lengths, Poisson onsets: exponential
+gaps), not simulated; c: dip vs Off-state lengths; d: P(dip detected as Off) vs
 dip length; e: Off length vs summed length of the dips it overlaps; f: per trial, total dip time vs total Off time.
 Output: figures/paper_model/figS_dips_vs_states.{png,svg} and figS_dips_vs_states.json.
 
@@ -13,6 +14,7 @@ import json
 import os
 
 import numpy as np
+from scipy import stats
 
 from . import model as M, readout as R
 from .off_vs_memory import RHO, reference
@@ -59,17 +61,21 @@ def main():
     r_tot = np.corrcoef(tot_dip, tot_off)[0, 1]; r_n = np.corrcoef(n_dip, n_off)[0, 1]
 
     fig, axs = plt.subplots(2, 3, figsize=(7.2, 4.4), gridspec_kw=dict(hspace=0.7, wspace=0.55, left=0.08, right=0.98, top=0.93, bottom=0.11))
+    k_, mu, rate = p['dip_shape'], p['dip_mean'], p['dip_rate']
     a = axs[0, 0]
-    a.hist(dlen, bins=np.arange(0, 301, 10), color=GREY, density=True)
-    a.set_xlabel('Dip length (ms)'); a.set_ylabel('Density')
-    a.set_title(f"Dips: mean {dlen.mean():.0f} ms, {n_dip.mean():.1f} per trial", fontsize=7.5, pad=3)
+    x = np.linspace(0, 300, 601)
+    a.fill_between(x, stats.gamma.pdf(x, k_, scale=mu / k_), color=GREY, lw=0)
+    a.set_xlabel('Dip length (ms)'); a.set_ylabel('Density'); a.set_ylim(bottom=0)
+    a.set_title(f"Dip length: gamma, mean {mu:.0f} ms,\nshape {k_:.1f} (SD {mu / np.sqrt(k_):.0f} ms)", fontsize=7.5, pad=3)
     b = axs[0, 1]
-    b.hist(gaps, bins=np.arange(0, 601, 20), color=GREY, density=True)
-    b.set_xlabel('Gap between dips (ms)'); b.set_ylabel('Density')
-    b.set_title(f"Gaps: mean {gaps.mean():.0f} ms", fontsize=7.5, pad=3)
+    x = np.linspace(0, 600, 601)
+    b.fill_between(x, rate / 1000 * np.exp(-rate / 1000 * x), color=GREY, lw=0)
+    b.set_xlabel('Gap between dips (ms)'); b.set_ylabel('Density'); b.set_ylim(bottom=0)
+    b.set_title(f"Gaps: exponential, {rate:.1f} dips/s\n(mean {1000 / rate:.0f} ms)", fontsize=7.5, pad=3)
     c = axs[0, 2]
     e_ = np.arange(0, 501, 20)
-    c.hist(dlen, bins=e_, color=GREY, alpha=0.6, density=True, label='Dips (input)')
+    xx = np.linspace(0, 500, 501)
+    c.fill_between(xx, stats.gamma.pdf(xx, k_, scale=mu / k_), color=GREY, alpha=0.6, lw=0, label='Dips (fitted)')
     c.hist(off_len, bins=e_, color=C_OFF, alpha=0.6, density=True, label='Off states (decoded)')
     c.set_xlabel('Length (ms)'); c.set_ylabel('Density'); c.legend(fontsize=6.5)
     c.set_title(f"Off: mean {off_len.mean():.0f} ms, {n_off.mean():.1f} per trial", fontsize=7.5, pad=3)
