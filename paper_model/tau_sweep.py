@@ -16,7 +16,7 @@ import numpy as np
 from . import readout as R, variant as M
 from .off_vs_memory import RHO, reference
 
-KEY = 'tau_N' if M.NAME == 'nmda' else 'tau_f'
+KEY = 'tau_f' if M.NAME == 'fac' else 'tau_N'
 OUT = os.path.join(M.OUT, 'tau_sweep')
 N_TRIALS, BATCH = 30000, 1000
 

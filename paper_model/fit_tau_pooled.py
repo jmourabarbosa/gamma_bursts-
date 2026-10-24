@@ -9,7 +9,7 @@ Bootstrap: sessions resampled with replacement N_BOOT times (all trials of each 
 distribution of the best tau_N.
 Output: figures/paper_model/fig_tau_fit_pooled.{png,svg} and fig_tau_fit_pooled.csv (one row per bootstrap sample).
 
-usage: python -m paper_model.fit_tau_pooled
+usage: [PM_VARIANT=os] python -m paper_model.fit_tau_pooled      (NMDA models only: nmda or os)
 """
 import csv
 import os
@@ -18,6 +18,9 @@ import numpy as np
 
 from .fit_tau_behaviour import DATA, EDGES, NB, P0, bins, model_curves, wilson
 from .make_figures import plt, save, letter, INK, OUT
+from . import variant as V
+
+SUFFIX = '' if V.NAME == 'nmda' else f'_{V.NAME}'
 
 G = 1 / 8           # chance of a correct response after the memory is lost (8 cue locations)
 N_BOOT = 1000
@@ -43,7 +46,7 @@ def main():
     k = np.bincount(b, weights=c, minlength=NB); n = np.bincount(b, minlength=NB)
     q = k.sum() / n.sum()
     ll0 = k.sum() * np.log(q) + (n - k).sum() * np.log(1 - q)
-    fine, Hf = model_curves('nmda')[2:]
+    fine, Hf = model_curves(V.NAME)[2:]
     i, j, ll = best(k, n, Hf)
     tau, p0, prof = fine[i], P0[j], ll.max(1) - ll.max()
     rng = np.random.default_rng(0)
@@ -83,8 +86,8 @@ def main():
     h.axvline(tau, color=INK, lw=0.6, ls=(0, (3, 2)))
     h.set_title(f'{N_BOOT} session bootstraps: {med:.0f} ms\n(95% CI {lo95:.0f}-{hi95:.0f})', fontsize=7, pad=3)
     letter(h, 'c', x=-0.35)
-    save(fig, os.path.join(OUT, 'fig_tau_fit_pooled.png'))
-    with open(os.path.join(OUT, 'fig_tau_fit_pooled.csv'), 'w', newline='') as f:
+    save(fig, os.path.join(OUT, f'fig_tau_fit_pooled{SUFFIX}.png'))
+    with open(os.path.join(OUT, f'fig_tau_fit_pooled{SUFFIX}.csv'), 'w', newline='') as f:
         w = csv.writer(f)
         w.writerow(['sample', 'tau_N_ms', 'p0', 'loglik'])
         w.writerow(['data', tau, p0, ll.max()])

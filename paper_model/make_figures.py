@@ -23,6 +23,7 @@ OUT = 'figures/paper_model'
 FIT_SET = 'all'                # unit set the dynamics were fitted to, and the read-out shown in Figure 1
 QUIET, DIPS = 1000, 1500       # example trial: delay without dips (ms after cue onset), then with dips
 CUE = 75                       # example trial only: longer cue for display (fitted trials: 50 ms, as in the task)
+BASE = {}                      # parameter overrides for figure1 (e.g. the overshoot variant); empty = model.FIT
 # journal style (Nature Neuroscience-like): Arial-metric font, 6-7 pt text, thin black axes with outward ticks,
 # lowercase bold panel letters, sentence-case labels, text legends, grey epoch bars
 C_ON, C_OFF, INK, GREY, LIGHT, C_UN = '#e8474a', '#3cb4c9', '#000000', '#7f7f7f', '#d9d9d9', '#8c8c8c'
@@ -49,7 +50,7 @@ def letter(ax, txt, x=-0.08, y=1.06):
 def example_trial(gain, n=300, seed=11):
     """Long trials (QUIET ms without dips, then DIPS ms with dips) read out with FIT_SET's gain and noise; returns
     the most representative one: memory held, On throughout the quiet delay, 3-5 Off states once dips start."""
-    sim = M.simulate(M.params(cue_dur=CUE, t_delay=QUIET + DIPS - CUE), n, seed=seed + 1, quiet=QUIET)
+    sim = M.simulate(M.params(**BASE, cue_dur=CUE, t_delay=QUIET + DIPS - CUE), n, seed=seed + 1, quiet=QUIET)
     rng = np.random.default_rng(seed)
     dw, tz = R.rate_diff(sim, t_from=-250)
     z = gain * dw + R.noise(dw.shape, R.RHO['all'], rng)
@@ -101,15 +102,26 @@ def figure1(out, path, input_dist=False, ff=False):
     a.text((tz[on1[0]] + tz[on1[1] - 1]) / 2, 0.96, 'On', color=C_ON, fontsize=7.5, va='top', ha='center')
     a.text((tz[off0[0]] + tz[off0[1] - 1]) / 2, 0.96, 'Off', color=C_OFF, fontsize=7.5, va='top', ha='center')
     letter(a, 'a')
-    b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
+    pb = M.params(**BASE)
+    if pb['ff_mode'] == 1.0 and not ff:   # overshoot variant: the attention signal as the pools receive it, with the
+        q = np.empty_like(tr['m']); q[0] = tr['m'][0]   # overshoot on recovery, scaled to 1 outside dips
+        for i in range(1, len(q)):
+            q[i] = min(tr['m'][i], q[i - 1] + (tr['m'][i - 1] - q[i - 1]) / pb['tau_ff']) if tr['m'][i] < q[i - 1] \
+                else q[i - 1] + (tr['m'][i - 1] - q[i - 1]) / pb['tau_ff']
+        b.plot(t, tr['m'] + pb['w_ff'] / (pb['I_0'] - pb['w_ff']) * (tr['m'] - q), color=INK, lw=0.7)
+    else:
+        b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
     if ff:      # lagging feed-forward inhibition, tau_ff dq/dt = -q + m (as in model._sim, here at 1 ms)
         q = np.empty_like(tr['m']); q[0] = tr['m'][0]
+        p_ = M.params(**BASE)
         for i in range(1, len(q)):
-            q[i] = q[i - 1] + (tr['m'][i - 1] - q[i - 1]) / M.FIXED['tau_ff']
+            q[i] = q[i - 1] + (tr['m'][i - 1] - q[i - 1]) / p_['tau_ff']
+            if p_['ff_mode'] == 1.0 and tr['m'][i] < q[i]:
+                q[i] = tr['m'][i]
         b.plot(t, q, color=C_OFF, lw=0.7, ls=(0, (2, 1)))
         b.text(-0.01, 0.75, 'Attention', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK)
         b.text(-0.01, 0.25, 'Inhibition', transform=b.transAxes, ha='right', va='center', fontsize=7, color=C_OFF)
-    b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
+    b.set_ylim(0, 2.0 if (pb['ff_mode'] == 1.0 and not ff) else 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
     b.tick_params(bottom=False)
     if not ff:
         b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
@@ -134,7 +146,7 @@ def figure1(out, path, input_dist=False, ff=False):
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
         if input_dist:   # the fitted input: dip lengths (gamma) under Off, up periods between dips (exponential) under On
             from scipy import stats
-            p = M.params()
+            p = M.params(**BASE)
             cdf = (stats.gamma(p['dip_shape'], scale=p['dip_mean'] / p['dip_shape']) if name == 'off'
                    else stats.expon(scale=1000 / p['dip_rate'])).cdf(edges)
             pb = np.diff(cdf)

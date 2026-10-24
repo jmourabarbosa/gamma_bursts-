@@ -18,19 +18,19 @@ import os
 import numpy as np
 from scipy import stats
 
-from . import model as M, readout as R
+from . import model as M, readout as R, variant as V
 from .off_vs_memory import RHO, reference
 from .make_figures import plt, save, letter, INK, GREY, C_OFF, C_ON, OUT
 
 N_TRIALS, T0, T1 = 2000, 0, 1400
+SUFFIX = '' if V.NAME == 'nmda' else f'_{V.NAME}'
 
 
 def main():
-    R.M = M
     ses, _ = R.load_data()
     gain = reference(ses)
-    p = M.params()
-    sim = M.simulate(p, N_TRIALS, seed=123)
+    p = V.params()
+    sim = V.simulate(p, N_TRIALS, seed=123)
     rng = np.random.default_rng(5)
     dw, tz = R.rate_diff(sim)
     valid = (tz >= T0) & (tz <= T1)
@@ -99,14 +99,14 @@ def main():
     f.set_title(f"Per trial: r = {r_tot:.2f} (counts r = {r_n:.2f})", fontsize=7.5, pad=3)
     for ax, l in zip(axs.ravel(), 'abcdef'):
         letter(ax, l, x=-0.35)
-    save(fig, os.path.join(OUT, 'figS_dips_vs_states.png'))
+    save(fig, os.path.join(OUT, f'figS_dips_vs_states{SUFFIX}.png'))
     summ = dict(n_trials=N_TRIALS, window_ms=[T0, T1], dip_mean_ms=float(dlen.mean()), dip_median_ms=float(np.median(dlen)),
                 dips_per_trial=float(n_dip.mean()), gap_mean_ms=float(gaps.mean()), off_mean_ms=float(off_len.mean()),
                 off_median_ms=float(np.median(off_len)), offs_per_trial=float(n_off.mean()),
                 frac_dips_detected=float(det.mean()), frac_offs_with_dip=float(expl.mean()),
                 p_detect_by_length={f'{eb[j]}-{eb[j + 1]}': (None if np.isnan(pr[j]) else float(pr[j])) for j in range(len(pr))},
                 r_off_length_vs_dip_time=float(r_len), r_total_dip_vs_total_off=float(r_tot), r_n_dips_vs_n_offs=float(r_n))
-    json.dump(summ, open(os.path.join(OUT, 'figS_dips_vs_states.json'), 'w'), indent=1)
+    json.dump(summ, open(os.path.join(OUT, f'figS_dips_vs_states{SUFFIX}.json'), 'w'), indent=1)
     print(json.dumps(summ, indent=1))
     on_figure(p, t, tz, valid, in_dip, state)
 
@@ -175,13 +175,13 @@ def on_figure(p, t, tz, valid, in_dip, state):
     f.set_title(f"Per trial: r = {r_tot:.2f} (counts r = {r_n:.2f})", fontsize=7.5, pad=3)
     for ax, l in zip(axs.ravel(), 'abcdef'):
         letter(ax, l, x=-0.35)
-    save(fig, os.path.join(OUT, 'figS_ups_vs_on_states.png'))
+    save(fig, os.path.join(OUT, f'figS_ups_vs_on_states{SUFFIX}.png'))
     summ = dict(up_mean_fitted_ms=1000 / rate, up_mean_ms=float(ulen.mean()), ups_per_trial=float(n_up.mean()),
                 on_mean_ms=float(on_len.mean()), on_median_ms=float(np.median(on_len)), ons_per_trial=float(n_on.mean()),
                 frac_ups_detected=float(det.mean()), frac_ons_with_up=float(expl.mean()),
                 p_detect_by_length={f'{eb[j]}-{eb[j + 1]}': (None if np.isnan(pr[j]) else float(pr[j])) for j in range(len(pr))},
                 r_on_length_vs_up_time=float(r_len), r_total_up_vs_total_on=float(r_tot), r_n_ups_vs_n_ons=float(r_n))
-    json.dump(summ, open(os.path.join(OUT, 'figS_ups_vs_on_states.json'), 'w'), indent=1)
+    json.dump(summ, open(os.path.join(OUT, f'figS_ups_vs_on_states{SUFFIX}.json'), 'w'), indent=1)
     print(json.dumps(summ, indent=1))
 
 
