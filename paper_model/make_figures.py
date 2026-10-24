@@ -74,7 +74,7 @@ def shade(ax, tz, state):
             ax.axvspan(tz[a] - R.STEP / 2, tz[b - 1] + R.STEP / 2, color=c, alpha=0.15, lw=0)
 
 
-def figure1(out, path):
+def figure1(out, path, input_dist=False):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(7.2, 3.0))     # double column, 183 mm
@@ -124,8 +124,18 @@ def figure1(out, path):
         h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None)
         hm = r['h_' + name]
         h.bar(edges[:-1], hm[:-1] / hm.sum(), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
+        if input_dist:   # the fitted input: dip lengths (gamma) under Off, up periods between dips (exponential) under On
+            from scipy import stats
+            p = M.params()
+            cdf = (stats.gamma(p['dip_shape'], scale=p['dip_mean'] / p['dip_shape']) if name == 'off'
+                   else stats.expon(scale=1000 / p['dip_rate'])).cdf(edges)
+            pb = np.diff(cdf)
+            h.step(edges, np.r_[pb, pb[-1]], where='post', color=INK, lw=0.8)
+            h.text(0.97, 0.72, 'Dips (input)' if name == 'off' else 'Up periods (input)', transform=h.transAxes,
+                   ha='right', va='top', color=INK, fontsize=7)
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
-        h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'])
+        top = 0.3 if input_dist else 0.25
+        h.set_ylim(0, top); h.set_yticks([0, top / 2, top], ['0', '', f'{top:g}'])
         h.set_ylabel('Fraction\nof states', labelpad=-14)   # beside the unlabelled middle tick
         h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
         if j == 0:
