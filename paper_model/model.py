@@ -10,12 +10,18 @@ time in ms. Phi(x) = r_max / (1 + exp(-(x - 1)/kappa)); xi are OU noises (tau_xi
 common input: 1, except during dips (Poisson onsets, gamma-distributed lengths) where it drops to 1 - depth,
 with 10 ms ramps. When a dip ends, the lagging feed-forward inhibition gives both pools a brief kick and the
 pool with more residual NMDA wins the competition.
+
+ff_mode = 1 (OVERSHOOT): the same input written as one attention signal that briefly overshoots when it recovers:
+    I_0*m - w_ff*q  with q following m instantly into a dip and with tau_ff out of it, i.e.
+    (I_0 - w_ff)*m + w_ff*(m - q): the steady input as before plus a pulse w_ff*(m - q) > 0 after each dip, no
+    transient at dip onset and no inhibitory pathway.
 """
 import numpy as np
 from numba import njit
 
 FIXED = dict(r_max=150.0, kappa=0.06, w_a=0.0141, beta=0.02, w_I=0.04, w_EI=0.5, w_ff=0.8, tau_ff=15.0, I_0=1.496,
-             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, dt=0.1)
+             tau_r=10.0, tau_I=1.0, tau_xi=10.0, cue_amp=1.0, cue_dur=50.0, t_pre=300.0, t_delay=1600.0, dt=0.1,
+             ff_mode=0.0)
 
 # fitted (fit.py) to the On/Off statistics and length histograms of the all-units read-out only
 FIT = dict(tau_N=150.0,       # ms, NMDA decay
@@ -26,7 +32,8 @@ FIT = dict(tau_N=150.0,       # ms, NMDA decay
            dip_depth=0.5987,  # fractional drop of the input in a dip
            sigma=0.0058)      # fast noise on the pools
 KEYS = ('r_max', 'kappa', 'w_a', 'beta', 'w_I', 'w_EI', 'w_ff', 'tau_ff', 'I_0', 'tau_r', 'tau_I', 'cue_amp',
-        'dt', 'tau_N', 'w_s', 'sigma')
+        'dt', 'tau_N', 'w_s', 'sigma', 'ff_mode')
+OVERSHOOT = dict(ff_mode=1.0)    # attention overshoot on recovery instead of the lagging feed-forward inhibition
 
 
 def params(**over):
@@ -52,7 +59,7 @@ def common_input(n_tr, n, p, rng, ramp=10.0):
 
 @njit(cache=True)
 def _sim(m, cue, xi, p, rec):
-    r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_N, w_s, sigma = p
+    r_max, kappa, w_a, beta, w_I, w_EI, w_ff, tau_ff, I_0, tau_r, tau_I, cue_amp, dt, tau_N, w_s, sigma, ff_mode = p
     n_tr, n = m.shape
     out = np.zeros((n_tr, n // rec, 4))    # rc, ru, sc, su every rec steps (1 ms)
     for k in range(n_tr):
@@ -64,7 +71,10 @@ def _sim(m, cue, xi, p, rec):
             rI += dt / tau_I * (w_EI * (rc + ru) - rI)
             rc += dt / tau_r * (fc - rc)
             ru += dt / tau_r * (fu - ru)
-            q += dt / tau_ff * (m[k, i] - q)
+            if ff_mode == 1.0 and m[k, i] < q:
+                q = m[k, i]                    # overshoot only on recovery
+            else:
+                q += dt / tau_ff * (m[k, i] - q)
             sc += dt / tau_N * (-sc + beta * rc * (1 - sc))
             su += dt / tau_N * (-su + beta * ru * (1 - su))
             if i % rec == rec - 1:

@@ -5,6 +5,8 @@ length distributions (states >= 40 ms), plus a memory penalty 2e4 x max(0, 0.98 
 
 usage: python -m paper_model.fit --out fit_run0 --seed 0 [--no-ff]
 
+--overshoot: the attention overshoot on recovery instead of the lagging feed-forward inhibition (model.OVERSHOOT;
+same steady input, pulse size and decay as w_ff and tau_ff).
 --no-ff: the model without the lagging feed-forward inhibition (w_ff = 0, I_0 lowered by the old w_ff so that the
 steady input in and out of dips is unchanged), with the NMDA strength w_s allowed up to 3 (NO_FF, BOUNDS_NO_FF).
 """
@@ -42,10 +44,11 @@ def main():
     ap.add_argument('--seed', type=int, default=0)
     ap.add_argument('--maxfev', type=int, default=1000)
     ap.add_argument('--no-ff', action='store_true', help='without the lagging feed-forward inhibition')
+    ap.add_argument('--overshoot', action='store_true', help='attention overshoot on recovery instead')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     ses, hist = R.load_data()
-    bounds, fixed = (BOUNDS_NO_FF, NO_FF) if a.no_ff else (BOUNDS, {})
+    bounds, fixed = (BOUNDS_NO_FF, NO_FF) if a.no_ff else (BOUNDS, M.OVERSHOOT) if a.overshoot else (BOUNDS, {})
     lo, hi = np.array(list(bounds.values())).T
     theta = lambda u: dict(zip(bounds, lo + (hi - lo) * np.clip(u, 0, 1)))
     best = [np.inf]
