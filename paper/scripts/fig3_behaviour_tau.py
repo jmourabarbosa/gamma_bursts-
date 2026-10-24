@@ -113,7 +113,7 @@ a.axvline(0, color=GREY, ls=(0, (3, 2)), lw=0.6)
 a.set_xlim(-0.7, 0.8); a.set_xticks([-0.5, 0, 0.5], ['−0.5', '0', '0.5'])
 a.set_yticks(range(len(stats_)), [r[1] for r in stats_]); a.set_ylim(len(stats_) - 0.5, -0.5)
 a.tick_params(axis='y', length=0)
-a.set_xlabel(r'$\beta$ (log-odds of error per SD)')
+a.set_xlabel(r'$\beta$')
 letter(a, 'b', x=-0.88)
 
 # c: fraction correct against Off time, data and best-fitting NMDA model
