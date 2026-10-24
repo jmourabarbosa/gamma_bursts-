@@ -4,7 +4,8 @@ fitted to their performance.
 a, single-dip test (one dip of 0-1 s per trial, 12,300 trials per model), read out as the data: fraction of trials
    with the memory held against the Off duration in the delay, NMDA model (black) and STP model (blue),
    95% Wilson intervals.
-b, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
+b, effect of each On/Off statistic on the log-odds of an error, per within-session SD (beta = log odds ratio;
+   logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
 c, fraction correct against Off time, all 15,468 trials pooled (95% Wilson intervals), and the NMDA model with the
    best-fitting tau_N (red): P(correct) = p0 x [P(held) + G x P(lost)], G = 1/8 (a guess among the 8 cues).
@@ -94,7 +95,7 @@ sx.text(880, 0.92, 'STP model', color=C_STP, fontsize=7, ha='right', va='top')
 sx.text(380, 0.45, 'NMDA model', color=INK, fontsize=7, ha='left', va='center')
 letter(sx, 'a')
 
-# b: odds ratio of an error per SD of each statistic
+# b: effect (beta, log-odds of an error) per SD of each statistic
 glmm = pd.read_csv(f'{GLMM}/joint_glmm.csv')
 sw = pd.read_csv(f'{GLMM}/joint_glmm_session_weights.csv')
 stats_ = [('frac_off', 'Total Off time', C_OFF), ('off_len_ms', 'Off length', C_OFF),
@@ -103,17 +104,16 @@ jit = np.random.default_rng(0)
 for q, (stat, name, col) in enumerate(stats_):
     g = glmm[(glmm.group == 'all') & (glmm.model == f'M_single_{stat}')].iloc[0]
     s = sw[(sw.model == 'single') & (sw.predictor == stat)]
-    a.plot(s.session_or, q + jit.uniform(-0.18, 0.18, len(s)), '.', ms=2.5, color=GREY, alpha=0.5, mew=0)
-    a.plot([g.or_ci_lo, g.or_ci_hi], [q, q], color=col, lw=1.4, solid_capstyle='butt')
-    a.plot(g.odds_ratio_per_sd, q, 'o', ms=4, color=col)
-    a.text(g.odds_ratio_per_sd, q - (0.22 if g.p_lrt < 0.05 else 0.36), stars(g.p_lrt), ha='center', va='center',
+    a.plot(np.log(s.session_or), q + jit.uniform(-0.18, 0.18, len(s)), '.', ms=2.5, color=GREY, alpha=0.5, mew=0)
+    a.plot([np.log(g.or_ci_lo), np.log(g.or_ci_hi)], [q, q], color=col, lw=1.4, solid_capstyle='butt')
+    a.plot(np.log(g.odds_ratio_per_sd), q, 'o', ms=4, color=col)
+    a.text(np.log(g.odds_ratio_per_sd), q - (0.22 if g.p_lrt < 0.05 else 0.36), stars(g.p_lrt), ha='center', va='center',
            fontsize=7.5)
-a.axvline(1, color=GREY, ls=(0, (3, 2)), lw=0.6)
-a.set_xscale('log'); a.set_xlim(0.5, 2.2)
-a.set_xticks([0.5, 1, 2], ['0.5', '1', '2']); a.xaxis.set_minor_locator(matplotlib.ticker.NullLocator())
+a.axvline(0, color=GREY, ls=(0, (3, 2)), lw=0.6)
+a.set_xlim(-0.7, 0.8); a.set_xticks([-0.5, 0, 0.5], ['−0.5', '0', '0.5'])
 a.set_yticks(range(len(stats_)), [r[1] for r in stats_]); a.set_ylim(len(stats_) - 0.5, -0.5)
 a.tick_params(axis='y', length=0)
-a.set_xlabel('Odds ratio of an error per SD')
+a.set_xlabel(r'$\beta$ (log-odds of error per SD)')
 letter(a, 'b', x=-0.88)
 
 # c: fraction correct against Off time, data and best-fitting NMDA model
