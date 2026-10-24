@@ -1,8 +1,9 @@
 """Figure 3: single-dip test of the two models, Off states and errors in the monkeys, and the NMDA time constant
 fitted to their performance.
 
-a, single-dip test (one dip of 0-1 s per trial, 12,300 trials per model), read out as the data: fraction of trials
-   with the memory held against Off time in the delay, NMDA model (black) and STP model (blue), 95% Wilson intervals.
+a, single-dip test: fraction of trials with the memory held against the duration of the single silence (one dip of
+   the common input per trial, 0-1 s in 25 ms steps, 300 trials per duration), NMDA model (black) and STP model
+   (blue), 95% Wilson intervals.
 b, odds ratio of an error per within-session SD of each On/Off statistic (logistic GLMM fixed effect, 95% CI),
    with each session's weight as grey dots; stars from the likelihood-ratio p.
 c, fraction correct against Off time, all 15,468 trials pooled (95% Wilson intervals), and the NMDA model with the
@@ -70,27 +71,25 @@ boot = np.array([fine[best(ks[idx].sum(0), ns[idx].sum(0), Hf)[0]]
                  for idx in (rng.integers(0, len(names), len(names)) for _ in range(N_BOOT))])
 med, lo95, hi95 = np.percentile(boot, (50, 2.5, 97.5))
 
-fig = plt.figure(figsize=(7.2, 2.25))
-gs = fig.add_gridspec(1, 4, width_ratios=[1, 1.05, 1, 1], wspace=1.05, left=0.07, right=0.985, top=0.84, bottom=0.21)
-sx, a, bx, dx = (fig.add_subplot(gs[0, q]) for q in range(4))
+FW, FH, SIDE, BOT = 7.2, 1.95, 1.12, 0.48          # inches; square panels of SIDE x SIDE
+fig = plt.figure(figsize=(FW, FH))
+sx, a, bx, dx = (fig.add_axes([x0 / FW, BOT / FH, SIDE / FW, SIDE / FH]) for x0 in (0.55, 2.72, 4.37, 6.0))
 
-# a: single-dip test, read out as the data, both models
+# a: single-dip test, memory held against the duration of the silence, both models
 for v, name, col in (('nmda', 'NMDA model', INK), ('fac', 'STP model', C_STP)):
     dd = np.load(os.path.join('figures', 'off_vs_memory', v, 'single_dip_readout_trials.npz'))
-    fr = np.round(dd['off_time_s'] / 0.01) / 91
-    held = dd['memory_held'].astype(bool)
-    q = np.clip(np.digitize(fr, EDGES) - 1, 0, NB - 1)
-    kk = np.bincount(q, weights=held, minlength=NB); nn = np.bincount(q, minlength=NB)
+    L, held = dd['dip_length_ms'], dd['memory_held'].astype(bool)
+    u = np.unique(L)
+    kk = np.array([held[L == x].sum() for x in u]); nn = np.array([(L == x).sum() for x in u])
     lo, hi = wilson(kk, nn)
-    cen0 = 900 * (EDGES[:-1] + np.minimum(EDGES[1:], 1)) / 2
-    sx.fill_between(cen0, lo, hi, color=col, alpha=0.18, lw=0)
-    sx.plot(cen0, kk / nn, 'o-', color=col, ms=3, label=name)
-sx.set_xlim(0, 900); sx.set_xticks([0, 300, 600, 900]); sx.set_ylim(0, 1.03)
-sx.set_yticks([0, 0.5, 1], ['0', '', '1']); sx.yaxis.labelpad = -6
-sx.set_xlabel('Off time in delay (ms)'); sx.set_ylabel('Fraction memory held')
+    sx.fill_between(u, lo, hi, color=col, alpha=0.18, lw=0)
+    sx.plot(u, kk / nn, '-', color=col, lw=1.2)
+sx.set_xlim(0, 1000); sx.set_xticks([0, 500, 1000]); sx.set_ylim(0, 1.03)
+sx.set_yticks([0, 0.5, 1], ['0', '', '1']); sx.yaxis.labelpad = 1
+sx.set_xlabel('Silence duration (ms)'); sx.set_ylabel('Fraction memory held')
 sx.set_title('Single-dip test', fontsize=8, pad=4)
-sx.text(880, 0.92, 'STP model', color=C_STP, fontsize=7, ha='right', va='top')
-sx.text(380, 0.45, 'NMDA model', color=INK, fontsize=7, ha='left', va='center')
+sx.text(980, 0.92, 'STP model', color=C_STP, fontsize=7, ha='right', va='top')
+sx.text(450, 0.45, 'NMDA model', color=INK, fontsize=7, ha='left', va='center')
 letter(sx, 'a')
 
 # b: odds ratio of an error per SD of each statistic
@@ -113,7 +112,7 @@ a.set_xticks([0.5, 1, 2], ['0.5', '1', '2']); a.xaxis.set_minor_locator(matplotl
 a.set_yticks(range(len(stats_)), [r[1] for r in stats_]); a.set_ylim(len(stats_) - 0.5, -0.5)
 a.tick_params(axis='y', length=0)
 a.set_xlabel('Odds ratio of an error per SD')
-letter(a, 'b', x=-0.95)
+letter(a, 'b', x=-0.88)
 
 # c: fraction correct against Off time, data and best-fitting NMDA model
 cen = 900 * (EDGES[:-1] + np.minimum(EDGES[1:], 1)) / 2
@@ -122,9 +121,9 @@ bx.plot(cen, p0 * (Hf[i] + G * (1 - Hf[i])), color=C_FIT, lw=1.2)
 bx.errorbar(cen, pk, yerr=[pk - lo, hi - pk], fmt='o', ms=3, color=INK, elinewidth=0.6, capsize=0)
 bx.set_xlim(0, 900); bx.set_xticks([0, 300, 600, 900]); bx.set_ylim(0.5, 1)
 bx.set_yticks([0.5, 0.75, 1], ['0.5', '', '1']); bx.yaxis.labelpad = -6
-bx.set_xlabel('Off time in delay (ms)'); bx.set_ylabel('Fraction correct')
+bx.set_xlabel('Total Off time (ms)'); bx.set_ylabel('Fraction correct')
 bx.text(30, 0.62, 'Monkeys', fontsize=6.5, color=INK)
-bx.text(30, 0.54, rf'NMDA model, $\tau_N$ = {tau:.0f} ms', fontsize=6.5, color=C_FIT)
+bx.text(30, 0.54, rf'NMDA, $\tau_N$ = {tau:.0f} ms', fontsize=6.5, color=C_FIT)
 letter(bx, 'c')
 
 # d: bootstrap over sessions
