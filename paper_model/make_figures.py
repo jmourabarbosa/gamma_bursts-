@@ -74,11 +74,11 @@ def shade(ax, tz, state):
             ax.axvspan(tz[a] - R.STEP / 2, tz[b - 1] + R.STEP / 2, color=c, alpha=0.15, lw=0)
 
 
-def figure1(out, path, input_dist=False):
+def figure1(out, path, input_dist=False, ff=False):
     r = out['sets'][FIT_SET]
     tr, t, tz, z, state = example_trial(r['gain'])
     fig = plt.figure(figsize=(7.2, 3.0))     # double column, 183 mm
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.35, 2.0], hspace=0.22, left=0.08, right=0.71, top=0.9, bottom=0.14)
+    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.55 if ff else 0.35, 2.0], hspace=0.22, left=0.08, right=0.71, top=0.9, bottom=0.14)
     gh = fig.add_gridspec(2, 1, hspace=0.45, left=0.85, right=0.99, top=0.9, bottom=0.14)
     a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
     shade(a, tz, state)
@@ -102,9 +102,17 @@ def figure1(out, path, input_dist=False):
     a.text((tz[off0[0]] + tz[off0[1] - 1]) / 2, 0.96, 'Off', color=C_OFF, fontsize=7.5, va='top', ha='center')
     letter(a, 'a')
     b.plot(t, tr['m'], color=INK, lw=0.7)     # common input, minimal
+    if ff:      # lagging feed-forward inhibition, tau_ff dq/dt = -q + m (as in model._sim, here at 1 ms)
+        q = np.empty_like(tr['m']); q[0] = tr['m'][0]
+        for i in range(1, len(q)):
+            q[i] = q[i - 1] + (tr['m'][i - 1] - q[i - 1]) / M.FIXED['tau_ff']
+        b.plot(t, q, color=C_OFF, lw=0.7, ls=(0, (2, 1)))
+        b.text(-0.01, 0.75, 'Attention', transform=b.transAxes, ha='right', va='center', fontsize=7, color=INK)
+        b.text(-0.01, 0.25, 'Inhibition', transform=b.transAxes, ha='right', va='center', fontsize=7, color=C_OFF)
     b.set_ylim(0, 1.1); b.set_yticks([]); b.spines['left'].set_visible(False); b.spines['bottom'].set_visible(False)
     b.tick_params(bottom=False)
-    b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
+    if not ff:
+        b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
     shade(d, tz, state)
     d.plot(tz, z, color=INK)
     for y, c, txt in ((0, GREY, ''), (1.96, C_ON, 'P < 0.05'), (0.84, C_OFF, 'P > 0.20')):
