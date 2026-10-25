@@ -85,8 +85,11 @@ N_TRIALS = 2112                 # simulated trials behind the model statistics (
 Z_INK = ('#7f7f7f', INK, '#bdbdbd')     # z traces per gain
 
 
+GAIN_NAMES = {2.0: 'High', 1.0: 'Mid', 0.5: 'Low'}   # 2x, 1x (calibrated) and 0.5x the fitted gain
+
+
 def gain_label(f):
-    return '$c$' if f == 1.0 else rf'${f:g}\,c$'
+    return GAIN_NAMES[f]
 
 
 
@@ -161,7 +164,7 @@ def figure1(out, path, input_dist=False, ff=False):
         zf = f * r['gain'] * ex['dw'] + ex['eta']
         d.plot(tz, zf, color=c, lw=0.9 if f == 1.0 else 0.7, zorder=3 if f == 1.0 else 2)
     from matplotlib.offsetbox import AnchoredOffsetbox, HPacker, TextArea   # gain legend, top right
-    box = HPacker(children=[TextArea(gain_label(f), textprops=dict(color=c, fontsize=7.5)) for f, c in zip(GAINS, Z_INK)],
+    box = HPacker(children=[TextArea(gain_label(f) + ' gain', textprops=dict(color=c, fontsize=7.5)) for f, c in zip(GAINS, Z_INK)],
                   align='baseline', pad=0, sep=7)
     d.add_artist(AnchoredOffsetbox('upper right', child=box, pad=0.1, borderpad=0.3, frameon=False))
     for y, c, txt in ((0, GREY, ''), (1.96, C_ON, 'P < 0.05'), (0.84, C_OFF, 'P > 0.20')):
@@ -182,12 +185,12 @@ def figure1(out, path, input_dist=False, ff=False):
         h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None)
         top = 0
         for i, f in enumerate(GAINS):
-            hm = gst[f]['h_' + name][:-1] / N_TRIALS      # states per trial in each 20 ms bin
-            if f == 1.0:
-                h.bar(edges[:-1], hm, width=20, align='edge', color=SHADES[name][1], edgecolor='white', lw=0.3, alpha=0.35)
-            h.step(edges, np.r_[hm, hm[-1]], where='post', color=SHADES[name][i], lw=1.0 if f == 1.0 else 0.8)
+            hc = gst[f]['h_' + name][:30]
+            hm = (hc[0::2] + hc[1::2]) / max(gst[f]['h_' + name].sum(), 1)    # fraction of states in 40 ms bins
+            w = 40 / len(GAINS)                                               # the gains side by side in each bin
+            h.bar(np.arange(0, 600, 40) + i * w, hm, width=w, align='edge', color=SHADES[name][i], lw=0)
             top = max(top, hm.max())
-            h.text(0.97, 0.66 - 0.17 * i, f"{gain_label(f)}  {gst[f]['n_' + name]:.1f}/trial", transform=h.transAxes,
+            h.text(0.97, 0.66 - 0.17 * i, f"{gain_label(f)}, {gst[f]['n_' + name]:.1f}/trial", transform=h.transAxes,
                    ha='right', va='top', color=SHADES[name][i], fontsize=6.5)
         if input_dist:   # the fitted input: dip lengths (gamma) under Off, up periods between dips (exponential) under On
             from scipy import stats
@@ -201,7 +204,7 @@ def figure1(out, path, input_dist=False, ff=False):
         h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
         top = np.ceil(top * 10) / 10
         h.set_ylim(0, top); h.set_yticks([0, top / 2, top], ['0', '', f'{top:g}'])
-        h.set_ylabel('States per\ntrial', labelpad=-14)   # beside the unlabelled middle tick
+        h.set_ylabel('Fraction\nof states', labelpad=-14)   # beside the unlabelled middle tick
         h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
         if j == 0:
             h.tick_params(labelbottom=False)
