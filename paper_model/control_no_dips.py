@@ -5,6 +5,8 @@ the 7 unit sets (same noise model, cluster-mass threshold and labelling), in two
 - fixed gain: each set's read-out gain from the fitted model (the identical read-out applied to a network that never
   falls silent);
 - recalibrated gain: the gain set again from the data's mu_on (readout.evaluate on the no-dip model).
+(With dips, the two coincide: the fitted model's gain is the one calibrated to the data.)
+g, h: fit loss (fit.py: six statistics plus the length-histogram term) per population and summed over the 7.
 Output: figures/paper_model/figS_control_no_dips.{png,svg} and figS_control_no_dips.json.
 
 usage: python -m paper_model.control_no_dips
@@ -16,6 +18,7 @@ import numpy as np
 
 from . import model as M, readout as R
 from .make_figures import plt, save, letter, INK, GREY, LIGHT, C_ON, C_OFF, OUT, FIT_SET
+from .fig_unit_sets_compare import loss_per_set
 
 N_TRIALS = 2112
 PANELS = (('off_per_trial', 'n_off', 'Off states per trial', None), ('off_median_ms', 'off_median', 'Off length, median (ms)', 600),
@@ -40,7 +43,7 @@ def fixed_gain(sim, gains, seed=2):
 
 def main():
     R.M = M
-    ses, _ = R.load_data()
+    ses, hist = R.load_data()
     fit = R.evaluate(M.params(), ses, n_trials=N_TRIALS, seed=1)
     gains = {lab: r['gain'] for lab, r in fit['sets'].items()}
     sim0 = M.simulate(M.params(dip_depth=0.0), N_TRIALS, seed=101)
@@ -51,7 +54,9 @@ def main():
              ('No dips, gain recalibrated', {l: recal['sets'][l] for l in R.SETS}, '#7b3294'))
 
     x = np.arange(len(R.SETS))
-    fig, axs = plt.subplots(2, 3, figsize=(6.6, 4.3), gridspec_kw=dict(hspace=0.8, wspace=0.6, left=0.13, right=0.98, top=0.84, bottom=0.12))
+    fig = plt.figure(figsize=(6.6, 6.3))
+    gs = fig.add_gridspec(3, 3, hspace=0.95, wspace=0.6, left=0.13, right=0.98, top=0.88, bottom=0.08, height_ratios=[1, 1, 0.9])
+    axs = np.array([[fig.add_subplot(gs[r, c]) for c in range(3)] for r in range(2)])
     j = list(R.SETS).index(FIT_SET)
     for k, (a, (dk, mk, label, top)) in enumerate(zip(axs.ravel(), PANELS)):
         a.axvspan(j - 0.45, j + 0.45, color=LIGHT, lw=0, zorder=0)
@@ -70,10 +75,29 @@ def main():
         letter(a, 'abcdef'[k], x=-0.45, y=1.02)
     items = [('Data (mean ± 2 SEM)', INK)] + [(n, c) for n, _, c in conds]
     for n, (txt, c) in enumerate(items):
-        fig.text(0.13 + 0.42 * (n % 2), 0.975 - 0.035 * (n // 2), txt, color=c, fontsize=7, va='center')
+        fig.text(0.13 + 0.42 * (n % 2), 0.98 - 0.025 * (n // 2), txt, color=c, fontsize=7, va='center')
+    losses = {name: {lab: float(loss_per_set(res[lab], ses[lab], hist, lab)) for lab in R.SETS} for name, res, _ in conds}
+    g = fig.add_subplot(gs[2, :2])
+    w = 0.26
+    for m, (name, _, col) in enumerate(conds):
+        g.bar(x + (m - 1) * w, [losses[name][lab] for lab in R.SETS], width=w, color=col, lw=0)
+    g.set_yscale('log'); g.set_xticks(x); g.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
+    g.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); g.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
+    g.set_ylabel('Fit loss (log)'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
+    letter(g, 'g', x=-0.2, y=1.02)
+    h = fig.add_subplot(gs[2, 2])
+    tot = [sum(losses[name].values()) for name, _, _ in conds]
+    h.bar(range(3), tot, color=[c for _, _, c in conds], lw=0)
+    for i, v in enumerate(tot):
+        h.text(i, v * 1.15, f'{v:.0f}', ha='center', va='bottom', fontsize=7)
+    h.set_yscale('log'); h.set_ylim(top=max(tot) * 6)
+    h.set_xticks(range(3), ['Dips', 'No dips\nsame gain', 'No dips\nrecalib.'], fontsize=6)
+    h.set_ylabel('Fit loss, sum over\n7 populations (log)')
+    letter(h, 'h', x=-0.45, y=1.02)
     save(fig, os.path.join(OUT, 'figS_control_no_dips.png'))
     keys = ('gain', 'n_off', 'off_median', 'off_mean', 'frac_off', 'n_on', 'on_median', 'on_mean', 'frac_on')
     out = {name: {lab: {k: float(res[lab][k]) for k in keys if k in res[lab]} for lab in R.SETS} for name, res, _ in conds}
+    out['loss'] = {name: dict(**losses[name], total=sum(losses[name].values())) for name, _, _ in conds}
     out['memory'] = dict(fitted=fit['mem'], no_dips=recal['mem'])
     out['data'] = {lab: {mk: float(ses[lab][dk].mean()) for dk, mk, _, _ in PANELS} for lab in R.SETS}
     json.dump(out, open(os.path.join(OUT, 'figS_control_no_dips.json'), 'w'), indent=1)
@@ -84,6 +108,8 @@ def main():
             print(f"  {lab:8s} gain {r.get('gain', gains[lab]):.3f} | Off {r['n_off']:.2f}/trial, median {r['off_median']:.0f} ms, frac {r['frac_off']:.2f}"
                   f" | On {r['n_on']:.2f}/trial, median {r['on_median']:.0f} ms, frac {r['frac_on']:.2f}")
     print('memory', out['memory'])
+    for name, _, _ in conds:
+        print(f"loss {name}: total {out['loss'][name]['total']:.0f} | " + ' '.join(f"{lab} {losses[name][lab]:.0f}" for lab in R.SETS))
 
 
 if __name__ == '__main__':
