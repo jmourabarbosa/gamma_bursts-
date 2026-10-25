@@ -20,7 +20,7 @@
 \newcommand{\cued}{\mathrm{cued}}
 \newcommand{\uncued}{\mathrm{uncued}}
 
-\title{Intermittent rate coding through NMDA-dependent persistent activity}
+\title{Intermittent working-memory coding through NMDA-sustained persistent activity}
 \author{}
 \date{}
 
@@ -28,7 +28,7 @@
 \maketitle
 
 \begin{abstract}
-Working memory is thought to rely either on persistent spiking activity, sustained by slow NMDA receptor currents, or on activity-silent synaptic traces. Recently, population recordings from non-human primate prefrontal cortex showed that the remembered item can be decoded only intermittently on single trials, with Off periods in which decoding falls to chance. These Off periods have been taken as evidence that memories are carried by short-term synaptic plasticity when spiking activity fails to hold them. Here, we show that intermittent decoding is also expected from a canonical attractor network without plastic synapses. When a shared input (such as fluctuating attention) briefly drops, the network falls silent and decoding fails. However, NMDA receptor currents, which decay over 150~ms as measured in cortical neurons, bridge the silence and the memory is reinstated when the attentional input returns. Fitted to population recordings from non-human primate prefrontal cortex, this model reproduces quantitatively the number and duration of On and Off states while retaining the memory. In the recordings, we found that Off states are more frequent when fewer or less selective neurons are decoded, so their frequency partly reflects how well the recorded sample reads out the memory. Without refitting, the model predicts this dependence for decoded populations it was never fitted to. Intermittent decoding is therefore compatible with persistent activity and does not, on its own, require activity-silent mechanisms. Finally, unlike a model in which short-term facilitation holds the memory, the NMDA model also predicts that errors increase with the time spent Off, as we found in the recordings. All together, these results favour persistent activity bridged by a short-lived NMDA trace over activity-silent storage in short-term facilitation.
+Working memory is classically attributed to persistent spiking sustained by slow NMDA receptor currents. This view has been challenged by large-scale prefrontal recordings in which the remembered item is decoded only intermittently on single trials, suggesting that memories survive Off states in activity-silent synaptic plasticity. Here we show that intermittent coding emerges from a canonical attractor network with fixed synapses and a fluctuating, attention-like common input. Brief drops in this input silence the network, and NMDA currents decaying within $\sim$150~ms bridge each silence, so that the memory reignites when the input returns. Fitted to monkey prefrontal recordings, the model reproduces the number and duration of On and Off states and, without refitting, predicts how they change with the decoded neurons: Off states are more frequent in less informative samples, so measured silences overestimate how often memory leaves spiking activity. Unlike facilitation, the NMDA trace predicts memory loss when silences outlast it. Accordingly, monkeys erred more when Off states were longer, but not when they were more numerous, and their performance pointed to a trace of $\sim$120~ms, matching NMDA kinetics rather than the seconds-long time scale of facilitation. Intermittent coding thus reflects persistent activity bridged by NMDA currents.
 \end{abstract}
 
 \section{Introduction}
@@ -67,7 +67,7 @@ So far we considered decoders that use all recorded neurons. We found, however, 
 
 \subsection{A model fitted to all neurons predicts this dependence}
 
-If Off states come from shared dips in network activity, the same dynamics, read out with a higher or lower decoding strength, should reproduce the change across decoded populations. To test this, we fitted the dynamics only to the decoder using all neurons in 25 sessions (Methods). The model matches the data well in Off states per trial (3.1 vs 3.3), Off median length (110 vs 112~ms), On states per trial (1.9 vs 2.1) and On median length (140 vs 134~ms) (Fig.~2, grey band). We then kept the dynamics fixed and, for each of the six other decoded populations, changed only the read-out without refitting any parameters. Its gain was calibrated on that population's decoding strength and its noise on that population's pre-cue $z$ (Methods). Without any refitting, the model predicts quantitatively the shift between selective and random neurons.
+If Off states come from shared dips in network activity, the same dynamics, read out with a higher or lower decoding strength, should reproduce the change across decoded populations. To test this, we fitted the dynamics only to the decoder using all neurons in 25 sessions (Methods). The model matches the data well in Off states per trial (3.1 vs 3.3), Off median length (110 vs 112~ms), On states per trial (1.9 vs 2.1) and On median length (140 vs 134~ms) (Fig.~2, grey band). We then kept the dynamics fixed and, for each of the six other decoded populations, changed only the read-out without refitting any parameters. Its gain was calibrated on that population's decoding strength and its noise on that population's pre-cue $z$ (Methods). Without any refitting, the model predicts quantitatively the shift between selective and random neurons. These Off states come from the network falling silent, not from the read-out noise: with a constant common input and the identical read-out, the model produced no Off states for the top-unit or all-unit decoders and few for random neurons, and even with the gain recalibrated to the data, noise alone reproduced the Off states of the weakly decoding random populations but not those of the strong decoders (Supplementary Fig.~1).
 
 \subsection{Errors increase with time Off, as expected from an NMDA trace}
 
@@ -175,5 +175,17 @@ Data statistics are means over the 25 sessions; for random neurons, the 10 draws
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
+
+\clearpage
+\section{Supplementary Figures}
+\renewcommand{\figurename}{Supplementary Figure}
+\setcounter{figure}{0}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.92\textwidth]{figS_control_no_dips.png}
+  \caption{\textbf{Off states are not produced by the read-out noise alone.} On/Off statistics of the seven decoded populations, as in Fig.~2: \textbf{a}, Off states per trial; \textbf{b}, median Off length; \textbf{c}, fraction of the delay Off; \textbf{d}, On states per trial; \textbf{e}, median On length; \textbf{f}, fraction of the delay On. Black: data (mean $\pm$ 2 SEM over 25 sessions). Red: fitted model. Blue: the same model with a constant common input (no dips), read out with the identical read-out (same gain, noise and labelling) for each population. Purple: the no-dip model with the read-out gain recalibrated to each population's decoding strength in the data. Without dips, the identical read-out produced no Off states for the top-unit and all-unit decoders and few for random neurons. With the gain recalibrated, noise alone reproduced the Off states of the random populations but not those of the top-unit decoders (0.1--0.3 vs 3.2--3.5 Off states per trial; summed fit loss over the seven populations 313, vs 74 for the fitted model).}
+  \label{fig:S1}
+\end{figure}
 
 \end{document}
