@@ -196,6 +196,29 @@ def fig_example_trial():
     save(fig, 'fig_example_trial')
 
 
+def table(model, rows, ctrl, data):
+    """Markdown table model (mean over sessions) vs data (mean over 25 sessions), written to results/table.md."""
+    cols = (('Off/trial', 'n_off', 'off_per_trial', 2), ('Off median', 'off_median', 'off_median_ms', 0),
+            ('frac Off', 'frac_off', 'frac_off', 2), ('On/trial', 'n_on', 'on_per_trial', 2),
+            ('On median', 'on_median', 'on_median_ms', 0), ('frac On', 'frac_on', 'frac_on', 2), ('mu_on', 'mu_on', 'mu_on', 2))
+    lines = ['| population | ' + ' | '.join(c[0] for c in cols) + ' |', '|---|' + '---|' * len(cols)]
+    for lab in ORDER:
+        lines.append(f'| {lab} | ' + ' | '.join(f'{np.nanmean(model[lab][mk]):.{d}f} ({data[lab][dk].mean():.{d}f})'
+                                                 for _, mk, dk, d in cols) + ' |')
+    if ctrl is not None:
+        lines += ['', 'No-dip control (model):', '', lines[0], lines[1]]
+        for lab in ORDER:
+            lines.append(f'| {lab} | ' + ' | '.join(f'{np.nanmean(ctrl[lab][mk]):.{d}f}' for _, mk, _, d in cols) + ' |')
+    mem = {k: np.mean([r[k] for r in rows]) for k in ('mem_held', 'mem_held_rate', 'mem_held_nmda', 'mem_held_probe',
+                                                      'wrong_place', 'wrong_probe')}
+    lines += ['', f'Sessions: {len(rows)} x {rows[0]["n_trials"]} trials. Memory held (end of delay, rate or NMDA): '
+              f'{mem["mem_held"]:.3f}; rate bump active and at the cue: {mem["mem_held_rate"]:.3f}; NMDA criterion: '
+              f'{mem["mem_held_nmda"]:.3f}; bump restarts at the cue in the probe: {mem["mem_held_probe"]:.3f}; '
+              f'wrong place at the end of the delay: {mem["wrong_place"]:.3f}; restarts elsewhere in the probe: '
+              f'{mem["wrong_probe"]:.3f}.']
+    open(os.path.join(RES, 'table.md'), 'w').write('Model (data in brackets); lengths in ms.\n\n' + '\n'.join(lines) + '\n')
+
+
 def main():
     ses, hist = PR.load_data()
     m = load_sessions('dips')
@@ -204,6 +227,7 @@ def main():
     if m:
         fig_unit_sets(m[0], ctrl, ses)
         fig_histograms(m[0], hist, ctrl)
+        table(m[0], m[1], ctrl, ses)
     fig_single_dip()
     fig_memory_off_time()
     fig_example_trial()
