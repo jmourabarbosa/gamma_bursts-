@@ -22,7 +22,7 @@ Script: `paper_model/control_no_dips.py`. Run with `python -m paper_model.contro
 ## Figure layout
 Same layout as Fig. 2, with the six On/Off statistics against decoded population:
 - **Panels:** a, Off states per trial; b, Off median length; c, fraction of delay Off; d, On states per trial; e, On median length; f, fraction of delay On.
-- **Loss panels:** g, fit loss per decoded population; h, loss summed over the 7 populations. Both on a log scale, one bar per condition.
+- **Loss panels:** g, fit loss per decoded population; h, loss summed over the 7 populations. Linear axes, one bar per condition.
 - **Colours:** black, data (mean ± 2 SEM over sessions); red, fitted model with dips; blue, no dips with the same gain; purple, no dips with the recalibrated gain.
 
 ## Key numbers

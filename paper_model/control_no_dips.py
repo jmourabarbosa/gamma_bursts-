@@ -81,18 +81,18 @@ def main():
     w = 0.26
     for m, (name, _, col) in enumerate(conds):
         g.bar(x + (m - 1) * w, [losses[name][lab] for lab in R.SETS], width=w, color=col, lw=0)
-    g.set_yscale('log'); g.set_xticks(x); g.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
+    g.set_xticks(x); g.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
     g.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); g.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
-    g.set_ylabel('Fit loss (log)'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
+    g.set_ylabel('Fit loss'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
     letter(g, 'g', x=-0.2, y=1.02)
     h = fig.add_subplot(gs[2, 2])
     tot = [sum(losses[name].values()) for name, _, _ in conds]
     h.bar(range(3), tot, color=[c for _, _, c in conds], lw=0)
     for i, v in enumerate(tot):
-        h.text(i, v * 1.15, f'{v:.0f}', ha='center', va='bottom', fontsize=7)
-    h.set_yscale('log'); h.set_ylim(top=max(tot) * 6)
+        h.text(i, v + max(tot) * 0.02, f'{v:.0f}', ha='center', va='bottom', fontsize=7)
+    h.set_ylim(0, max(tot) * 1.15)
     h.set_xticks(range(3), ['Dips', 'No dips\nsame gain', 'No dips\nrecalib.'], fontsize=6)
-    h.set_ylabel('Fit loss, sum over\n7 populations (log)')
+    h.set_ylabel('Fit loss, sum over\n7 populations')
     letter(h, 'h', x=-0.45, y=1.02)
     save(fig, os.path.join(OUT, 'figS_control_no_dips.png'))
     keys = ('gain', 'n_off', 'off_median', 'off_mean', 'frac_off', 'n_on', 'on_median', 'on_mean', 'frac_on')
