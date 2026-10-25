@@ -23,12 +23,15 @@ it drops to 1 - depth, with 10 ms ramps. The E cells receive external Poisson in
 
 so the drive overshoots briefly after each dip (option A, "the kick"). Interneurons get a constant nu_ext.
 
-Heterogeneity: firing thresholds are drawn per cell (Gaussian, SD sd_vth), fixed for the network.
+Heterogeneity, fixed for the network: firing thresholds are drawn per cell (Gaussian, SD sd_vth), and each E cell i
+receives a fraction h_i of its E->E input through a broad kernel 1 + kappa_broad cos(dtheta) instead of W (broadly,
+weakly tuned cells for large h_i).
 
 Units: ms, mV, nS, pF, pA, Hz.
 """
 import numpy as np
 from numba import njit, prange
+from scipy import stats
 
 # all parameters in one place; sources and notes in PARAMETERS.md
 P = dict(
@@ -48,8 +51,9 @@ P = dict(
     nu_ext=1800.0, g_ext_E=3.1, g_ext_I=2.38,
     # E->E footprint
     J_plus=1.62, sigma_deg=18.0,
-    # heterogeneity
-    sd_vth=1.0,
+    # heterogeneity: thresholds (SD, mV), and tuning of the E->E input: cell i receives (1 - h_i) of its NMDA input
+    # through W and h_i through the broad kernel 1 + kappa_broad cos(dtheta), h_i ~ h_max * Beta(h_a, h_b)
+    sd_vth=1.0, h_max=0.0, h_a=1.0, h_b=1.0, kappa_broad=0.0,
     # cue: current to E cells, Gaussian in angle
     cue_amp=200.0, cue_sigma_deg=18.0, cue_dur=50.0,
     # trial timing (ms); cue onset at t_pre
@@ -72,6 +76,11 @@ def params(**over):
     return p
 
 
+def _stratified(rng, n, ppf, block=16):
+    q = ppf((np.arange(block) + 0.5) / block)
+    return np.concatenate([rng.permutation(q) for _ in range(n // block)])
+
+
 class Network:
     """Fixed structure of one network (angles, thresholds, Fourier tables of W)."""
 
@@ -81,8 +90,11 @@ class Network:
         self.theta_E = 2 * np.pi * np.arange(NE) / NE
         self.theta_I = 2 * np.pi * np.arange(NI) / NI
         rng = np.random.default_rng(p['net_seed'])
-        self.vth = np.r_[p['Vth'] + p['sd_vth'] * rng.standard_normal(NE),
-                         p['Vth'] + p['sd_vth'] * rng.standard_normal(NI)]
+        # stratified draws: every block of 16 neighbouring cells holds the same 16 quantiles in random order, so that
+        # local averages along the ring are uniform (no clumps that pin the bump)
+        self.vth = np.r_[p['Vth'] + p['sd_vth'] * _stratified(rng, NE, stats.norm.ppf),
+                         p['Vth'] + p['sd_vth'] * _stratified(rng, NI, stats.norm.ppf)]
+        self.h = p['h_max'] * _stratified(rng, NE, lambda q: stats.beta.ppf(q, p['h_a'], p['h_b']))
         # W(dtheta) sampled on the grid, normalised to mean 1
         sig = np.deg2rad(p['sigma_deg'])
         d = np.angle(np.exp(1j * self.theta_E))
@@ -157,7 +169,7 @@ def _kick(m, A, a):
 
 
 @njit(parallel=True, cache=True)
-def _run(m_eff, cue, cue_on, cue_off, pf, vth, wk, cos_tab, sin_tab, rec_idx, seeds, raster_on, s_from, s_to):
+def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_idx, seeds, raster_on, s_from, s_to):
     """Simulate trials in parallel. Returns spike counts of the recorded cells in 10 ms bins, E population vector of
     spikes and of NMDA gating every 10 ms, mean NMDA gating and spike count of each E cell from step s_from to
     s_to, and
@@ -223,6 +235,7 @@ def _run(m_eff, cue, cue_on, cue_off, pf, vth, wk, cos_tab, sin_tab, rec_idx, se
                     rec = 0.0
                     for k in range(K1):
                         rec += Ck[k] * cos_tab[k, j] + Sk[k] * sin_tab[k, j]
+                    rec -= h[j] * (rec - Ck[0] - kb * (Ck[1] * cos_tab[1, j] + Sk[1] * sin_tab[1, j]) / wk[1])
                     I = (gL_E * (v - EL) + g_ext_E * sA[j] * (v - E_E) + g_EE * rec * (v - E_E) * Bm
                          + g_IE * sum_g * (v - E_I))
                     if cue_now:
@@ -298,7 +311,7 @@ def simulate(net, cue_deg, seed=0, rec_idx=None, m=None, raster=False, dip_free=
     s_to = int(round(T / dt))                      # end of the delay
     s_from = s_to - int(round(100 / dt))
     pf = np.array([float(p[k]) for k in PF_KEYS])
-    counts, popv, s_end, c_end, ras = _run(m_eff, net.cue_current(cue_deg), cue_on, cue_off, pf, net.vth, net.wk,
+    counts, popv, s_end, c_end, ras = _run(m_eff, net.cue_current(cue_deg), cue_on, cue_off, pf, net.vth, net.h, float(p['kappa_broad']), net.wk,
                                     net.cos_tab, net.sin_tab, rec_idx, seeds, raster, s_from, s_to)
     b1 = int(round(1 / dt))
     return dict(counts=counts, popv=popv, s_end=s_end, c_end=c_end, raster=ras if raster else None,

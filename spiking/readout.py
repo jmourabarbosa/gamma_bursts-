@@ -14,8 +14,10 @@ paper_model/data/readout_note_data_lam10000.md).
   time point (mean and SD over trials and shuffles of the pair).
 - On = runs of z > 1.96 whose summed z exceeds the 95th percentile of the same quantity in the null z;
   Off = >= 5 consecutive points with z < 0.84; 0-1,400 ms, fractions over 500-1,400 ms (paper_model.readout).
-- Decoded populations: all recorded cells; top 5/20/50 ranked by one-way ANOVA across the 8 cues on the other half
-  of the trials (split-half, so a test trial never ranks its own units); random 5/20/50 (10 draws).
+- Decoded populations: all recorded cells; top 5/20/50 ranked by ANOVA on the other half of the trials (split-half,
+  so a test trial never ranks its own units), by default between the two cues of the decoded pair (rank_by='pair';
+  'all8' ranks once by a one-way ANOVA across the 8 cues; 'pair_balanced', a diagnostic, takes the best cells
+  preferring each of the two cues alternately); random 5/20/50 (10 draws).
 """
 import numpy as np
 
@@ -58,9 +60,10 @@ def _decode_pair(X, y, shuf):
     return o[0], o[1:]
 
 
-def decode(X, cue, rng, n_shuf=N_SHUF):
+def decode(X, cue, rng, units, n_shuf=N_SHUF):
     """z of the decoder for the cued location, (n_tr, n_t), and the null z (n_shuf, n_tr, n_t).
-    X: (n_tr, n_t, d) window counts of the decoded cells; cue: (n_tr,) cue index 0..7 (correct trials only)."""
+    X: (n_tr, n_t, n_cells) window counts; cue: (n_tr,) cue index 0..7 (correct trials only); units: indices of
+    the decoded cells, or a list of 4 index arrays, one per cue pair (c, c + 4)."""
     n_tr, n_t, _ = X.shape
     z = np.full((n_tr, n_t), np.nan)
     zn = np.full((n_shuf, n_tr, n_t), np.nan)
@@ -68,7 +71,8 @@ def decode(X, cue, rng, n_shuf=N_SHUF):
         idx = np.where((cue == c) | (cue == c + 4))[0]
         y = (cue[idx] == c).astype(int)
         shuf = np.array([rng.permutation(y) for _ in range(n_shuf)])
-        o, on = _decode_pair(X[idx], y, shuf)
+        u = units[c] if isinstance(units, list) else units
+        o, on = _decode_pair(X[idx][:, :, u], y, shuf)
         mu, sd = on.mean((0, 1)), on.std((0, 1))
         sd = np.maximum(sd, 1e-300)
         z[idx] = (o - mu) / sd
@@ -91,7 +95,7 @@ def anova_f(X, cue):
     return (ssb / (k - 1)) / np.maximum(ssw / (n - k), 1e-12)
 
 
-def read_session(counts, t10, cue, correct, seed=0, sets=SETS, n_draws=10, n_shuf=N_SHUF, keep_z=False):
+def read_session(counts, t10, cue, correct, seed=0, sets=SETS, n_draws=10, n_shuf=N_SHUF, keep_z=False, rank_by='pair'):
     """Decode one simulated session. counts: (n_tr, n_bins10, n_cells) uint8 of the recorded cells; cue: (n_tr,) cue
     index; correct: (n_tr,) bool, trials used (memory held). Returns {set: stats} (random sets averaged over draws as
     in the data) and optionally z / states of each set (first draw)."""
@@ -106,7 +110,23 @@ def read_session(counts, t10, cue, correct, seed=0, sets=SETS, n_draws=10, n_shu
         i = rng.permutation(np.where(cue == c)[0])
         half[i[len(i) // 2:]] = 1
     tot = Xall[:, valid].sum(1)
-    rank = [np.argsort(-anova_f(tot[half == h], cue[half == h])) for h in (0, 1)]
+    if rank_by == 'pair':      # ANOVA between the two cues of each decoded pair
+        rank = [[np.argsort(-anova_f(tot[(half == h) & (cue % 4 == c)], cue[(half == h) & (cue % 4 == c)]))
+                 for c in range(4)] for h in (0, 1)]
+    elif rank_by == 'pair_balanced':   # diagnostic: per pair, alternately the best cell preferring each cue
+        rank = []
+        for h in (0, 1):
+            rh = []
+            for c in range(4):
+                m = (half == h) & (cue % 4 == c)
+                o = np.argsort(-anova_f(tot[m], cue[m]))
+                pref = tot[m & (cue == c)].mean(0) > tot[m & (cue == c + 4)].mean(0)
+                a_, b_ = o[pref[o]], o[~pref[o]]
+                n = min(len(a_), len(b_))
+                rh.append(np.ravel(np.c_[a_[:n], b_[:n]]))
+            rank.append(rh)
+    else:                      # one-way ANOVA across all 8 cues
+        rank = [[np.argsort(-anova_f(tot[half == h], cue[half == h]))] * 4 for h in (0, 1)]
     active = Xall.sum((0, 1)) > 0
     out, zs = {}, {}
     for lab in sets:
@@ -114,7 +134,7 @@ def read_session(counts, t10, cue, correct, seed=0, sets=SETS, n_draws=10, n_shu
             draws = [[np.where(active)[0]] * 2]
         elif lab.startswith('top'):
             k = int(lab.split()[1])
-            draws = [[rank[1][:k], rank[0][:k]]]           # trials of half h use units ranked on the other half
+            draws = [[[r[:k] for r in rank[1]], [r[:k] for r in rank[0]]]]   # half h: units ranked on the other half
         else:
             k = int(lab.split()[1])
             draws = [[s, s] for s in (rng.choice(d, k, replace=False) for _ in range(n_draws))]
@@ -122,12 +142,12 @@ def read_session(counts, t10, cue, correct, seed=0, sets=SETS, n_draws=10, n_shu
         for units in draws:
             z = np.full((n_tr, n_t), np.nan)
             zn_all = []
-            if units[0] is units[1] or np.array_equal(units[0], units[1]):
-                z, zn = decode(Xall[:, :, units[0]], cue, rng, n_shuf)
+            if units[0] is units[1]:
+                z, zn = decode(Xall, cue, rng, units[0], n_shuf)
                 zn_all.append(zn)
             else:
                 for h in (0, 1):
-                    zh, zn = decode(Xall[:, :, units[h]], cue, rng, n_shuf)
+                    zh, zn = decode(Xall, cue, rng, units[h], n_shuf)
                     z[half == h] = zh[half == h]
                     zn_all.append(zn[:, half == h])
             thr = null_threshold(np.concatenate(zn_all, 1), valid)

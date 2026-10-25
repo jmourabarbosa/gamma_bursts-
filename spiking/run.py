@@ -19,9 +19,10 @@ from . import network as N, readout as R
 
 OUT = os.path.join(os.path.dirname(__file__), 'results')
 # values changed from network.P during tuning (NOTE.md, "Tuning steps")
-TUNED = dict(J_plus=2.0, g_EE=0.33, sd_vth=0.3, cue_amp=500.0, kick_A=1.0, tau_kick=150.0, dip_depth=0.5, t_pre=500.0,
-             t_delay=1500.0, t_probe=300.0)
-N_REC = 330           # recorded E cells per session
+TUNED = dict(J_plus=3.0, g_EE=0.33, sd_vth=0.3, h_max=1.0, kappa_broad=0.25, cue_amp=500.0, kick_A=1.0,
+             tau_kick=150.0, dip_depth=0.5, dip_rate=7.0, dip_mean=150.0,
+             t_pre=500.0, t_delay=1500.0, t_probe=300.0)
+N_REC = 330           # recorded cells per session, E and I in proportion to their numbers (264 E + 66 I)
 N_SESSIONS = 12
 N_TRIALS = 480        # per session, 60 per cue
 BATCH = 64
@@ -29,6 +30,13 @@ BATCH = 64
 
 def make_net(**over):
     return N.Network(N.params(**{**TUNED, **over}))
+
+
+def record(net, rng, n=N_REC):
+    """Indices of the recorded cells (0..N_E-1 E, N_E.. I), drawn at random over the whole ring."""
+    NE, NI = net.p['N_E'], net.p['N_I']
+    n_i = int(round(n * NI / (NE + NI)))
+    return np.sort(np.r_[rng.choice(NE, n - n_i, replace=False), NE + rng.choice(NI, n_i, replace=False)])
 
 
 def run_trials(net, cue_idx, seed, rec_idx, **kw):
@@ -57,18 +65,21 @@ def sessions(tag='dips', n_sessions=N_SESSIONS, n_trials=N_TRIALS, seed0=0, **ov
     for s in range(n_sessions):
         t0 = time.time()
         rng = np.random.default_rng(seed0 + 100 + s)
-        rec = np.sort(rng.choice(net.p['N_E'], N_REC, replace=False))
+        rec = record(net, rng)
         cue = rng.permutation(np.repeat(np.arange(8), n_trials // 8))
         sim = run_trials(net, cue, seed0 + s, rec)
         mem = sim['mem']
         res, zs, tz = R.read_session(sim['counts'], sim['t10'], cue, mem['held'], seed=seed0 + s, keep_z=True)
+        # behaviour analogue: all trials (held and lost) decoded with the all-units decoder trained on all trials
+        _, zall, _ = R.read_session(sim['counts'], sim['t10'], cue, np.ones(n_trials, bool), seed=seed0 + s,
+                                    sets=('all',), keep_z=True)
+        keep[f's{s}_off_time_all_trials'] = off_time(zall['all']['state'], tz)
         row = dict(session=s, n_trials=n_trials, mem_held=float(mem['held'].mean()),
+                   mem_held_probe=float(mem['held_probe'].mean()), wrong_probe=float(mem['wrong_probe'].mean()),
                    mem_held_rate=float(mem['held_rate'].mean()), mem_held_nmda=float(mem['held_nmda'].mean()),
                    wrong_place=float((mem['wrong_rate'] | (~mem['active_rate'] & mem['wrong_nmda'])).mean()),
                    sets={k: {a: (b.tolist() if isinstance(b, np.ndarray) else b) for a, b in v.items()} for k, v in res.items()})
         rows.append(row)
-        # per-trial records for the behaviour analysis: all-units states on all trials need a decoder trained on
-        # correct trials; error trials are decoded with the same procedure including them (see NOTE.md)
         keep[f's{s}_z_all'] = zs['all']['z'].astype(np.float32)
         keep[f's{s}_state_all'] = zs['all']['state'].astype(np.int8)
         keep[f's{s}_held'] = mem['held']
@@ -79,6 +90,8 @@ def sessions(tag='dips', n_sessions=N_SESSIONS, n_trials=N_TRIALS, seed0=0, **ov
             keep['s0_m_eff'] = sim['m_eff'][:20].astype(np.float32)
             keep['s0_counts20'] = sim['counts'][:20]
             keep['s0_rec'] = rec
+            keep['s0_counts'] = sim['counts']
+            keep['s0_held'] = mem['held']
             for lab in zs:
                 keep[f's0_z_{lab}'] = zs[lab]['z'][:40].astype(np.float32)
                 keep[f's0_state_{lab}'] = zs[lab]['state'][:40].astype(np.int8)
@@ -90,26 +103,6 @@ def sessions(tag='dips', n_sessions=N_SESSIONS, n_trials=N_TRIALS, seed0=0, **ov
                   default=float)
         np.savez_compressed(os.path.join(OUT, f'sessions_{tag}_trials.npz'), **keep)
     return rows
-
-
-def all_trials_offtime(tag='dips', n_sessions=N_SESSIONS, n_trials=N_TRIALS, seed0=0, **over):
-    """Behaviour analogue: decode all trials (held and lost) with the all-units decoder and relate time Off to
-    memory held. The decoder is trained on all trials of the session (error trials included), since in the model
-    lost trials are a small minority."""
-    net = make_net(**over)
-    out = dict(off=[], held=[])
-    for s in range(n_sessions):
-        rng = np.random.default_rng(seed0 + 100 + s)
-        rec = np.sort(rng.choice(net.p['N_E'], N_REC, replace=False))
-        cue = rng.permutation(np.repeat(np.arange(8), n_trials // 8))
-        sim = run_trials(net, cue, seed0 + s, rec)
-        res, zs, tz = R.read_session(sim['counts'], sim['t10'], cue, np.ones(len(cue), bool), seed=seed0 + s,
-                                     sets=('all',), keep_z=True)
-        out['off'].append(off_time(zs['all']['state'], tz))
-        out['held'].append(sim['mem']['held'])
-        print(f'session {s}: memory {sim["mem"]["held"].mean():.3f}', flush=True)
-    np.savez_compressed(os.path.join(OUT, f'offtime_{tag}.npz'), off_time_s=np.concatenate(out['off']),
-                        memory_held=np.concatenate(out['held']))
 
 
 def single_dip(lengths=tuple(range(0, 701, 50)), n_rep=32, onset=600.0, seed=7, **over):
@@ -128,6 +121,8 @@ def single_dip(lengths=tuple(range(0, 701, 50)), n_rep=32, onset=600.0, seed=7, 
                held_rate=[float(mem['held_rate'][L == l].mean()) for l in lengths],
                held_nmda=[float(mem['held_nmda'][L == l].mean()) for l in lengths],
                wrong=[float(mem['wrong_rate'][L == l].mean()) for l in lengths],
+               held_probe=[float(mem['held_probe'][L == l].mean()) for l in lengths],
+               wrong_probe=[float(mem['wrong_probe'][L == l].mean()) for l in lengths],
                kick_A=net.p['kick_A'], tau_kick=net.p['tau_kick'])
     json.dump(res, open(os.path.join(OUT, f'single_dip{"_" + "_".join(f"{k}{v}" for k, v in over.items()) if over else ""}.json'), 'w'), indent=1)
     for l, h, hr, hn, w in zip(lengths, res['held'], res['held_rate'], res['held_nmda'], res['wrong']):
@@ -159,16 +154,26 @@ def stability(n=16, seed=3):
     print(json.dumps(res, indent=1))
 
 
-def example(seed=11, n=24):
-    """Candidate example trials with rasters (with dips), saved for the figure script."""
+def example(tag='dips', seed0=0):
+    """Re-simulate the first batch of session 0 with rasters (same seeds, so the same trials) and keep one trial with
+    the memory held and 2-5 Off states in its all-units read-out, with its decoded z (for the figure)."""
     net = make_net()
-    rng = np.random.default_rng(seed)
-    rec = np.sort(rng.choice(net.p['N_E'], N_REC, replace=False))
-    cue = np.arange(n) % 8
-    sim = N.simulate(net, 45.0 * cue, seed=seed, rec_idx=rec, raster=True)
-    np.savez_compressed(os.path.join(OUT, 'example_trials.npz'), raster=sim['raster'], m=sim['m'], m_eff=sim['m_eff'],
-                        counts=sim['counts'], rec=rec, cue=cue, t1=sim['t1'], t10=sim['t10'],
-                        held=N.memory(sim, net)['held'])
+    rng = np.random.default_rng(seed0 + 100)
+    rec = record(net, rng)
+    cue = rng.permutation(np.repeat(np.arange(8), N_TRIALS // 8))
+    sim = N.simulate(net, 45.0 * cue[:BATCH], seed=seed0 * 1000, rec_idx=rec, raster=True)
+    d = np.load(os.path.join(OUT, f'sessions_{tag}_trials.npz'))
+    held = d['s0_held']
+    assert np.array_equal(sim['counts'], d['s0_counts'][:BATCH]), 'example trials differ from session 0'
+    n_off = [(np.diff(np.r_[0, s == -1, 0].astype(int)) == 1).sum() for s in d['s0_state_all']]
+    corr = np.where(held)[0][:len(n_off)]               # trial index of each stored correct trial
+    good = [k for k, (i, n) in enumerate(zip(corr, n_off)) if i < BATCH and 2 <= n <= 5]
+    k = good[0] if good else 0
+    i = corr[k]
+    np.savez_compressed(os.path.join(OUT, 'example_trials.npz'), raster=sim['raster'][i:i + 1], m=sim['m'][i:i + 1],
+                        m_eff=sim['m_eff'][i:i + 1], cue=cue[i:i + 1], t1=sim['t1'], pick=0, trial=i,
+                        z=d['s0_z_all'][k], state=d['s0_state_all'][k], tz=d['tz'])
+    print(f'example: trial {i} of session 0, cue {cue[i] * 45} deg')
 
 
 if __name__ == '__main__':
@@ -185,8 +190,6 @@ if __name__ == '__main__':
         sessions(a.tag or 'dips', a.n_sessions, a.n_trials, **over)
     elif a.what == 'nodips':
         sessions(a.tag or 'nodips', a.n_sessions, a.n_trials, dip_rate=0.0, **over)
-    elif a.what == 'offtime':
-        all_trials_offtime(a.tag or 'dips', a.n_sessions, a.n_trials, seed0=1000, **over)
     elif a.what == 'single_dip':
         single_dip(**over)
     elif a.what == 'stability':
