@@ -104,7 +104,7 @@ Scored on 2,112 new trials:
 - **Supplementary figure for "it reproduced the On/Off statistics about as well as the NMDA model":** `figures/paper_model/figS_unit_sets_models.png` (with `.svg` and `.csv`).
   - Panels a–f: the six On/Off statistics of the 7 decoded populations for the data, the NMDA model, the STP model with facilitation only, and the STP model with facilitation and depression.
   - Panel g: fit loss per population.
-  - Panel h: loss summed over the 7 populations (linear axes): NMDA 74, STP with facilitation 79, STP with facilitation and depression 261.
+  - Panel h: loss summed over the 7 populations (log axes): NMDA 74, STP with facilitation 79, STP with facilitation and depression 261.
   - Each model was fitted to the all-unit decoder only, evaluated on 2,112 trials, and the other six populations predicted by the read-out, as in Fig. 2.
   - The depression version shows why depression was switched off: On states too short, too much Off time, and identical top-unit sets because the read-out gain reaches its upper limit. It is similar to the NMDA model's, with On states in the top-unit sets about 50 ms too long.
 

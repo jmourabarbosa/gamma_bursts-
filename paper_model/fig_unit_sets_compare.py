@@ -32,6 +32,15 @@ def loss_per_set(r, d, h, lab):
                                  np.sqrt(h[lab, s][2:] / h[lab, s][2:].sum())) ** 2) for s in ('on', 'off'))
 
 
+def plain_log(ax, bottom):
+    """Log y axis from `bottom`, with plain tick labels at 1, 3, 10, 30, ..."""
+    ax.set_ylim(bottom=bottom)
+    top = ax.get_ylim()[1]
+    ticks = [t for t in (1, 3, 10, 30, 100, 300, 1000, 3000, 10000) if bottom <= t <= top]
+    ax.set_yticks(ticks, [str(t) for t in ticks])
+    ax.yaxis.set_minor_formatter(plt.NullFormatter())
+
+
 def main():
     ses, hist = R.load_data()
     outs = []
@@ -74,18 +83,20 @@ def main():
     w = 0.26
     for m, ((name, _, _, col), ls) in enumerate(zip(MODELS, losses)):
         g.bar(x + (m - 1) * w, [ls[lab] for lab in R.SETS], width=w, color=col, lw=0)
-    g.set_xticks(x); g.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
+    g.set_yscale('log'); g.set_xticks(x); g.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
     g.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); g.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
-    g.set_ylabel('Fit loss'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
+    g.set_ylabel('Fit loss (log)'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
+    plain_log(g, 1)
     letter(g, 'g', x=-0.2, y=1.02)
     h = fig.add_subplot(gs[2, 2])
     tot = [sum(ls.values()) for ls in losses]
     h.bar(range(len(MODELS)), tot, color=[c for _, _, _, c in MODELS], lw=0)
     for i, v in enumerate(tot):
-        h.text(i, v + max(tot) * 0.02, f'{v:.0f}', ha='center', va='bottom', fontsize=7)
-    h.set_ylim(0, max(tot) * 1.15)
+        h.text(i, v * 1.15, f'{v:.0f}', ha='center', va='bottom', fontsize=7)
+    h.set_yscale('log'); h.set_ylim(10, max(tot) * 6)
+    plain_log(h, 10)
     h.set_xticks(range(len(MODELS)), ['NMDA', 'STP\nfacil.', 'STP facil.\n+ depr.'], fontsize=6)
-    h.set_ylabel('Fit loss, sum over\n7 populations')
+    h.set_ylabel('Fit loss, sum over\n7 populations (log)')
     letter(h, 'h', x=-0.45, y=1.02)
     save(fig, os.path.join(OUT, 'figS_unit_sets_models.png'))
     rows = []
