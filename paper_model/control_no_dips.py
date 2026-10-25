@@ -58,10 +58,9 @@ def main():
     sim0 = M.simulate(M.params(dip_depth=0.0), N_TRIALS, seed=101)
     fixed = fixed_gain(sim0, gains)
     recal = R.evaluate(M.params(dip_depth=0.0), ses, n_trials=N_TRIALS, seed=1)
-    conds = (('Fitted model (dips)', {l: fit['sets'][l] for l in R.SETS}, 'o', '#4d4d4d'),
-             ('No dips, same gain', fixed, '^', '#8c8c8c'),
-             ('No dips, recalibrated', {l: recal['sets'][l] for l in R.SETS}, 'D', '#c8c8c8'))
-    PCOL = (C_OFF, C_OFF, C_OFF, C_ON, C_ON, C_ON)
+    conds = (('Fitted model (dips)', {l: fit['sets'][l] for l in R.SETS}, 'o', '#d7301f'),
+             ('No dips, same gain', fixed, 'o', '#2b83ba'),
+             ('No dips, recalibrated', {l: recal['sets'][l] for l in R.SETS}, 'o', '#7b3294'))
 
     x = np.arange(len(R.SETS))
     jit = np.random.default_rng(0).uniform(-0.18, 0.18, 25)
@@ -70,7 +69,6 @@ def main():
     axs = np.array([[fig.add_subplot(gs[r, c]) for c in range(3)] for r in range(2)])
     j = list(R.SETS).index(FIT_SET)
     for k, (a, (dk, mk, label, top)) in enumerate(zip(axs.ravel(), PANELS)):
-        col = PCOL[k]
         a.axvspan(j - 0.45, j + 0.55, color=LIGHT, lw=0, zorder=0)
         for i, lab in enumerate(R.SETS):
             v = ses[lab][dk]
@@ -78,9 +76,8 @@ def main():
         v = [ses[lab][dk] for lab in R.SETS]
         a.errorbar(x, [s.mean() for s in v], yerr=[2 * s.std(ddof=1) / np.sqrt(len(s)) for s in v], fmt='o', ms=3,
                    color=INK, elinewidth=0.6, capsize=0, zorder=3)
-        for m, (name, res, mk_, _) in enumerate(conds):
-            a.plot(x + 0.2 + 0.14 * m, [res[lab][mk] for lab in R.SETS], mk_, ms=3 if mk_ == 'o' else 2.6, color=col,
-                   mew=0, zorder=2)
+        for m, (name, res, mk_, cc) in enumerate(conds):
+            a.plot(x + 0.2 + 0.14 * m, [res[lab][mk] for lab in R.SETS], mk_, ms=3, color=cc, mew=0, zorder=2)
         a.axvline(2.5, color=GREY, ls=(0, (3, 2)), lw=0.5); a.axvline(5.5, color=GREY, ls=(0, (3, 2)), lw=0.5)
         a.set_xlim(-0.6, len(R.SETS) - 0.4)
         a.set_xticks(x); a.set_xticklabels(R.SETS, rotation=60, ha='right', rotation_mode='anchor', fontsize=7)
@@ -92,15 +89,12 @@ def main():
         a.text(j + 0.05, 0.97, 'Fitted', transform=a.get_xaxis_transform(), ha='center', va='top', rotation=90, fontsize=7)
         a.text(2.5, 1.1, 'Predicted', transform=a.get_xaxis_transform(), ha='center', va='bottom', fontsize=7)
         a.plot([0, 0, 5, 5], [1.06, 1.09, 1.09, 1.06], color=INK, lw=0.5, transform=a.get_xaxis_transform(), clip_on=False)
-    short = {'Fitted model (dips)': 'Dips (fitted model)', 'No dips, same gain': 'No dips, same gain',
+    short = {'Fitted model (dips)': 'Fitted model (dips)', 'No dips, same gain': 'No dips, same gain',
              'No dips, recalibrated': 'No dips, recalibrated'}
-    for a, col, x0, y0 in ((axs[0, 1], C_OFF, 0.06, 0.95), (axs[1, 1], C_ON, 0.06, 0.8)):   # legends in empty areas
-        a.text(x0, y0, 'Data', color=INK, transform=a.transAxes, va='center', fontsize=6.5)
-        for n, (name, _, mk_, _) in enumerate(conds):
-            y = y0 - (n + 1) * 0.09
-            a.plot([x0 + 0.025], [y], mk_, ms=3 if mk_ == 'o' else 2.6, color=col, mew=0, transform=a.transAxes, clip_on=False)
-            a.text(x0 + 0.06, y, short[name], color=col, transform=a.transAxes, va='center', fontsize=6.5)
-        a.text(x0, y0 - 4 * 0.09, 'Sessions', color=GREY, transform=a.transAxes, va='center', fontsize=6.5)
+    for a, x0, y0 in ((axs[0, 1], 0.06, 0.95), (axs[1, 1], 0.06, 0.8)):   # legends in empty areas
+        items = [('Data', INK)] + [(short[name], cc) for name, _, _, cc in conds] + [('Sessions', GREY)]
+        for n, (txt, c) in enumerate(items):
+            a.text(x0, y0 - n * 0.09, txt, color=c, transform=a.transAxes, va='center', fontsize=6.5)
     losses = {name: {lab: float(loss_per_set(res[lab], ses[lab], hist, lab)) for lab in R.SETS} for name, res, _, _ in conds}
     g = fig.add_subplot(gs[2, :2])
     w = 0.26
@@ -111,7 +105,7 @@ def main():
     g.set_ylabel('Fit loss (log)'); g.set_xlim(-0.6, len(R.SETS) - 0.4)
     g.set_ylim(1, 30000); plain_log(g, 1)
     for n, (name, _, _, bc) in enumerate(conds):
-        g.text(0.02, 0.97 - n * 0.11, name, color=bc if n < 2 else '#a6a6a6', transform=g.transAxes, ha='left', va='top', fontsize=7)
+        g.text(0.02, 0.97 - n * 0.11, name, color=bc, transform=g.transAxes, ha='left', va='top', fontsize=7)
     letter(g, 'g', x=-0.2, y=1.02)
     h = fig.add_subplot(gs[2, 2])
     tot = [sum(losses[name].values()) for name, _, _, _ in conds]
