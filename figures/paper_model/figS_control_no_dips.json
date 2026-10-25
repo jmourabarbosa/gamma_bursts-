@@ -150,7 +150,7 @@
    "frac_on": 0.9877674408924408
   }
  },
- "No dips, gain recalibrated": {
+ "No dips, recalibrated": {
   "top 5": {
    "gain": 0.03809799203254716,
    "n_off": 0.07575757575757576,
@@ -250,7 +250,7 @@
    "all": 463.40631854076594,
    "total": 3248.104619634152
   },
-  "No dips, gain recalibrated": {
+  "No dips, recalibrated": {
    "top 5": 97.26042649762829,
    "top 20": 82.16254032463482,
    "top 50": 59.118037979516316,
