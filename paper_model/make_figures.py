@@ -1,8 +1,9 @@
 """Paper figures of the best-fit model.
 
 Figure 1: a, an example trial: 1 s of delay with a constant common input (attention signal), then dips (pool
-          rates and NMDA gating; attention signal; all-units decoding z with On/Off labels). B: the model's
-          all-units Off and On length distributions (states 0-1,400 ms after cue onset).
+          rates and NMDA gating; attention signal). b, the same trial read out with 2x, 1x and 0.5x the fitted
+          all-units gain c (same noise), with On/Off labels. c, Off and On length distributions of the simulated trials
+          at each gain (states 0-1,400 ms after cue onset).
 Figure 2: On/Off statistics of every unit set, model vs data. The dynamics were fitted to the all-units set only;
           the other sets are predicted by changing the read-out (gain from the data's mu_on, noise share).
 
@@ -53,8 +54,10 @@ def example_trial(gain, n=300, seed=11):
     sim = M.simulate(M.params(**BASE, cue_dur=CUE, t_delay=QUIET + DIPS - CUE), n, seed=seed + 1, quiet=QUIET)
     rng = np.random.default_rng(seed)
     dw, tz = R.rate_diff(sim, t_from=-250)
-    z = gain * dw + R.noise(dw.shape, R.RHO['all'], rng)
-    state = R.label(z, tz >= 0, R.null_threshold(dw.shape, R.RHO['all'], rng))
+    eta = R.noise(dw.shape, R.RHO['all'], rng)
+    z = gain * dw + eta
+    thr = R.null_threshold(dw.shape, R.RHO['all'], rng)
+    state = R.label(z, tz >= 0, thr)
     ok = M.memory_correct(sim) & (sim['rc'][:, -300:].max(1) > 80) & (sim['sc'][:, -1] > 0.4)
     quiet = (tz >= 300) & (tz < QUIET)
     best, score = None, np.inf
@@ -66,7 +69,8 @@ def example_trial(gain, n=300, seed=11):
         sc = abs(np.median(off) - 110) / 30 + abs(np.median(on) - 160) / 40 + (state[k, quiet] != 1).mean() * 5
         if sc < score:
             best, score = k, sc
-    return {key: v[best] for key, v in sim.items() if key != 't'}, sim['t'], tz, z[best], state[best]
+    return ({key: v[best] for key, v in sim.items() if key != 't'}, sim['t'], tz, z[best], state[best],
+            dict(dw=dw[best], eta=eta[best], thr=thr))
 
 
 def shade(ax, tz, state):
@@ -75,13 +79,36 @@ def shade(ax, tz, state):
             ax.axvspan(tz[a] - R.STEP / 2, tz[b - 1] + R.STEP / 2, color=c, alpha=0.15, lw=0)
 
 
+GAINS = (2.0, 1.0, 0.5)         # Figure 1: read-out gain relative to the fitted c, top to bottom
+SHADES = {'off': ('#1d7f90', C_OFF, '#9edbe6'), 'on': ('#a81e21', C_ON, '#f4a3a4')}   # per gain, dark to light
+
+
+def gain_stats(out, factors=GAINS):
+    """On/Off statistics of the simulated trials read out with the fitted all-units gain times each factor, with the
+    same noise draw, so that only the gain differs."""
+    r = out['sets'][FIT_SET]
+    dw, tz = R.rate_diff(out['sim'])
+    eta = r['z'] - r['gain'] * dw
+    thr = R.null_threshold(dw.shape, R.RHO['all'], np.random.default_rng(7))
+    delay, valid = (tz >= 500) & (tz <= 1400), (tz >= 0) & (tz <= 1400)
+    res = {}
+    for f in factors:
+        st = r['state'] if f == 1.0 else R.label(f * r['gain'] * dw + eta, valid, thr)
+        res[f] = R.stats(st, delay)
+    return res
+
+
 def figure1(out, path, input_dist=False, ff=False):
     r = out['sets'][FIT_SET]
-    tr, t, tz, z, state = example_trial(r['gain'])
-    fig = plt.figure(figsize=(7.2, 3.0))     # double column, 183 mm
-    gs = fig.add_gridspec(3, 1, height_ratios=[2.0, 0.55 if ff else 0.35, 2.0], hspace=0.22, left=0.08, right=0.71, top=0.9, bottom=0.14)
-    gh = fig.add_gridspec(2, 1, hspace=0.45, left=0.85, right=0.99, top=0.9, bottom=0.14)
-    a, b, d = fig.add_subplot(gs[0]), fig.add_subplot(gs[1]), fig.add_subplot(gs[2])
+    tr, t, tz, z, state, ex = example_trial(r['gain'])
+    gst = gain_stats(out)
+    fig = plt.figure(figsize=(7.2, 4.6))     # double column, 183 mm
+    gs = fig.add_gridspec(5, 1, height_ratios=[2.0, 0.35, 1.25, 1.25, 1.25], hspace=0.28, left=0.08, right=0.68,
+                          top=0.93, bottom=0.09)
+    gh = fig.add_gridspec(5, 2, height_ratios=[2.0, 0.35, 1.25, 1.25, 1.25], hspace=0.28, wspace=0.25, left=0.82,
+                          right=0.99, top=0.93, bottom=0.09)
+    a, b = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
+    zs = [fig.add_subplot(gs[2 + i], sharex=a) for i in range(len(GAINS))]
     shade(a, tz, state)
     a.axvspan(0, CUE, color=LIGHT, lw=0)
     a.plot(t, tr['rc'] / M.FIXED['r_max'], color=INK)     # rates relative to the sigmoid ceiling (a.u.)
@@ -125,44 +152,56 @@ def figure1(out, path, input_dist=False, ff=False):
     b.tick_params(bottom=False)
     if not ff:
         b.text(-0.01, 0.5, 'Attention\nsignal', transform=b.transAxes, ha='right', va='center', fontsize=7.5)
-    shade(d, tz, state)
-    d.plot(tz, z, color=INK)
-    for y, c, txt in ((0, GREY, ''), (1.96, C_ON, 'P < 0.05'), (0.84, C_OFF, 'P > 0.20')):
-        d.axhline(y, color=c, ls=(0, (3, 2)), lw=0.6)
-        d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=7.5, va='center')
-    d.set_ylim(z.min() - 0.3, 6); d.set_yticks([0, 3, 6], ['0', '', '6'])
-    d.set_ylabel('Decoding z')
-    d.set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$', fontsize=7.5, loc='left', pad=2)
-    d.set_xlabel('Time from cue onset (ms)')
-    for ax in (a, b, d):
-        ax.axvline(QUIET, color=GREY, ls=(0, (3, 2)), lw=0.6)
-        ax.set_xlim(-300, QUIET + DIPS)
+    valid = tz >= 0
+    ztop = max(11, GAINS[0] * r['gain'] * ex['dw'].max() + ex['eta'].max() + 0.5)
+    for i, (f, d) in enumerate(zip(GAINS, zs)):
+        zf = f * r['gain'] * ex['dw'] + ex['eta']
+        sf = state if f == 1.0 else R.label(zf[None], valid, ex['thr'])[0]
+        shade(d, tz, sf)
+        d.plot(tz, zf, color=INK, lw=0.8)
+        for y, c, txt, va in ((0, GREY, '', 'center'), (1.96, C_ON, 'P < 0.05', 'bottom'), (0.84, C_OFF, 'P > 0.20', 'top')):
+            d.axhline(y, color=c, ls=(0, (3, 2)), lw=0.6)
+            if i == 1:
+                d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=6.5, va=va)
+        d.set_ylim(-3, ztop); d.set_yticks([0, 5, 10], ['0', '', '10'])
+        lab = 'Fitted $c$' if f == 1.0 else rf'${f:g}\,c$'
+        d.text(0.005, 0.97, lab, transform=d.transAxes, fontsize=7.5, va='top', ha='left',
+               bbox=dict(facecolor='white', edgecolor='none', pad=0.6, alpha=0.8))
+        d.axvline(QUIET, color=GREY, ls=(0, (3, 2)), lw=0.6)
+        if i < len(GAINS) - 1:
+            d.tick_params(labelbottom=False)
+    zs[1].set_ylabel('Decoding z')
+    zs[0].set_title(r'$z(t) = c\,[r_\mathrm{cued}(t) - r_\mathrm{uncued}(t)] + \eta(t)$, same $\eta$ for each gain',
+                    fontsize=7.5, loc='left', pad=2)
+    zs[-1].set_xlabel('Time from cue onset (ms)')
+    letter(zs[0], 'b', x=-0.08, y=1.0)
     for ax in (a, b):
+        ax.axvline(QUIET, color=GREY, ls=(0, (3, 2)), lw=0.6)
         ax.tick_params(labelbottom=False)
+    for ax in (a, b):
+        ax.set_xlim(-300, min(QUIET + DIPS, t[-1]))
     edges = np.arange(0, 620, 20)
-    for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
-        h = fig.add_subplot(gh[j], sharex=fig.axes[-1] if j else None)
-        hm = r['h_' + name]
-        h.bar(edges[:-1], hm[:-1] / hm.sum(), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
-        if input_dist:   # the fitted input: dip lengths (gamma) under Off, up periods between dips (exponential) under On
-            from scipy import stats
-            p = M.params(**BASE)
-            cdf = (stats.gamma(p['dip_shape'], scale=p['dip_mean'] / p['dip_shape']) if name == 'off'
-                   else stats.expon(scale=1000 / p['dip_rate'])).cdf(edges)
-            pb = np.diff(cdf)
-            h.step(edges, np.r_[pb, pb[-1]], where='post', color=INK, lw=0.8)
-            h.text(0.97, 0.72, 'Dips (input)' if name == 'off' else 'Up periods (input)', transform=h.transAxes,
-                   ha='right', va='top', color=INK, fontsize=7)
-        h.set_xlim(0, 620); h.set_xticks([0, 200, 400, 600])
-        top = 0.3 if input_dist else 0.25
-        h.set_ylim(0, top); h.set_yticks([0, top / 2, top], ['0', '', f'{top:g}'])
-        h.set_ylabel('Fraction\nof states', labelpad=-14)   # beside the unlabelled middle tick
-        h.text(0.97, 0.9, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
-        if j == 0:
-            h.tick_params(labelbottom=False)
-            letter(h, 'b', x=-0.55, y=1.0)
-        else:
-            h.set_xlabel('State length (ms)')
+    top = 0.3
+    for i, f in enumerate(GAINS):
+        for j, name in enumerate(('off', 'on')):
+            h = fig.add_subplot(gh[2 + i, j])
+            hm = gst[f]['h_' + name]
+            c = SHADES[name][i]
+            h.bar(edges[:-1], hm[:-1] / max(hm.sum(), 1), width=20, align='edge', color=c, edgecolor='white', lw=0.3)
+            h.set_xlim(0, 620); h.set_xticks([0, 300, 600])
+            h.set_ylim(0, top); h.set_yticks([0, top / 2, top], ['0', '', f'{top:g}'] if j == 0 else [])
+            n = gst[f]['n_' + name]
+            h.text(0.97, 0.95, f'{n:.1f} per trial', transform=h.transAxes, ha='right', va='top',
+                   color=SHADES[name][min(i, 1)], fontsize=6.5)
+            if i == 0:
+                h.set_title(f'{name.capitalize()} states', fontsize=7.5, color=SHADES[name][1], pad=2)
+            if i < len(GAINS) - 1:
+                h.tick_params(labelbottom=False)
+            if j == 0 and i == 1:
+                h.set_ylabel('Fraction of states', labelpad=2)
+            if i == 0 and j == 0:
+                letter(h, 'c', x=-0.75, y=1.0)
+    fig.text(0.89, 0.025, 'State length (ms)', ha='center', fontsize=8.5)
     save(fig, path)
 
 
