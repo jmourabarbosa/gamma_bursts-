@@ -1,0 +1,3 @@
+results/*_trials.npz
+results/example_trials.npz
+__pycache__/
