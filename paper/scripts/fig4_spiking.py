@@ -82,28 +82,28 @@ def pca_panels(fig):
     lg = d2.inset_axes([0.72, 0.0, 0.28, 0.2]); lg.axis('off'); lg.set_xlim(0, 1); lg.set_ylim(0, 1)
     lg.plot(0.1, 0.75, 'o', ms=4.5, mfc=GREY, mec=INK, mew=0.4); lg.text(0.3, 0.75, 'On', va='center', fontsize=6.5)
     lg.plot(0.1, 0.3, 'o', ms=4.5, mfc='white', mec=GREY, mew=1.0); lg.text(0.3, 0.3, 'Off', va='center', fontsize=6.5)
-    # e, Procrustes shape similarity of the per-cue centroids to the ring of cue means (cue-mean PCs with >= 90% of
-    # the variance), during On, Off and before the cue; dashes, shuffled cue labels
+    # e, Procrustes shape similarity of the per-cue centroids to the ring of cue means, in the 7 PCs of the cue
+    # means, normalised to the shuffle (1 - disparity / shuffled disparity; 0 = chance). On/Off labelled from all
+    # units of the labelling half in both data and network
     e = fig.add_axes([0.885, 0.6, 0.11, 0.26])
     x = np.array([0, 1, 2])
     for fn, dx, col in (('data_procrustes.csv', -0.12, INK), ('net_procrustes.csv', 0.12, C_NET)):
         rows = [r for r in csv.DictReader(open(os.path.join(P, fn))) if r['space'] == 'pcs']
         sess = sorted({r['session'] for r in rows})
-        get = lambda k: np.array([[float(next(r[k] for r in rows if r['session'] == ss and r['period'] == q))
-                                   for q in ('on', 'off', 'pre')] for ss in sess])
-        M, Sh = get('similarity'), get('shuffle_mean')
+        M = np.array([[float(next(r['normalised'] for r in rows if r['session'] == ss and r['period'] == q) or 'nan')
+                       for q in ('on', 'off', 'pre')] for ss in sess])
         for row in M:
             e.plot(x[:2] + dx, row[:2], color=col, lw=0.4, alpha=0.3)
             e.plot(x[2] + dx, row[2], 'o', ms=1.5, color=col, alpha=0.4)
-        mu, se = M.mean(0), M.std(0, ddof=1) / np.sqrt(len(M))
+        mu = np.nanmean(M, 0)
+        se = np.nanstd(M, 0, ddof=1) / np.sqrt((~np.isnan(M)).sum(0))
         e.plot(x[:2] + dx, mu[:2], color=col, lw=1.2)
         e.errorbar(x + dx, mu, yerr=se, fmt='o', ms=3.5, color=col, lw=1.0, capsize=0)
-        for xi, sh in zip(x, Sh.mean(0)):
-            e.plot([xi + dx - 0.1, xi + dx + 0.1], [sh, sh], color=col, lw=0.8, ls=(0, (2, 1)))
-    e.set_xticks(x, ['On', 'Off', 'Pre']); e.set_xlim(-0.4, 2.4); e.set_ylim(0, 1.05); e.set_yticks([0, 0.5, 1], ['0', '', '1'])
-    e.set_ylabel('Shape similarity\nto cue ring', labelpad=-6)
-    e.text(0.04, 0.24, 'Data', transform=e.transAxes, color=INK, fontsize=6.5, va='top')
-    e.text(0.04, 0.12, 'Network', transform=e.transAxes, color=C_NET, fontsize=6.5, va='top')
+    e.axhline(0, color=GREY, ls=(0, (3, 2)), lw=0.6)
+    e.set_xticks(x, ['On', 'Off', 'Pre']); e.set_xlim(-0.4, 2.4); e.set_ylim(-0.4, 1.05); e.set_yticks([0, 0.5, 1], ['0', '', '1'])
+    e.set_ylabel('Shape similarity\nto cue ring', labelpad=1)
+    e.text(0.6, 0.8, 'Data', transform=e.transAxes, color=INK, fontsize=6, va='top')
+    e.text(0.6, 0.68, 'Network', transform=e.transAxes, color=C_NET, fontsize=6, va='top')
     letter(e, 'e', x=-0.6, y=1.05)
 
 
