@@ -8,6 +8,8 @@ fig_unit_sets         On/Off statistics of the 7 decoded populations, model (wit
 fig_histograms        On and Off length histograms (all units) vs data
 fig_single_dip        memory held against the length of a single dip (cut-off)
 fig_memory_off_time   memory held against time Off in 500-1,400 ms (all-units read-out), as the paper's Figure 3
+fig_populations       decoder z of all units, top 5 and random 5 on the same trials
+fig_tuning            delay tuning of the recorded cells (why top-unit decoders are not better than random ones)
 """
 import json
 import os
@@ -196,6 +198,70 @@ def fig_example_trial():
     save(fig, 'fig_example_trial')
 
 
+def fig_populations(n=4):
+    """Decoder z of three populations (all units, top 5, random 5) on the same trials, with the common input."""
+    f = os.path.join(RES, 'sessions_dips_trials.npz')
+    if not os.path.exists(f):
+        return
+    d = np.load(f)
+    tz, held, cue = d['tz'], d['s0_held'], d['s0_cue']
+    corr = np.where(held)[0]
+    ks = [k for k in range(min(20, len(corr))) if corr[k] < len(d['s0_m'])][:n]
+    t1 = np.arange(d['s0_m'].shape[1]) - RU.TUNED['t_pre']
+    fig, axs = plt.subplots(len(ks), 1, figsize=(5.6, 1.35 * len(ks) + 0.4), sharex=True,
+                            gridspec_kw=dict(hspace=0.25, left=0.11, right=0.97, top=0.95, bottom=0.1))
+    for a, k in zip(axs, ks):
+        i = corr[k]
+        m = d['s0_m'][i]
+        a.fill_between(t1, -3, 14, where=m < 0.75, color=LIGHT, lw=0, step='mid')
+        for lab, col in (('all', INK), ('top 5', C_ON), ('rand 5', C_OFF)):
+            a.plot(tz, d[f's0_z_{lab}'][k], color=col, lw=0.8, label=lab)
+        a.axhline(1.96, color=GREY, lw=0.4, ls=':'); a.axhline(0.84, color=GREY, lw=0.4, ls=':')
+        a.set_ylim(-3, 14); a.set_ylabel('z')
+        a.text(0.01, 0.97, f'cue {cue[i] * 45} deg', transform=a.transAxes, fontsize=6, va='top')
+    axs[0].legend(loc='upper right', ncol=3, fontsize=6)
+    axs[-1].set_xlim(-100, 1450); axs[-1].set_xlabel('Time from cue onset (ms); grey: dips')
+    save(fig, 'fig_populations')
+
+
+def fig_tuning():
+    """Delay rates of the recorded cells of session 0 against cue, and the ANOVA top cells of one pair."""
+    f = os.path.join(RES, 'sessions_dips_trials.npz')
+    if not os.path.exists(f):
+        return
+    d = np.load(f)
+    C, held, cue, rec = d['s0_counts'], d['s0_held'], d['s0_cue'], d['s0_rec']
+    X, tz = R.windows(C[held], np.arange(C.shape[1]) * 10.0 - RU.TUNED['t_pre'])
+    cu = cue[held]
+    dl = (tz >= 500) & (tz <= 1400)
+    rate = X[:, dl].mean(1) * 10
+    tun = np.array([rate[cu == c].mean(0) for c in range(8)])
+    isE = rec < N.P['N_E']
+    fig, axs = plt.subplots(1, 3, figsize=(6.6, 2.2), gridspec_kw=dict(wspace=0.55, left=0.11, right=0.98, bottom=0.22, top=0.86))
+    a = axs[0]
+    o = np.argsort(rec[isE])
+    im = a.imshow(tun[:, isE][:, o].T, aspect='auto', cmap='Greys', extent=(-22.5, 337.5, 360, 0), vmax=40)
+    a.set_xlabel('Cue (deg)'); a.set_ylabel('Recorded E cell (pref. angle, deg)')
+    a.set_xticks([0, 90, 180, 270]); plt.colorbar(im, ax=a, label='Delay rate (Hz)', fraction=0.05)
+    a = axs[1]
+    pk, bs = tun.max(0), tun.min(0)
+    a.plot(bs[isE], pk[isE], '.', ms=2, color=INK, label='E')
+    a.plot(bs[~isE], pk[~isE], '.', ms=2, color=C_ON, label='I')
+    a.set_xlabel('Lowest cue rate (Hz)'); a.set_ylabel('Highest cue rate (Hz)'); a.legend(fontsize=6)
+    a = axs[2]
+    tot = X[:, (tz >= 0) & (tz <= 1400)].sum(1)
+    m = cu % 4 == 0
+    top = np.argsort(-R.anova_f(tot[m], cu[m]))[:5]
+    for j in top:
+        a.plot(np.arange(8) * 45, tun[:, j], 'o-', ms=2, lw=0.7)
+    a.axvline(0, color=GREY, lw=0.5, ls=':'); a.axvline(180, color=GREY, lw=0.5, ls=':')
+    a.set_xlabel('Cue (deg)'); a.set_ylabel('Delay rate (Hz)'); a.set_xticks([0, 90, 180, 270])
+    a.set_title('Top 5 cells for the 0 vs 180 deg pair', fontsize=7)
+    for a, l, x in zip(axs, 'abc', (-0.5, -0.3, -0.3)):
+        letter(a, l, x=x)
+    save(fig, 'fig_tuning')
+
+
 def table(model, rows, ctrl, data):
     """Markdown table model (mean over sessions) vs data (mean over 25 sessions), written to results/table.md."""
     cols = (('Off/trial', 'n_off', 'off_per_trial', 2), ('Off median', 'off_median', 'off_median_ms', 0),
@@ -231,6 +297,8 @@ def main():
     fig_single_dip()
     fig_memory_off_time()
     fig_example_trial()
+    fig_populations()
+    fig_tuning()
 
 
 if __name__ == '__main__':
