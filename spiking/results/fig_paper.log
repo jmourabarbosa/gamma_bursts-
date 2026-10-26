@@ -1,0 +1,23 @@
+long session: 64 trials
+long session: 128 trials
+long session: 192 trials
+long session: 256 trials
+long session: 320 trials
+long session: 384 trials
+long session: 448 trials
+long session: 512 trials
+{
+ "example_trial": 27,
+ "example_cue_deg": 180.0,
+ "n_trials_long_session": 480,
+ "n_correct_long_session": 450,
+ "n_states_model": {
+  "on": 16182,
+  "off": 14385
+ },
+ "n_tuning_curves": 3300,
+ "tuning_peak_on": 1.2577888154149035,
+ "tuning_peak_off": 0.01857972881702629,
+ "tuning_opposite_on": -0.5804542585397721,
+ "tuning_opposite_off": -0.007091969237989511
+}

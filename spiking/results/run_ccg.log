@@ -9,3 +9,4 @@ remote: pre-receive hook declined
 To https://github.com/jmourabarbosa/gamma_bursts-
  ! [remote rejected] claude/gallant-volta-bkjojq -> claude/gallant-volta-bkjojq (pre-receive hook declined)
 error: failed to push some refs to 'https://github.com/jmourabarbosa/gamma_bursts-'
+session 1 all: Manhattan 6823.6, null 4595.9 +- 14.0, z 159.18, significant CCGs per cue 3814 (7.03% of pairs) (2756 s)
