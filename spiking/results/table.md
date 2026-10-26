@@ -10,4 +10,16 @@ Model (data in brackets); lengths in ms.
 | rand 50 | 3.06 (4.27) | 100 (112) | 0.26 (0.53) | 3.21 (1.75) | 203 (110) | 0.56 (0.14) | 5.78 (1.69) |
 | all | 3.00 (3.25) | 98 (112) | 0.26 (0.45) | 3.37 (2.10) | 202 (134) | 0.59 (0.21) | 5.67 (2.18) |
 
+No-dip control (model):
+
+| population | Off/trial | Off median | frac Off | On/trial | On median | frac On | mu_on |
+|---|---|---|---|---|---|---|---|
+| top 5 | 0.06 | 1410 | 0.06 | 0.94 | 1410 | 0.94 | 12.66 |
+| top 20 | 0.00 | nan | 0.00 | 1.00 | 1410 | 1.00 | 11.52 |
+| top 50 | 0.00 | nan | 0.00 | 1.00 | 1410 | 1.00 | 11.30 |
+| rand 5 | 1.07 | 518 | 0.34 | 0.94 | 1040 | 0.58 | 12.46 |
+| rand 20 | 0.17 | 280 | 0.04 | 0.95 | 1410 | 0.89 | 13.13 |
+| rand 50 | 0.00 | 60 | 0.00 | 1.00 | 1410 | 1.00 | 12.76 |
+| all | 0.00 | nan | 0.00 | 1.00 | 1410 | 1.00 | 10.85 |
+
 Sessions: 12 x 480 trials. Memory held (end of delay, rate or NMDA): 0.832; rate bump active and at the cue: 0.531; NMDA criterion: 0.830; bump restarts at the cue in the probe: 0.887; wrong place at the end of the delay: 0.101; restarts elsewhere in the probe: 0.113.
