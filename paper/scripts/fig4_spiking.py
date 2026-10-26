@@ -64,13 +64,13 @@ def pca_scatter(ax, rows, deg, title):
 
 
 def pca_panels(fig):
-    """d, delay activity in the plane of the cue means, data (one session) and network (one session); e, alignment
-    with the cue (shuffle-corrected cosine) during On, Off and before the cue, data and network."""
+    """d, delay activity in the plane of the cue means, data (one session) and network (one session); e, Procrustes
+    shape similarity to the ring of cue means during On, Off and before the cue, data and network."""
     P = os.path.join(os.path.dirname(__file__), 'data', 'pca')
     dc = list(csv.DictReader(open(os.path.join(P, 'data_panel_c.csv'))))
     nc = list(csv.DictReader(open(os.path.join(P, 'net_panel_c.csv'))))
     d1 = fig.add_axes([0.675, 0.06, 0.15, 0.36]); d2 = fig.add_axes([0.85, 0.06, 0.15, 0.36])
-    pca_scatter(d1, nc, [45.0 * int(r['cue']) for r in nc], 'Network')
+    pca_scatter(d1, nc, [float(r['angle_deg']) for r in nc], 'Network')
     pca_scatter(d2, dc, [np.degrees(float(r['angle_rad'])) for r in dc], 'Data')
     letter(d1, 'd', x=-0.1, y=1.02)
     key = d2.inset_axes([0.0, 0.7, 0.3, 0.3]); key.set_aspect('equal'); key.axis('off')
@@ -82,26 +82,28 @@ def pca_panels(fig):
     lg = d2.inset_axes([0.72, 0.0, 0.28, 0.2]); lg.axis('off'); lg.set_xlim(0, 1); lg.set_ylim(0, 1)
     lg.plot(0.1, 0.75, 'o', ms=4.5, mfc=GREY, mec=INK, mew=0.4); lg.text(0.3, 0.75, 'On', va='center', fontsize=6.5)
     lg.plot(0.1, 0.3, 'o', ms=4.5, mfc='white', mec=GREY, mew=1.0); lg.text(0.3, 0.3, 'Off', va='center', fontsize=6.5)
-    # e, alignment with the cue
+    # e, Procrustes shape similarity of the per-cue centroids to the ring of cue means (cue-mean PCs with >= 90% of
+    # the variance), during On, Off and before the cue; dashes, shuffled cue labels
     e = fig.add_axes([0.885, 0.6, 0.11, 0.26])
-    dd = list(csv.DictReader(open(os.path.join(P, 'data_panel_d.csv'))))
-    nd = list(csv.DictReader(open(os.path.join(P, 'net_panel_d.csv'))))
-    D = np.array([[float(r[p]) for p in ('on', 'off', 'pre')] for r in dd])
-    sess = sorted({r['session'] for r in nd})
-    N = np.array([[float(next(r['corrected'] for r in nd if r['session'] == ss and r['period'] == p)) for p in ('on', 'off', 'pre')] for ss in sess])
     x = np.array([0, 1, 2])
-    for M, dx, col in ((D, -0.12, INK), (N, 0.12, C_NET)):
+    for fn, dx, col in (('data_procrustes.csv', -0.12, INK), ('net_procrustes.csv', 0.12, C_NET)):
+        rows = [r for r in csv.DictReader(open(os.path.join(P, fn))) if r['space'] == 'pcs']
+        sess = sorted({r['session'] for r in rows})
+        get = lambda k: np.array([[float(next(r[k] for r in rows if r['session'] == ss and r['period'] == q))
+                                   for q in ('on', 'off', 'pre')] for ss in sess])
+        M, Sh = get('similarity'), get('shuffle_mean')
         for row in M:
             e.plot(x[:2] + dx, row[:2], color=col, lw=0.4, alpha=0.3)
             e.plot(x[2] + dx, row[2], 'o', ms=1.5, color=col, alpha=0.4)
         mu, se = M.mean(0), M.std(0, ddof=1) / np.sqrt(len(M))
         e.plot(x[:2] + dx, mu[:2], color=col, lw=1.2)
         e.errorbar(x + dx, mu, yerr=se, fmt='o', ms=3.5, color=col, lw=1.0, capsize=0)
-    e.axhline(0, color=GREY, ls=(0, (3, 2)), lw=0.6)
-    e.set_xticks(x, ['On', 'Off', 'Pre']); e.set_xlim(-0.4, 2.4); e.set_ylim(-0.1, 1.0); e.set_yticks([0, 0.5, 1], ['0', '', '1'])
-    e.set_ylabel('Alignment\nwith cue', labelpad=-6)
-    e.text(0.45, 1.0, 'Data', transform=e.transAxes, color=INK, fontsize=6.5, va='top')
-    e.text(0.45, 0.87, 'Network', transform=e.transAxes, color=C_NET, fontsize=6.5, va='top')
+        for xi, sh in zip(x, Sh.mean(0)):
+            e.plot([xi + dx - 0.1, xi + dx + 0.1], [sh, sh], color=col, lw=0.8, ls=(0, (2, 1)))
+    e.set_xticks(x, ['On', 'Off', 'Pre']); e.set_xlim(-0.4, 2.4); e.set_ylim(0, 1.05); e.set_yticks([0, 0.5, 1], ['0', '', '1'])
+    e.set_ylabel('Shape similarity\nto cue ring', labelpad=-6)
+    e.text(0.04, 0.24, 'Data', transform=e.transAxes, color=INK, fontsize=6.5, va='top')
+    e.text(0.04, 0.12, 'Network', transform=e.transAxes, color=C_NET, fontsize=6.5, va='top')
     letter(e, 'e', x=-0.6, y=1.05)
 
 
