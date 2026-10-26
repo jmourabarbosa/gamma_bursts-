@@ -27,3 +27,18 @@
   -3.0
  ]
 }
+dip    0 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip   50 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  100 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  150 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  200 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  250 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  300 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  350 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  400 ms: held 1.00 (rate 1.00, NMDA 1.00), wrong place 0.00
+dip  450 ms: held 0.91 (rate 0.91, NMDA 0.91), wrong place 0.09
+dip  500 ms: held 0.75 (rate 0.75, NMDA 0.75), wrong place 0.25
+dip  550 ms: held 0.53 (rate 0.53, NMDA 0.53), wrong place 0.47
+dip  600 ms: held 0.47 (rate 0.47, NMDA 0.47), wrong place 0.44
+dip  650 ms: held 0.19 (rate 0.16, NMDA 0.19), wrong place 0.59
+dip  700 ms: held 0.22 (rate 0.19, NMDA 0.22), wrong place 0.41
