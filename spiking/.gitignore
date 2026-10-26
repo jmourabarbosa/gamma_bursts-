@@ -4,3 +4,4 @@ __pycache__/
 results/ccg/spikes_*.npz
 results/ccg/graphs_*.npz
 results/fig_paper/long_session.npz
+results/pca_onoff/counts_*.npz
