@@ -38,6 +38,37 @@ Paired t-tests across sessions:
 | sessions with Off above its shuffle p95 | 10 of 10 | 6 of 10 |
 | sessions with pre above its shuffle p95 | 2 of 10 | 0 of 10 |
 
+## Normalised to the shuffle (as the data hand-off; use this for the figure)
+Same normalisation as the recordings (`analysis/procrustes_paper_handoff/` on `jmourabarbosa/panichello`,
+branch `analysis-replication`), using their `procrustes_normalize.py` (copied to `spiking/procrustes_normalize.py`):
+
+    normalised = 1 − disparity / shuffle disparity = (similarity − shuffle mean) / (1 − shuffle mean)
+
+0 = chance, 1 = identical shape. Spaces renamed to match the data files: `pcs` = 7 PCs (our `pcs7`), `full` = all
+165 held-out units; the earlier 90%-variance run is kept as `pcs_var90`.
+
+| normalised, mean ± s.e.m. (data, 25 sessions) | On | Off | pre-cue |
+|---|---|---|---|
+| network, 7 PCs (10 sessions) | 0.99 ± 0.00 (0.50) | 0.84 ± 0.02 (0.36) | −0.01 ± 0.06 (0.01) |
+| network, all held-out units | 0.99 ± 0.00 (0.49) | 0.13 ± 0.03 (0.32) | 0.01 ± 0.01 (0.00) |
+
+- **7 PCs:** On vs Off p = 7×10⁻⁵; Off vs pre p = 9×10⁻⁷; Off > 0 p = 3×10⁻¹¹ (10/10 sessions above the shuffle
+  p95); pre vs 0 p = 0.93.
+- **All units:** On vs Off p = 2×10⁻¹⁰; Off vs pre p = 0.002; Off > 0 p = 0.001 (6/10 above the shuffle p95);
+  pre vs 0 p = 0.24.
+- **Order On > Off > pre-cue = 0 in both spaces, as in the data.**
+- **Unlike the data, the two spaces disagree for Off** (0.84 vs 0.13; data 0.36 vs 0.32). The network's Off
+  centroids are tiny (about 2% of the On spread in the PC plane). In the 7 cue-mean PCs their small,
+  cue-consistent residue keeps the ring's shape; across all 165 units the noise in the other dimensions dominates.
+  The data's Off activity keeps the ring's shape at a much larger size, so it survives in both spaces.
+- **Labelling differs from the data:** the network uses all cells of H1, as the paper agent asked; the data README
+  says the data used the top 20 units of H1. If the figure should compare like with like, one of the two needs
+  re-running.
+
+Files: `procrustes_sessions_normalised.csv` (adds `normalised`, `normalised_p95`), `procrustes_stats_normalised.json`
+(same structure as the data's), `procrustes_normalised_check.png` (quick check, network vs data means; not a paper
+figure).
+
 ## Third space, as requested: 7 PCs (`pcs7`)
 The first 7 PCs of the cue means of each trial half, i.e. the whole cue-mean subspace (8 cue means span at most 7
 dimensions). Same labels, splits and shuffles as above; only the number of PCs is fixed at 7 instead of the 90% rule
