@@ -527,3 +527,84 @@ def procrustes_panel(sessions, n_shuf=50, ex=0):
         fig.savefig(os.path.join(FIG, f'fig_pca_procrustes.{ext}'), dpi=300)
     plt.close(fig)
     print(json.dumps(stats, indent=1))
+
+
+def project_k(Zd, cue, rng, Zpre, k):
+    """As project, with k principal components (k <= 8; 8 cue means span at most 7 dimensions)."""
+    half = np.zeros(len(cue), int)
+    for c in range(8):
+        idx = rng.permutation(np.flatnonzero(cue == c))
+        half[idx[len(idx) // 2:]] = 1
+    proj = np.zeros(Zd.shape[:2] + (k,)); pre = np.zeros(Zpre.shape[:2] + (k,))
+    cms = []
+    for h in (0, 1):
+        tr = half != h
+        C = np.stack([Zd[tr & (cue == c)].mean((0, 1)) for c in range(8)])
+        mu = C.mean(0)
+        _, _, vt = np.linalg.svd(C - mu, full_matrices=False)
+        W = vt[:k].T
+        cm, P, Pp = (C - mu) @ W, (Zd[half == h] - mu) @ W, (Zpre[half == h] - mu) @ W
+        if h == 1:
+            Rm = procrustes(cms[0], cm)
+            cm, P, Pp = cm @ Rm, P @ Rm, Pp @ Rm
+        cms.append(cm); proj[half == h] = P; pre[half == h] = Pp
+    return proj, half, np.stack(cms), pre
+
+
+def procrustes_k(sessions, k=8, n_shuf=50):
+    """Procrustes shape similarity (as procrustes_panel) in the space of the first k PCs of the cue means
+    (independent units; the stored On/Off labels of run_session)."""
+    from scipy.spatial import procrustes as sp_procrustes
+    rng = np.random.default_rng(0)
+
+    def sim(P, cue, half, cms):
+        v = []
+        for h in (0, 1):
+            m = half == h
+            cen = np.array([P[m & (cue == c)].mean(0) if (m & (cue == c)).any() else np.full(P.shape[1], np.nan)
+                            for c in range(8)])
+            ok = ~np.isnan(cen).any(1)
+            if ok.sum() >= 4:
+                v.append(1 - sp_procrustes(cms[h][ok], cen[ok])[2])
+        return np.mean(v)
+    res, shuf = {p: [] for p in ('on', 'off', 'pre')}, {p: [] for p in ('on', 'off', 'pre')}
+    for s in sessions:
+        d = np.load(os.path.join(OUT, f'session_{s}.npz'))
+        counts, cue, held = session_counts(s)
+        t10 = np.arange(counts.shape[1]) * 10.0 - RU.TUNED['t_pre']
+        X, tz = R.windows(counts[held], t10)
+        Zt = (X - X.mean(0)) / np.where(X.std(0) > 0, X.std(0), 1)
+        dl = (tz >= DEL[0]) & (tz <= DEL[1])
+        kk = R.WIN // R.STEP
+        c_ = np.cumsum(np.concatenate([np.zeros_like(counts[held][:, :1], dtype=np.int32),
+                                       counts[held].astype(np.int32)], 1), 1)
+        Xa = (c_[:, kk:] - c_[:, :-kk]).astype(float)
+        ta = t10[:Xa.shape[1]] + R.WIN / 2
+        Xp = Xa[:, (ta >= PRE[0]) & (ta <= PRE[1])]
+        Zpre = (Xp - Xp.mean(0)) / np.where(Xp.std(0) > 0, Xp.std(0), 1)
+        n = X.shape[2]
+        H2 = np.sort(np.random.default_rng(1).permutation(n)[n // 2:])
+        cue = cue[held]
+        proj, half, cms, pre = project_k(Zt[:, dl][:, :, H2], cue, np.random.default_rng(0), Zpre[:, :, H2], k)
+        if k == 2:
+            assert np.allclose(proj, d['split_proj'])
+        st = d['split_state']
+        for p in res:
+            tri, P = [], []
+            for i in range(len(cue)):
+                m = st[i] == (1 if p == 'on' else -1)
+                if p == 'pre':
+                    tri.append(i); P.append(pre[i].mean(0))
+                elif m.any():
+                    tri.append(i); P.append(proj[i][m].mean(0))
+            tri, P = np.array(tri), np.array(P)
+            res[p].append(sim(P, cue[tri], half[tri], cms))
+            sh = []
+            for _ in range(n_shuf):
+                c2 = cue[tri].copy()
+                for hh in (0, 1):
+                    mm = half[tri] == hh
+                    c2[mm] = rng.permutation(c2[mm])
+                sh.append(sim(P, c2, half[tri], cms))
+            shuf[p].append(np.mean(sh))
+    return {p: np.array(v) for p, v in res.items()}, {p: np.array(v) for p, v in shuf.items()}
