@@ -6,10 +6,9 @@ Not fitted to the data. Simulations and read-out: branch claude/gallant-volta-bk
 fig_spiking_note.md); this script only redraws the saved panel data in the style of the other figures.
 
 a, example trial: spikes of the excitatory cells sorted by preferred location (5 ms x 8-cell bins); the common input
-   (attention signal) with its overshoot after each dip; the all-units decoder z with On/Off states, and the z of
-   the 20 most cue-selective neurons on the same trial (grey).
-b, Off and On length distributions for decoders using the 20 most cue-selective neurons (dark) and all units, in
-   4 further sessions of 480 trials (paper/scripts/spiking_topbottom.py); axis clipped at 600 ms (fractions of all states); two-sample KS test.
+   (attention signal) with its overshoot after each dip; the all-units decoder z with On/Off states.
+b, Off and On length distributions of the all-units decoder in 4 further sessions of 480 trials
+   (paper/scripts/spiking_topbottom.py); axis clipped at 600 ms (fractions of all states).
 c, cross-validated tuning of held-out simulated neurons in On and Off states (as Panichello et al. 2024, Fig. 4d).
 
 usage (from the root of branch paper-model): python paper/scripts/fig4_spiking.py <out.png>
@@ -144,15 +143,11 @@ def main(out):
     # a, bottom: all-units decoder z with On/Off states
     tz, z, st = tr['z_t_ms'], tr['z'], tr['state']
     shade(d, tz, st, 10)
-    t20 = np.load(os.path.join(DATA, 'fig_spiking_a_top20.npz'))      # same trial, decoded with the top 20 neurons
-    d.plot(t20['z_t_ms'], t20['z_top20'], color=GREY, lw=0.8)
     d.plot(tz, z, color=INK)
-    d.text(0.58, 0.97, 'All units', transform=d.transAxes, ha='left', va='top', color=INK, fontsize=7)
-    d.text(0.58, 0.84, 'Top 20', transform=d.transAxes, ha='left', va='top', color=GREY, fontsize=7)
     for y, c, txt in ((0, GREY, ''), (1.96, C_ON, 'P < 0.05'), (0.84, C_OFF, 'P > 0.20')):
         d.axhline(y, color=c, ls=(0, (3, 2)), lw=0.6)
         d.text(1.005, y, txt, transform=d.get_yaxis_transform(), color=c, fontsize=7, va='bottom' if y > 1 else 'top')
-    d.set_ylim(-3, max(12, np.ceil(t20['z_top20'][t20['z_t_ms'] <= XL[1]].max()) + 1)); d.set_yticks([0, 5, 10])
+    d.set_ylim(-3, max(12, np.ceil(z[tz <= XL[1]].max()) + 1)); d.set_yticks([0, 5, 10])
     d.set_ylabel('Decoding z')
     d.set_xlabel('Time from cue onset (ms)')
     for ax in (a, m, d):
@@ -161,25 +156,18 @@ def main(out):
     for ax in (a, m):
         ax.tick_params(labelbottom=False)
 
-    # b, state lengths for decoders using the 20 most cue-selective neurons (dark) and all units (as Fig. 1b)
+    # b, state lengths of the all-units decoder (as Fig. 1b)
     hb = list(csv.DictReader(open(os.path.join(DATA, 'fig_spiking_b_top20.csv'))))
     shades = {'off': ('#16606d', C_OFF), 'on': ('#9c1215', C_ON)}
     centers = np.r_[np.arange(10, 600, 20), 700.0]        # 20 ms bins; the last one holds all states >= 600 ms
     for j, name in enumerate(('off', 'on')):
         h = fig.add_subplot(gb[j])
-        top, lens = 0, []
-        for g, (lab, txt) in enumerate((('top 20', 'Top 20'), ('all', 'All'))):
-            rows = [r for r in hb if r['decoder'] == lab and r['state'] == name]
-            cnt = np.array([float(r['count']) for r in rows])
-            lens.append(np.repeat(centers, cnt.astype(int)))
-            frac = np.r_[cnt[:30][0::2] + cnt[:30][1::2], cnt[30]] / cnt.sum()   # 40 ms bins to 600 ms, then >= 600 ms (not shown)
-            h.bar(np.arange(0, 600, 40) + g * 20, frac[:-1], width=20, align='edge', color=shades[name][g], lw=0)
-            top = max(top, frac[:-1].max())
-            h.text(0.97, 0.8 - 0.13 * g, f"{txt}, {float(rows[0]['n_states_per_trial']):.1f}/trial", transform=h.transAxes,
-                   ha='right', va='top', color=shades[name][g], fontsize=6.5)
-        ks = stats.ks_2samp(*lens)
-        h.text(0.97, 0.54, f'KS p = {ks.pvalue:.0e}'.replace('e-0', 'e-').replace('e-', ' x 10$^{-') + '}$', transform=h.transAxes,
-               ha='right', va='top', color=GREY, fontsize=6)
+        rows = [r for r in hb if r['decoder'] == 'all' and r['state'] == name]
+        cnt = np.array([float(r['count']) for r in rows])
+        frac = np.r_[cnt[:30][0::2] + cnt[:30][1::2], cnt[30]] / cnt.sum()   # 40 ms bins to 600 ms, then >= 600 ms (not shown)
+        h.bar(np.arange(0, 600, 40), frac[:-1], width=40, align='edge', color=shades[name][1], ec='white', lw=0.4)
+        h.text(0.97, 0.8, f"{float(rows[0]['n_states_per_trial']):.1f}/trial", transform=h.transAxes,
+               ha='right', va='top', color=shades[name][1], fontsize=6.5)
         h.text(0.97, 0.97, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=shades[name][1], fontsize=7.5)
         h.set_xlim(0, 600); h.set_xticks([0, 300, 600])
         h.set_ylim(0, 0.4); h.set_yticks([0, 0.2, 0.4], ['0', '', '0.4'])
