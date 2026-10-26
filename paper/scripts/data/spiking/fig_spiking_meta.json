@@ -1,0 +1,15 @@
+{
+ "example_trial": 27,
+ "example_cue_deg": 180.0,
+ "n_trials_long_session": 480,
+ "n_correct_long_session": 450,
+ "n_states_model": {
+  "on": 16182,
+  "off": 14385
+ },
+ "n_tuning_curves": 330,
+ "tuning_peak_on": 1.2577888154149033,
+ "tuning_peak_off": 0.018579728817026294,
+ "tuning_opposite_on": -0.5804542585397721,
+ "tuning_opposite_off": -0.007091969237989511
+}
