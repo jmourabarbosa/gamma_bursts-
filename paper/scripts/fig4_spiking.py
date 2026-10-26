@@ -7,7 +7,8 @@ fig_spiking_note.md); this script only redraws the saved panel data in the style
 
 a, example trial: spikes of the excitatory cells sorted by preferred location (5 ms x 8-cell bins); the common input
    (attention signal) with its overshoot after each dip; the all-units decoder z with On/Off states.
-b, Off and On length distributions of the model (all units, 12 sessions x 480 trials).
+b, Off and On length distributions for decoders using the 20 most cue-selective neurons (dark) and all units, in
+   4 further sessions of 480 trials (paper/scripts/spiking_topbottom.py).
 c, cross-validated tuning of held-out simulated neurons in On and Off states (as Panichello et al. 2024, Fig. 4d).
 
 usage (from the root of branch paper-model): python paper/scripts/fig4_spiking.py <out.png>
@@ -83,16 +84,23 @@ def main(out):
     for ax in (a, m):
         ax.tick_params(labelbottom=False)
 
-    # b, state lengths of the model, 20 ms bins up to 600 ms
-    for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
+    # b, state lengths for decoders using the 20 most cue-selective neurons (dark) and all units (as Fig. 1b)
+    hb = list(csv.DictReader(open(os.path.join(DATA, 'fig_spiking_b_top20.csv'))))
+    shades = {'off': ('#16606d', C_OFF), 'on': ('#9c1215', C_ON)}
+    for j, name in enumerate(('off', 'on')):
         h = fig.add_subplot(gb[j])
-        rows = [r for r in hist if r['state'] == name and float(r['bin_lo_ms']) < 600]
-        lo = np.array([float(r['bin_lo_ms']) for r in rows])
-        mf = np.array([float(r['model_fraction']) for r in rows])
-        h.bar(lo, mf, width=20, align='edge', color=c, edgecolor='white', lw=0.3)
+        top = 0
+        for g, (lab, txt) in enumerate((('top 20', 'Top 20'), ('all', 'All'))):
+            rows = [r for r in hb if r['decoder'] == lab and r['state'] == name]
+            cnt = np.array([float(r['count']) for r in rows])
+            frac = (cnt[:30][0::2] + cnt[:30][1::2]) / cnt.sum()          # 40 ms bins, 0-600 ms
+            h.bar(np.arange(0, 600, 40) + g * 20, frac, width=20, align='edge', color=shades[name][g], lw=0)
+            top = max(top, frac.max())
+            h.text(0.97, 0.78 - 0.15 * g, f"{txt}, {float(rows[0]['n_states_per_trial']):.1f}/trial", transform=h.transAxes,
+                   ha='right', va='top', color=shades[name][g], fontsize=6.5)
+        h.text(0.97, 0.97, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=shades[name][1], fontsize=7.5)
         h.set_xlim(0, 600); h.set_xticks([0, 300, 600])
-        h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'] if j == 0 else [])
-        h.text(0.97, 0.95, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
+        h.set_ylim(0, 0.6); h.set_yticks([0, 0.3, 0.6], ['0', '', '0.6'] if j == 0 else [])
         if j == 0:
             h.set_ylabel('Fraction\nof states', labelpad=-14)
             letter(h, 'b', x=-0.62, y=1.0)
