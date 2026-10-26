@@ -3,7 +3,8 @@ computed in the full space of the held-out units and in the space of the cue-mea
 Cross-validated: centroids of the trials of one half are compared with the cue means of the other half.
 
 Copied from the paper agent's reference (paper/handoffs/procrustes_shape.py, branch
-claude/intermittent-rate-coding-paper-ced984); only change: the 95th percentile of the shuffles is also returned."""
+claude/intermittent-rate-coding-paper-ced984); changes: the 95th percentile of the shuffles is also returned, and k_fixed sets the number of PCs
+directly (instead of the 90%-variance rule)."""
 import numpy as np
 from scipy.spatial import procrustes as sp_procrustes
 
@@ -33,7 +34,7 @@ def trial_vectors(Zd, Zpre, state):
     return out
 
 
-def shape_similarity(Zd, Zpre, cue, state, half, var_keep=0.9, n_shuf=50, rng=None):
+def shape_similarity(Zd, Zpre, cue, state, half, var_keep=0.9, n_shuf=50, rng=None, k_fixed=None):
     """Returns {space: {period: (sim, shuffle_mean, n_trials, shuffle_p95)}} for space in ('full', 'pcs'), plus the number of PCs kept."""
     rng = rng or np.random.default_rng(0)
     V = trial_vectors(Zd, Zpre, state)
@@ -44,7 +45,7 @@ def shape_similarity(Zd, Zpre, cue, state, half, var_keep=0.9, n_shuf=50, rng=No
         C = np.stack([Zd[(half != h) & (cue == c)].mean((0, 1)) for c in range(8)])
         mu = C.mean(0)
         _, sv, vt = np.linalg.svd(C - mu, full_matrices=False)
-        k = int(np.searchsorted(np.cumsum(sv ** 2) / np.sum(sv ** 2), var_keep) + 1)
+        k = int(np.searchsorted(np.cumsum(sv ** 2) / np.sum(sv ** 2), var_keep) + 1) if k_fixed is None else k_fixed
         ks.append(k)
         ref[h] = (C - mu, mu, vt[:k].T)
 

@@ -109,5 +109,49 @@ def main(sessions=range(10)):
     print(json.dumps(stats, indent=1))
 
 
+def main_k(k=7, sessions=range(10)):
+    """Add a third space, 'pcs{k}': the first k PCs of the cue means (k = 7 is the whole cue-mean subspace), with the
+    stored all-H1 labels; rows appended to procrustes_sessions.csv, stats added to procrustes_stats.json."""
+    name = f'pcs{k}'
+    rows = [r for r in csv.DictReader(open(os.path.join(OUT, 'procrustes_sessions.csv'))) if r['space'] != name]
+    for s in sessions:
+        X, Zt, Zpre, tz, cue = session_data(s)
+        n = X.shape[2]
+        H2 = np.sort(np.random.default_rng(1).permutation(n)[n // 2:])
+        d = np.load(os.path.join(P.OUT, f'states_allH1_s{s}.npz'))
+        dl = (tz >= P.DEL[0]) & (tz <= P.DEL[1])
+        res, ks = PS.shape_similarity(Zt[:, dl][:, :, H2], Zpre[:, :, H2], cue, d['state'], d['half'], k_fixed=k)
+        for p in PS.PERIODS:
+            sim, sh, nt, p95 = res['pcs'][p]
+            rows.append(dict(session=s, period=p, space=name, k_pcs=f'{k};{k}', similarity=sim, shuffle_mean=sh,
+                             shuffle_p95=p95, n_trials=nt))
+        print(f'session {s} {name}: ' + ' '.join(f'{p} {res["pcs"][p][0]:.2f}/{res["pcs"][p][1]:.2f}' for p in PS.PERIODS),
+              flush=True)
+    with open(os.path.join(OUT, 'procrustes_sessions.csv'), 'w', newline='') as fh:
+        w = csv.DictWriter(fh, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
+    stats = json.load(open(os.path.join(OUT, 'procrustes_stats.json')))
+    g = {p: [r for r in rows if r['space'] == name and r['period'] == p] for p in PS.PERIODS}
+    v = {p: np.array([float(r['similarity']) for r in g[p]]) for p in g}
+    sh = {p: np.array([float(r['shuffle_mean']) for r in g[p]]) for p in g}
+    p95 = {p: np.array([float(r['shuffle_p95']) for r in g[p]]) for p in g}
+    c = {p: v[p] - sh[p] for p in v}
+    stats[name] = dict(n_sessions=len(v['on']), k_pcs=k,
+                       **{f'{p}_mean': float(v[p].mean()) for p in v},
+                       **{f'{p}_sem': float(v[p].std(ddof=1) / np.sqrt(len(v[p]))) for p in v},
+                       **{f'{p}_shuffle_mean': float(sh[p].mean()) for p in v},
+                       **{f'{p}_minus_shuffle_mean': float(c[p].mean()) for p in v},
+                       **{f'{p}_minus_shuffle_sem': float(c[p].std(ddof=1) / np.sqrt(len(c[p]))) for p in v},
+                       p_on_vs_off=float(ttest_rel(v['on'], v['off']).pvalue),
+                       p_off_vs_pre=float(ttest_rel(v['off'], v['pre']).pvalue),
+                       p_off_vs_shuffle=float(ttest_rel(v['off'], sh['off']).pvalue),
+                       p_pre_vs_shuffle=float(ttest_rel(v['pre'], sh['pre']).pvalue),
+                       p_on_vs_off_minus_shuffle=float(ttest_rel(c['on'], c['off']).pvalue),
+                       p_off_vs_pre_minus_shuffle=float(ttest_rel(c['off'], c['pre']).pvalue),
+                       n_off_above_shuffle_p95=int((v['off'] > p95['off']).sum()),
+                       n_pre_above_shuffle_p95=int((v['pre'] > p95['pre']).sum()))
+    json.dump(stats, open(os.path.join(OUT, 'procrustes_stats.json'), 'w'), indent=1)
+    print(json.dumps(stats[name], indent=1))
+
+
 if __name__ == '__main__':
     main()

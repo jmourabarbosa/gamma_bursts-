@@ -21,7 +21,7 @@ Computed as in `procrustes_common_spec.md` and `handoff_spiking_procrustes.md` (
 - **Counts:** the 10 ms counts of all 10 sessions are committed in `spiking/results/pca_onoff/counts_s{s}.npz`
   (keys `counts`, `cue`, `held`), so nothing needs re-simulation.
 
-## Numbers (10 sessions, mean ± s.e.m.; shuffle mean in brackets)
+## Numbers, spaces of the spec (10 sessions, mean ± s.e.m.; shuffle mean in brackets)
 | space | On | Off | pre-cue |
 |---|---|---|---|
 | `pcs` (k = 3–4) | 0.995 ± 0.000 (0.30) | 0.93 ± 0.01 (0.31) | 0.32 ± 0.04 (0.32) |
@@ -37,6 +37,27 @@ Paired t-tests across sessions:
 | pre vs its shuffle | 0.97 | 0.24 |
 | sessions with Off above its shuffle p95 | 10 of 10 | 6 of 10 |
 | sessions with pre above its shuffle p95 | 2 of 10 | 0 of 10 |
+
+## Third space, as requested: 7 PCs (`pcs7`)
+The first 7 PCs of the cue means of each trial half, i.e. the whole cue-mean subspace (8 cue means span at most 7
+dimensions). Same labels, splits and shuffles as above; only the number of PCs is fixed at 7 instead of the 90% rule
+(`k_fixed=7` in the copy of `shape_similarity`). Rows with `space = pcs7` in `procrustes_sessions.csv`; key `pcs7` in
+`procrustes_stats.json`.
+
+| `pcs7` (10 sessions) | On | Off | pre-cue |
+|---|---|---|---|
+| similarity, mean ± s.e.m. | 0.994 ± 0.001 | 0.91 ± 0.01 | 0.48 ± 0.03 |
+| shuffle mean | 0.38 | 0.47 | 0.49 |
+| similarity minus shuffle | 0.61 ± 0.003 | 0.45 ± 0.01 | −0.00 ± 0.03 |
+
+- On vs Off: p = 7×10⁻⁵ (minus shuffle: 1×10⁻⁶).
+- Off vs pre: p = 8×10⁻⁷ (minus shuffle: 8×10⁻⁷).
+- Off vs its shuffle: p = 8×10⁻¹¹; Off above its shuffle p95 in 10 of 10 sessions.
+- Pre vs its shuffle: p = 0.95; pre above its shuffle p95 in 2 of 10 sessions.
+
+**Plot it minus the shuffle.** In 7 dimensions chance differs between periods (On 0.38, Off 0.47, pre 0.49), so
+raw values are not comparable across periods. Minus the shuffle the order is On > Off > pre = 0. The same caveat as in
+`pcs` applies: the Off configuration is about 4% of the size of the On one; its high value reflects its shape only.
 
 ## Read before plotting: Off is very small but ring-shaped
 - **In `pcs` space the model's Off value (0.93) is far above the data's** (test session 210921: Off 0.14, below its
@@ -69,11 +90,12 @@ With the all-H1 labelling, the Off positions of every cue collapse to nearly one
 ## Files (in `figures/spiking/`)
 | file | content |
 |---|---|
-| `procrustes_sessions.csv` | one row per session × period × space: `k_pcs` (half 0; half 1), `similarity`, `shuffle_mean`, `shuffle_p95`, `n_trials` |
+| `procrustes_sessions.csv` | one row per session × period × space (`full`, `pcs`, `pcs7`): `k_pcs` (half 0; half 1), `similarity`, `shuffle_mean`, `shuffle_p95`, `n_trials` |
 | `procrustes_stats.json` | per space: means, s.e.m., shuffle means, paired t-tests, counts above the shuffle p95 |
 | `net_panel_c.csv` | panel d values |
 
 ## Reproduce
 ```
-python -m spiking.procrustes_run     # ~2 min per session, from the committed counts
+python -m spiking.procrustes_run                                       # full and pcs, ~2 min per session
+python -c "from spiking import procrustes_run as R; R.main_k(7)"     # adds pcs7 (uses the stored labels)
 ```
