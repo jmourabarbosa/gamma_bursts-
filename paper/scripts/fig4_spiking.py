@@ -9,7 +9,7 @@ a, example trial: spikes of the excitatory cells sorted by preferred location (5
    (attention signal) with its overshoot after each dip; the all-units decoder z with On/Off states, and the z of
    the 20 most cue-selective neurons on the same trial (grey).
 b, Off and On length distributions for decoders using the 20 most cue-selective neurons (dark) and all units, in
-   4 further sessions of 480 trials (paper/scripts/spiking_topbottom.py); last bar, states >= 600 ms; two-sample KS test.
+   4 further sessions of 480 trials (paper/scripts/spiking_topbottom.py); axis clipped at 600 ms (fractions of all states); two-sample KS test.
 c, cross-validated tuning of held-out simulated neurons in On and Off states (as Panichello et al. 2024, Fig. 4d).
 
 usage (from the root of branch paper-model): python paper/scripts/fig4_spiking.py <out.png>
@@ -172,18 +172,17 @@ def main(out):
             rows = [r for r in hb if r['decoder'] == lab and r['state'] == name]
             cnt = np.array([float(r['count']) for r in rows])
             lens.append(np.repeat(centers, cnt.astype(int)))
-            frac = np.r_[cnt[:30][0::2] + cnt[:30][1::2], cnt[30]] / cnt.sum()   # 40 ms bins to 600 ms, then >= 600 ms
-            h.bar(np.r_[np.arange(0, 600, 40), 640] + g * 20, frac, width=20, align='edge', color=shades[name][g], lw=0)
-            top = max(top, frac.max())
+            frac = np.r_[cnt[:30][0::2] + cnt[:30][1::2], cnt[30]] / cnt.sum()   # 40 ms bins to 600 ms, then >= 600 ms (not shown)
+            h.bar(np.arange(0, 600, 40) + g * 20, frac[:-1], width=20, align='edge', color=shades[name][g], lw=0)
+            top = max(top, frac[:-1].max())
             h.text(0.97, 0.8 - 0.13 * g, f"{txt}, {float(rows[0]['n_states_per_trial']):.1f}/trial", transform=h.transAxes,
                    ha='right', va='top', color=shades[name][g], fontsize=6.5)
         ks = stats.ks_2samp(*lens)
         h.text(0.97, 0.54, f'KS p = {ks.pvalue:.0e}'.replace('e-0', 'e-').replace('e-', ' x 10$^{-') + '}$', transform=h.transAxes,
                ha='right', va='top', color=GREY, fontsize=6)
         h.text(0.97, 0.97, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=shades[name][1], fontsize=7.5)
-        h.axvline(620, ymax=0.4, color=GREY, lw=0.5, ls=(0, (2, 2)))
-        h.set_xlim(0, 680); h.set_xticks([0, 300, 600, 660], ['0', '300', '', '>600'])
-        h.set_ylim(0, 0.6); h.set_yticks([0, 0.3, 0.6], ['0', '', '0.6'])
+        h.set_xlim(0, 600); h.set_xticks([0, 300, 600])
+        h.set_ylim(0, 0.4); h.set_yticks([0, 0.2, 0.4], ['0', '', '0.4'])
         h.set_ylabel('Fraction\nof states', labelpad=-14)
         if j == 0:
             letter(h, 'b', x=-0.55, y=1.0)
