@@ -7,7 +7,7 @@ fig_spiking_note.md); this script only redraws the saved panel data in the style
 
 a, example trial: spikes of the excitatory cells sorted by preferred location (5 ms x 8-cell bins); the common input
    (attention signal) with its overshoot after each dip; the all-units decoder z with On/Off states.
-b, Off and On length distributions, model (12 sessions x 480 trials) and data (25 sessions, all units).
+b, Off and On length distributions of the model (all units, 12 sessions x 480 trials).
 c, cross-validated tuning of held-out simulated neurons in On and Off states (as Panichello et al. 2024, Fig. 4d).
 
 usage (from the root of branch paper-model): python paper/scripts/fig4_spiking.py <out.png>
@@ -83,19 +83,16 @@ def main(out):
     for ax in (a, m):
         ax.tick_params(labelbottom=False)
 
-    # b, state lengths, model (bars) and data (line), 20 ms bins up to 600 ms
+    # b, state lengths of the model, 20 ms bins up to 600 ms
     for j, (name, c) in enumerate((('off', C_OFF), ('on', C_ON))):
         h = fig.add_subplot(gb[j])
         rows = [r for r in hist if r['state'] == name and float(r['bin_lo_ms']) < 600]
         lo = np.array([float(r['bin_lo_ms']) for r in rows])
-        mf, df = np.array([float(r['model_fraction']) for r in rows]), np.array([float(r['data_fraction']) for r in rows])
+        mf = np.array([float(r['model_fraction']) for r in rows])
         h.bar(lo, mf, width=20, align='edge', color=c, edgecolor='white', lw=0.3)
-        h.step(np.r_[lo, 600], np.r_[df, df[-1]], where='post', color=INK, lw=0.8)
         h.set_xlim(0, 600); h.set_xticks([0, 300, 600])
         h.set_ylim(0, 0.25); h.set_yticks([0, 0.125, 0.25], ['0', '', '0.25'] if j == 0 else [])
         h.text(0.97, 0.95, f'{name.capitalize()} states', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7.5)
-        h.text(0.97, 0.78, 'Model', transform=h.transAxes, ha='right', va='top', color=c, fontsize=7)
-        h.text(0.97, 0.64, 'Data', transform=h.transAxes, ha='right', va='top', color=INK, fontsize=7)
         if j == 0:
             h.set_ylabel('Fraction\nof states', labelpad=-14)
             letter(h, 'b', x=-0.62, y=1.0)
