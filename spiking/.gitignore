@@ -1,3 +1,5 @@
 results/*_trials.npz
 results/example_trials.npz
 __pycache__/
+results/ccg/spikes_*.npz
+results/ccg/graphs_*.npz

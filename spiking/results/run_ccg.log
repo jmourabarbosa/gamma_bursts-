@@ -1,0 +1,11 @@
+session 0 all: Manhattan 7073.8, null 4723.5 +- 14.5, z 162.42, significant CCGs per cue 3982 (7.33% of pairs) (1875 s)
+session 0 on: Manhattan 4607.1, null 3047.3 +- 10.6, z 146.55, significant CCGs per cue 2454 (4.52% of pairs) (809 s)
+session 0 off: Manhattan 505.8, null 534.9 +- 8.4, z -3.48, significant CCGs per cue 257 (0.47% of pairs) (482 s)
+remote: error: Trace: 0fb1d810042d2f792b6fe6d9662d6b718d02511f693248a7150222894e65c0f1        
+remote: error: See https://gh.io/lfs for more information.        
+remote: error: File spiking/results/ccg/graphs_s0.npz is 129.65 MB; this exceeds GitHub's file size limit of 100.00 MB        
+remote: error: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.        
+remote: pre-receive hook declined
+To https://github.com/jmourabarbosa/gamma_bursts-
+ ! [remote rejected] claude/gallant-volta-bkjojq -> claude/gallant-volta-bkjojq (pre-receive hook declined)
+error: failed to push some refs to 'https://github.com/jmourabarbosa/gamma_bursts-'

@@ -169,11 +169,13 @@ def _kick(m, A, a):
 
 
 @njit(parallel=True, cache=True)
-def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_idx, seeds, raster_on, s_from, s_to):
+def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_idx, seeds, raster_on, s_from, s_to,
+         r1_from, r1_to):
     """Simulate trials in parallel. Returns spike counts of the recorded cells in 10 ms bins, E population vector of
     spikes and of NMDA gating every 10 ms, mean NMDA gating and spike count of each E cell from step s_from to
     s_to, and
-    (if raster_on) the E raster in 1 ms bins."""
+    (if raster_on) the E raster in 1 ms bins, and the recorded cells' spikes in 1 ms bins from step r1_from to r1_to
+    (none if r1_to <= r1_from)."""
     (NE, NI, C_E, gL_E, EL, Vreset, ref_E, C_I, gL_I, ref_I, E_E, E_I, Mg, tau_AMPA, tau_x, alpha, tau_N, tau_GABA,
      g_EE, g_EI, g_IE, g_II, nu_ext, g_ext_E, g_ext_I, dt) = pf
     NE = int(NE); NI = int(NI)
@@ -187,6 +189,8 @@ def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_
     c_end = np.zeros((n_tr, NE), np.int32)
     n_ms = n // b1 if raster_on else 0
     raster = np.zeros((n_tr if raster_on else 0, n_ms, NE), np.uint8)
+    n1 = max(r1_to - r1_from, 0) // b1
+    spk1 = np.zeros((n_tr if n1 > 0 else 0, n1, rec_idx.shape[0]), np.uint8)
     rec_map = -np.ones(NE + NI, np.int64)
     for r in range(rec_idx.shape[0]):
         rec_map[rec_idx[r]] = r
@@ -266,6 +270,8 @@ def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_
             for j in range(N):
                 if spk[j] and rec_map[j] >= 0:
                     counts[b, ib, rec_map[j]] += 1
+                    if n1 > 0 and r1_from <= i < r1_from + n1 * b1:
+                        spk1[b, (i - r1_from) // b1, rec_map[j]] = 1
             if i % b10 == b10 - 1:
                 cs = 0.0; ss = 0.0; tot = 0.0
                 for j in range(NE):
@@ -277,7 +283,7 @@ def _run(m_eff, cue, cue_on, cue_off, pf, vth, h, kb, wk, cos_tab, sin_tab, rec_
                     c_end[b, j] += spk[j]
         for j in range(NE):
             s_end[b, j] /= max(s_to - s_from, 1)
-    return counts, popv, s_end, c_end, raster
+    return counts, popv, s_end, c_end, raster, spk1
 
 
 PF_KEYS = ('N_E', 'N_I', 'C_E', 'gL_E', 'EL', 'Vreset', 'ref_E', 'C_I', 'gL_I', 'ref_I', 'E_E', 'E_I', 'Mg',
@@ -285,12 +291,14 @@ PF_KEYS = ('N_E', 'N_I', 'C_E', 'gL_E', 'EL', 'Vreset', 'ref_E', 'C_I', 'gL_I', 
            'g_ext_I', 'dt')
 
 
-def simulate(net, cue_deg, seed=0, rec_idx=None, m=None, raster=False, dip_free=0.0, fixed_dips=None, m_eff=None):
+def simulate(net, cue_deg, seed=0, rec_idx=None, m=None, raster=False, dip_free=0.0, fixed_dips=None, m_eff=None,
+             spikes_1ms=None):
     """Trials with cues at cue_deg (one per trial). Time axis: cue onset at t_pre; dips only after cue onset +
     dip_free (default: from cue onset). Returns a dict with 10 ms spike counts of rec_idx (cells 0..N_E-1 are E,
     N_E.. are I), population vectors, end-of-delay NMDA profile and rates, the common input (1 ms) and the dips.
     The delay is followed by t_probe ms with the input at 1 (response probe).
-    m, m_eff: optional common input without / with the kick at resolution dt (n_trials, n_steps)."""
+    m, m_eff: optional common input without / with the kick at resolution dt (n_trials, n_steps).
+    spikes_1ms: optional (t0, t1) in ms from cue onset: binary 1 ms spike trains of rec_idx in [t0, t1) ('spk1')."""
     p = net.p
     cue_deg = np.atleast_1d(np.asarray(cue_deg, float))
     n_tr = len(cue_deg)
@@ -311,10 +319,12 @@ def simulate(net, cue_deg, seed=0, rec_idx=None, m=None, raster=False, dip_free=
     s_to = int(round(T / dt))                      # end of the delay
     s_from = s_to - int(round(100 / dt))
     pf = np.array([float(p[k]) for k in PF_KEYS])
-    counts, popv, s_end, c_end, ras = _run(m_eff, net.cue_current(cue_deg), cue_on, cue_off, pf, net.vth, net.h, float(p['kappa_broad']), net.wk,
-                                    net.cos_tab, net.sin_tab, rec_idx, seeds, raster, s_from, s_to)
+    r1 = (0, 0) if spikes_1ms is None else tuple(int(round((p['t_pre'] + x) / dt)) for x in spikes_1ms)
+    counts, popv, s_end, c_end, ras, spk1 = _run(m_eff, net.cue_current(cue_deg), cue_on, cue_off, pf, net.vth, net.h, float(p['kappa_broad']), net.wk,
+                                    net.cos_tab, net.sin_tab, rec_idx, seeds, raster, s_from, s_to, r1[0], r1[1])
     b1 = int(round(1 / dt))
     return dict(counts=counts, popv=popv, s_end=s_end, c_end=c_end, raster=ras if raster else None,
+                spk1=spk1 if spikes_1ms is not None else None,
                 m=m[:, b1 - 1::b1], m_eff=m_eff[:, b1 - 1::b1], dips=ev, cue_deg=cue_deg,
                 t10=np.arange(counts.shape[1]) * 10.0 - p['t_pre'],     # left edge of each 10 ms bin, from cue onset
                 t1=np.arange(m.shape[1] // b1) * 1.0 - p['t_pre'])

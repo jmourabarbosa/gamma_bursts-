@@ -312,6 +312,91 @@ def fig_examples_grid():
     save(fig, 'fig_examples_grid')
 
 
+def fig_ccg():
+    """Panichello et al. Fig. 5 on the model: example CCGs, connectivity maps for two cues, observed vs null
+    Manhattan distance, and z per session for the whole delay, On and Off states."""
+    d = os.path.join(RES, 'ccg')
+    files = sorted(f for f in os.listdir(d) if f.startswith('session_')) if os.path.isdir(d) else []
+    if not files:
+        return
+    rows = [json.load(open(os.path.join(d, f))) for f in files]
+    rows = [r for r in rows if all(v in r['variants'] for v in ('all', 'on', 'off'))]
+    if not rows:
+        return
+    gf = np.load(os.path.join(d, f'ccg_figure_s{rows[0]["session"]}.npz'))
+    cells = gf['cells']
+    n = int(gf['n'])
+    g = {f'g{c}': np.unpackbits(gf[f'g{c}'])[:n * n].reshape(n, n).astype(bool) for c in range(8)}
+    ang = np.where(cells < N.P['N_E'], cells * 2 * np.pi / N.P['N_E'], (cells - N.P['N_E']) * 2 * np.pi / N.P['N_I'])
+    rad = np.where(cells < N.P['N_E'], 1.0, 0.75)
+    xy = np.c_[rad * np.cos(ang), rad * np.sin(ang)]
+    fig = plt.figure(figsize=(7.0, 5.0))
+    gs = fig.add_gridspec(2, 4, wspace=0.55, hspace=0.5, left=0.07, right=0.98, top=0.93, bottom=0.1)
+    # a: example significant CCGs (cue 0), sorted by peak lag
+    a = fig.add_subplot(gs[0, 0])
+    lags = np.arange(-25, 26)
+    sel = (lags >= -12) & (lags <= 12)
+    curves = gf['examples'][:, sel]
+    curves = curves[np.argsort(curves.argmax(1))]
+    for i, c in enumerate(curves):
+        a.plot(lags[sel], i + 0.8 * c / c.max(), color=C_ON, lw=0.5)
+    a.set_yticks([]); a.set_xlabel('Lag (ms)'); a.set_title('Significant CCGs (cue 0°)', fontsize=7)
+    a.spines['left'].set_visible(False)
+    # b, c: connectivity matrices for cue 0 and 180 deg, cells sorted by preferred angle (E, then I)
+    order = np.lexsort((ang, cells >= N.P['N_E']))
+    nE = int((cells < N.P['N_E']).sum())
+    for col, (cname, key, colr) in enumerate((('0°', 'g0', '#b07aa1'), ('180°', 'g4', '#59a14f'))):
+        a = fig.add_subplot(gs[0, 1 + col])
+        M = g[key] | g[key].T
+        jj, kk = np.nonzero(M[np.ix_(order, order)])
+        a.plot(kk, jj, ',', color=colr, alpha=0.8, rasterized=True)
+        a.axhline(nE, color=GREY, lw=0.5); a.axvline(nE, color=GREY, lw=0.5)
+        a.set_xlim(0, len(order)); a.set_ylim(len(order), 0); a.set_aspect('equal')
+        tk = [np.searchsorted(np.sort(ang[cells < N.P['N_E']]), np.deg2rad(x)) for x in (0, 90, 180, 270)]
+        a.set_xticks(tk + [nE + (len(order) - nE) // 2], ['0', '90', '180', '270', 'I'], fontsize=6)
+        a.set_yticks(tk + [nE + (len(order) - nE) // 2], ['0', '90', '180', '270', 'I'], fontsize=6)
+        a.set_xlabel('Cell (preferred angle, deg)', fontsize=6)
+        a.set_title(f'Cue {cname}: {int(g[key].sum())} significant CCGs', fontsize=7)
+    # c: observed vs null, first session
+    a = fig.add_subplot(gs[0, 3])
+    v = rows[0]['variants']['all']
+    a.hist(v['null'], 12, color=LIGHT, edgecolor=GREY, lw=0.5, orientation='horizontal', label='Null (shuffled cues)')
+    a.set_ylabel('Manhattan distance (edges)'); a.set_xlabel('Count (shuffles)')
+    a.text(0.5, 0.97, f'observed: {v["manhattan"]:.0f}\n(off the scale)', transform=a.transAxes, ha='center',
+           va='top', fontsize=6.5)
+    a.legend(loc='lower right', fontsize=6)
+    a.set_title(f'Session {rows[0]["session"]}: z = {v["z"]:.1f}', fontsize=7)
+    # d: z per session and variant (Fig. 5f)
+    a = fig.add_subplot(gs[1, 0:2])
+    cols = {'all': GREY, 'on': '#e8743b', 'off': '#3b5ba5'}
+    paper = {'all': 3.6, 'on': 4.0, 'off': 3.9}
+    for i, vname in enumerate(('all', 'on', 'off')):
+        z = np.array([r['variants'][vname]['z'] for r in rows])
+        a.plot(i + np.linspace(-0.12, 0.12, len(z)), z, 'o', ms=3, color=cols[vname], alpha=0.8)
+        a.plot([i - 0.25, i + 0.25], [z.mean()] * 2, color=INK, lw=1.2)
+        a.plot(i + 0.35, paper[vname], 'x', color=INK, ms=4, mew=0.8)
+    a.axhline(0, color=GREY, lw=0.5, ls=(0, (3, 2)))
+    a.set_yscale('symlog', linthresh=5); a.set_yticks([-5, 0, 5, 50, 100, 200], ['-5', '0', '5', '50', '100', '200'])
+    a.set_xticks([0, 1, 2], ['All', 'On', 'Off']); a.set_ylabel('Manhattan distance (z, symlog)')
+    a.set_title('Dots: model sessions; bar: mean; x: data mean (Fig. 5f)', fontsize=7)
+    # e: fraction of significant pairs and spikes per cell
+    a = fig.add_subplot(gs[1, 2])
+    for i, vname in enumerate(('all', 'on', 'off')):
+        fs = np.array([100 * r['variants'][vname]['frac_sig'] for r in rows])
+        a.bar(i, fs.mean(), color=cols[vname], width=0.6)
+        a.plot(i + np.linspace(-0.12, 0.12, len(fs)), fs, '.', color=INK, ms=2)
+    a.axhline(1.36, color=INK, lw=0.6, ls=':'); a.text(2.4, 1.36, 'data', fontsize=6, va='bottom', ha='right')
+    a.set_xticks([0, 1, 2], ['All', 'On', 'Off']); a.set_ylabel('Significant CCGs (% of pairs)')
+    a = fig.add_subplot(gs[1, 3])
+    for i, vname in enumerate(('all', 'on', 'off')):
+        sp = np.array([r['variants'][vname]['spikes_per_cell_trial'] for r in rows])
+        a.bar(i, sp.mean(), color=cols[vname], width=0.6)
+    a.set_xticks([0, 1, 2], ['All', 'On', 'Off']); a.set_ylabel('Spikes per cell and trial')
+    for ax, l in zip(fig.axes, 'abcdefgh'):
+        letter(ax, l, x=-0.3, y=1.08)
+    save(fig, 'fig_ccg')
+
+
 def table(model, rows, ctrl, data):
     """Markdown table model (mean over sessions) vs data (mean over 25 sessions), written to results/table.md."""
     cols = (('Off/trial', 'n_off', 'off_per_trial', 2), ('Off median', 'off_median', 'off_median_ms', 0),
@@ -350,6 +435,7 @@ def main():
     fig_populations()
     fig_tuning()
     fig_examples_grid()
+    fig_ccg()
 
 
 if __name__ == '__main__':
