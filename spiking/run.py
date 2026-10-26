@@ -5,6 +5,7 @@
     python -m spiking.run nodips                # control: the same sessions without dips
     python -m spiking.run single_dip            # memory held against the length of one dip
     python -m spiking.run example               # one example trial with its raster (for the figure)
+    python -m spiking.run examples_grid         # trials at 4 cue locations, with and without dips
 
 Network parameters: network.P with the overrides in TUNED (all values and sources in PARAMETERS.md).
 """
@@ -176,6 +177,33 @@ def example(tag='dips', seed0=0):
     print(f'example: trial {i} of session 0, cue {cue[i] * 45} deg')
 
 
+def examples_grid(cues=(0, 2, 4, 6), seed=5):
+    """Example trials at several cue locations, each run with and without dips with the same neuron noise
+    (the same per-trial seeds; only the common input differs). Saves spike times of the E cells."""
+    net = make_net()
+    p = net.p
+    n = len(cues)
+    rng = np.random.default_rng(seed)
+    m, _ = N.dips(n, p['t_pre'] + p['t_delay'], p, rng, t_free=p['t_pre'])
+    m = np.c_[m, np.ones((n, int(round(p['t_probe'] / p['dt']))))]
+    out = {}
+    for tag, mm in (('dips', m), ('nodips', np.ones_like(m))):
+        sim = N.simulate(net, 45.0 * np.asarray(cues), seed=seed, m=mm, raster=True)
+        for k in range(n):
+            t, i = np.nonzero(sim['raster'][k])
+            out[f'{tag}_{k}_t'] = sim['t1'][t].astype(np.float32)
+            out[f'{tag}_{k}_i'] = i.astype(np.int16)
+        out[f'{tag}_m'] = sim['m']
+        out[f'{tag}_m_eff'] = sim['m_eff']
+        out[f'{tag}_held'] = N.memory(sim, net)['held']
+        out[f'{tag}_popv'] = sim['popv']
+    out['cue'] = 45.0 * np.asarray(cues)
+    out['t1'] = sim['t1']
+    out['t10'] = sim['t10']
+    np.savez_compressed(os.path.join(OUT, 'examples_grid.npz'), **out)
+    print('held with dips', out['dips_held'], 'without', out['nodips_held'])
+
+
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('what')
@@ -196,3 +224,5 @@ if __name__ == '__main__':
         stability()
     elif a.what == 'example':
         example()
+    elif a.what == 'examples_grid':
+        examples_grid()

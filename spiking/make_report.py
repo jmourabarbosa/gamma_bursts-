@@ -138,12 +138,64 @@ def main():
         'Memory held: bump location from the whole E population in the last 100 ms of the delay (spike rate if the '
         'bump is active, else NMDA gating), within 22.5° of the cue.'])
 
-    story += [figure('fig_example_trial', '<b>Figure 1. Example trial.</b> a, raster of the E population sorted '
+    story += [p('Tuning: what was changed to reach this regime', H2),
+              p('Starting point: the published ring (Compte et al. 2000; Wang 1999) and, for the common input, the '
+                'rate model\'s fitted dips and kick. With the published values and τ<sub>N</sub> = 100 ms the '
+                'network reproduces the published behaviour (spontaneous state ~3 Hz, bump ~50 Hz, slow drift), '
+                'which served as an implementation check. Each change below was made for the reason given, in this '
+                'order (tests on 8–32 trials per setting, then 240-trial sessions).', BODY),
+              table([['Parameter', 'Start', 'Final', 'Why'],
+                     ['NMDA decay τ<sub>N</sub>', '100 ms', '150 ms', 'Design requirement.'],
+                     ['E→E NMDA g<sub>EE</sub>', '0.381 nS', '0.33 nS',
+                      'With τ<sub>N</sub> = 150 ms the published value gives a bump before the cue. Scanned for a '
+                      'stable spontaneous state plus a cue-triggered bump; final window 0.30–0.33 nS.'],
+                     ['Footprint peak J<super>+</super>', '1.62', '3.0',
+                      'At 1.62 the bistable window was only 0.36–0.375 nS. Raised to 2, then to 3 to compensate the '
+                      'weaker tuned input once the heterogeneity below was added.'],
+                     ['Tuning heterogeneity h<sub>i</sub>, κ', 'none', 'U(0, 1), κ = 0.25',
+                      'Every cell was sharply tuned, so 5 random cells decoded as well as the top 5. A fraction '
+                      'h<sub>i</sub> of each E cell\'s input goes through a broad kernel 1 + κ cos Δθ. κ ≥ 0.5 made '
+                      'the spontaneous state unstable.'],
+                     ['Threshold SD', '0', '0.3 mV',
+                      'Heterogeneity required. 1 mV (random draws) seeded spontaneous bumps at clumps of '
+                      'low-threshold cells.'],
+                     ['Stratified draws', '–', 'blocks of 16 cells',
+                      'Random draws pinned the bump ~15° from the cue; each block of 16 neighbouring cells now holds '
+                      'the same quantiles in random order.'],
+                     ['Cue', '250 ms, weaker', '50 ms, 500 pA',
+                      'Task cue is 50 ms; 200 pA for 50 ms did not reliably start a bump.'],
+                     ['Kick A, τ<sub>kick</sub>', '0.8, 15 ms', '1.0, 150 ms',
+                      'A sharp kick makes every E cell fire at once; one spike nearly saturates its NMDA gating, the '
+                      'cued cells lose their advantage and global inhibition silences the ring (memory lost, A ≥ 1). '
+                      'A slow kick restarts the bump; without any kick it fails after 200–250 ms dips.'],
+                     ['Dip depth', '0.60', '0.50',
+                      'Both silence the bump; 0.6 lost the memory more often (59–81% vs 84–94%).'],
+                     ['Dip rate, mean length', '10/s, 90 ms', '7/s, 150 ms',
+                      'With 90 ms dips the decoded z rarely stays below 0.84 for 50 ms (100 ms windows bridge the '
+                      'silence): too few Off states. Longer, sparser dips give the data\'s Off counts and lengths; '
+                      'longer still (5/s × 190 ms) costs memory (77%).'],
+                     ['Response probe', '–', '300 ms at m = 1',
+                      'Added to check whether a silent bump at the end of the delay can still restart at the cue.']],
+                    [3.1 * cm, 2.0 * cm, 2.3 * cm, W - 7.4 * cm]),
+              Spacer(1, 4),
+              p('Tried and not kept: stronger external drive and larger threshold spread, to raise E baselines to '
+                'PFC-like rates; neither raised them above ~1 Hz before bumps formed spontaneously.', BODY),
+              figure('fig_examples_grid', '<b>Figure 1. Example trials at four cue locations (0°, 90°, 180°, '
+                     '270°), without (left) and with (right) dips.</b> Each pair has the same neuron noise; only '
+                     'the common input differs. Raster: E cells by preferred angle; red line: bump position '
+                     '(population vector, 20 ms bins, shown when the bump is active); red dotted line: cue; grey '
+                     'bar: cue; dashed line: end of the delay, followed by the response probe. Below each raster: '
+                     'common input m(t) (grey) and the drive to E cells with the kick (black). Without dips the '
+                     'bump holds the cued place for the whole delay. With dips it is silenced in every dip and '
+                     'restarts at the same place; dips may start at cue onset, in which case the bump first '
+                     'appears at the next recovery. In the 90° trial it restarts about 18° from the cue and stays '
+                     'there (within the 22.5° criterion).', width=0.95 * W, head=p('Results', H2)),
+              figure('fig_example_trial', '<b>Figure 2. Example trial (one trial in detail, with its decoding).</b> a, raster of the E population sorted '
                      'by preferred angle (red dotted line: cue). b, common input m(t) and the drive to E cells with '
                      'the kick. c, all-units decoder z, On (red) and Off (blue) states. Each dip silences the whole '
                      'bump and z falls to chance; the bump restarts at the cued place when the input returns.',
-                     width=0.82 * W, head=p('Results', H2)),
-              figure('fig_unit_sets', '<b>Figure 2. On/Off statistics of the 7 decoded populations.</b> Black: data '
+                     width=0.82 * W),
+              figure('fig_unit_sets', '<b>Figure 3. On/Off statistics of the 7 decoded populations.</b> Black: data '
                      '(mean ± 2 SEM, 25 sessions); colour: model (12 sessions); purple crosses: the same network '
                      'and read-out without dips. Off counts and lengths are close to the data; the model has too '
                      'much On time and too little Off time for the strong decoders, and top units are worse than '
@@ -155,23 +207,23 @@ def main():
                 f'wrong place: {100 * mem["wrong_place"]:.1f}%.', BODY),
               p('<b>Table 2.</b> No-dip control (6 sessions × 480 trials), same read-out. Memory 100%.', CAP),
               control_table(), Spacer(1, 8),
-              figure('fig_histograms', '<b>Figure 3. State lengths, all units</b> (20 ms bins, pooled). The Off '
+              figure('fig_histograms', '<b>Figure 4. State lengths, all units</b> (20 ms bins, pooled). The Off '
                      'histogram matches the data (rise at 40–60 ms, peak at 60–80 ms, long tail). On states are '
                      'about 70 ms too long and almost never shorter than 100 ms.', width=0.85 * W),
-              figure('fig_populations', '<b>Figure 4. Decoder z of three populations on the same trials</b> (grey: '
+              figure('fig_populations', '<b>Figure 5. Decoder z of three populations on the same trials</b> (grey: '
                      'dips). All units and random 5 cells follow the bump; the top 5 cells of this pair prefer the '
                      'other cue and stay silent, so z ≈ 0 and the trial is Off throughout.', width=0.72 * W),
-              figure('fig_tuning', '<b>Figure 5. Why top units are not better.</b> a, delay rate of the recorded E '
+              figure('fig_tuning', '<b>Figure 6. Why top units are not better.</b> a, delay rate of the recorded E '
                      'cells against cue: narrow tuning. b, highest vs lowest cue rate: E cells are almost silent '
                      'at their non-preferred cues (below 1 Hz); interneurons are weakly modulated. c, the top 5 '
                      'cells for the 0° vs 180° pair all prefer 180°. Without dips their silence identifies the '
                      'other cue; with dips the preferred cue\'s trials are often silent too, so silence carries no '
                      'information. In PFC, cells have baselines of several Hz, so suppression stays informative.'),
-              figure('fig_single_dip', f'<b>Figure 6. Memory after a single dip</b> ({sd["n_rep"]} trials per '
+              figure('fig_single_dip', f'<b>Figure 7. Memory after a single dip</b> ({sd["n_rep"]} trials per '
                      'length, dip 600 ms after the cue, no other dips). The memory survives dips up to 400 ms and '
                      'is lost by about 575 ms (50%), later than 2.5 τ<sub>N</sub> = 375 ms because the slow kick '
                      'also bridges long silences. Lost memories mostly restart at the wrong place.', width=0.55 * W),
-              figure('fig_memory_off_time', '<b>Figure 7. Memory held against time Off in the delay</b> (all-units '
+              figure('fig_memory_off_time', '<b>Figure 8. Memory held against time Off in the delay</b> (all-units '
                      'decoder trained on all trials, 5,760 trials). a, model (black) and the monkeys\' fraction '
                      'correct (grey). b, distribution of time Off for held and lost trials. More time Off goes '
                      'with memory loss, as in the data, but far more steeply.', width=0.85 * W),

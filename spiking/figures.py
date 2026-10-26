@@ -262,6 +262,56 @@ def fig_tuning():
     save(fig, 'fig_tuning')
 
 
+def fig_examples_grid():
+    """Example trials at 4 cue locations, without (left) and with (right) dips, same neuron noise."""
+    f = os.path.join(RES, 'examples_grid.npz')
+    if not os.path.exists(f):
+        return
+    d = np.load(f)
+    cues, t1 = d['cue'], d['t1']
+    n = len(cues)
+    fig = plt.figure(figsize=(7.0, 1.55 * n + 0.6))
+    gs = fig.add_gridspec(2 * n, 2, height_ratios=[3, 0.7] * n, hspace=0.12, wspace=0.12, left=0.08, right=0.99,
+                          top=0.95, bottom=0.07)
+    NE = N.P['N_E']
+    for c, (tag, title) in enumerate((('nodips', 'Without dips'), ('dips', 'With dips'))):
+        pv = d[f'{tag}_popv'].reshape(n, -1, 2, 6).sum(2)          # 20 ms bins
+        t20 = d['t10'][::2][:pv.shape[1]] + 10
+        for k in range(n):
+            a = fig.add_subplot(gs[2 * k, c])
+            a.plot(d[f'{tag}_{k}_t'], d[f'{tag}_{k}_i'].astype(float) * 360 / NE, ',', color=INK, alpha=0.5, rasterized=True)
+            a.axhline(cues[k], color=C_ON, lw=0.6, ls=':')
+            amp = np.hypot(pv[k, :, 0], pv[k, :, 1]) / NE / 0.02
+            ang = np.rad2deg(np.arctan2(pv[k, :, 1], pv[k, :, 0])) % 360
+            on = amp > 2
+            y = np.where(on, ang, np.nan)
+            y[1:][np.abs(np.diff(y)) > 180] = np.nan               # no line across the 0/360 wrap
+            a.plot(t20, y, color=C_ON, lw=0.9)
+            a.axvspan(0, 50, color=LIGHT, lw=0, zorder=0)
+            a.set_xlim(-300, 1800); a.set_ylim(0, 360); a.set_yticks([0, 180, 360])
+            a.set_xticklabels([])
+            if c == 0:
+                a.set_ylabel('Pref. angle')
+            else:
+                a.set_yticklabels([])
+            if k == 0:
+                a.set_title(title, fontsize=8)
+            b = fig.add_subplot(gs[2 * k + 1, c])
+            b.plot(t1, d[f'{tag}_m_eff'][k], color=INK, lw=0.6)
+            b.plot(t1, d[f'{tag}_m'][k], color=GREY, lw=0.5)
+            b.set_xlim(-300, 1800); b.set_ylim(0.4, 1.6); b.set_yticks([0.5, 1, 1.5])
+            b.tick_params(labelsize=6)
+            if c:
+                b.set_yticklabels([])
+            if k < n - 1:
+                b.set_xticklabels([])
+            else:
+                b.set_xlabel('Time from cue onset (ms)')
+            b.axvline(1500, color=GREY, lw=0.5, ls=(0, (2, 2)))
+            a.axvline(1500, color=GREY, lw=0.5, ls=(0, (2, 2)))
+    save(fig, 'fig_examples_grid')
+
+
 def table(model, rows, ctrl, data):
     """Markdown table model (mean over sessions) vs data (mean over 25 sessions), written to results/table.md."""
     cols = (('Off/trial', 'n_off', 'off_per_trial', 2), ('Off median', 'off_median', 'off_median_ms', 0),
@@ -299,6 +349,7 @@ def main():
     fig_example_trial()
     fig_populations()
     fig_tuning()
+    fig_examples_grid()
 
 
 if __name__ == '__main__':
