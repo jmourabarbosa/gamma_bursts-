@@ -44,7 +44,8 @@ Paired t-tests across sessions:
 - **Procrustes removes size.** The model's per-cue Off centroids are tiny: the root-mean-square spread of the 8
   Off centroids is 4% of that of the On centroids (pre-cue: 8%, unstructured). But they are consistently arranged
   like the ring, so after rescaling they fit it almost as well as On.
-- **Why they are ring-shaped:** the 100 ms windows of Off points near the edges of an Off state still contain spikes
+- **Why they are ring-shaped (likely explanation, not yet verified):** the 100 ms windows of Off points near the
+  edges of an Off state still contain spikes
   of the bump just before it falls silent or just after it restarts, always at the cued location. Averaged over
   about 25 trials per cue, this weak residue keeps the ring's shape.
 - **What this means for the comparison:** a high model Off value says "a small, cue-consistent residue", not "the
