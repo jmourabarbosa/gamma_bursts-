@@ -1,3 +1,13 @@
 session 0: memory 0.858  all: Off 3.05/tr 100 ms frac 0.26 | On 3.40/tr 200 ms frac 0.58 mu_on 5.76  (404 s)
 session 1: memory 0.833  all: Off 3.06/tr 100 ms frac 0.26 | On 3.30/tr 200 ms frac 0.58 mu_on 5.43  (401 s)
 session 2: memory 0.850  all: Off 2.93/tr 100 ms frac 0.25 | On 3.52/tr 200 ms frac 0.60 mu_on 6.01  (404 s)
+session 3: memory 0.812  all: Off 2.90/tr 90 ms frac 0.23 | On 3.54/tr 200 ms frac 0.61 mu_on 5.84  (402 s)
+session 4: memory 0.829  all: Off 3.04/tr 100 ms frac 0.26 | On 3.18/tr 200 ms frac 0.57 mu_on 5.67  (402 s)
+session 5: memory 0.796  all: Off 3.07/tr 100 ms frac 0.27 | On 3.11/tr 210 ms frac 0.56 mu_on 5.11  (400 s)
+session 6: memory 0.846  all: Off 2.95/tr 90 ms frac 0.25 | On 3.44/tr 200 ms frac 0.59 mu_on 5.71  (403 s)
+session 7: memory 0.850  all: Off 2.93/tr 100 ms frac 0.26 | On 3.48/tr 200 ms frac 0.59 mu_on 6.10  (402 s)
+session 8: memory 0.798  all: Off 3.07/tr 100 ms frac 0.26 | On 3.38/tr 200 ms frac 0.58 mu_on 5.34  (399 s)
+session 9: memory 0.815  all: Off 3.08/tr 90 ms frac 0.26 | On 3.25/tr 210 ms frac 0.56 mu_on 5.18  (400 s)
+session 10: memory 0.827  all: Off 3.00/tr 100 ms frac 0.26 | On 3.45/tr 200 ms frac 0.59 mu_on 5.90  (401 s)
+session 11: memory 0.871  all: Off 2.95/tr 100 ms frac 0.25 | On 3.44/tr 200 ms frac 0.60 mu_on 6.00  (404 s)
+example: trial 0 of session 0, cue 315 deg
