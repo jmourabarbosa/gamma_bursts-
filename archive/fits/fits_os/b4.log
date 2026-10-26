@@ -1,0 +1,9 @@
+os tau_N 150: memory 0.9873, frac Off 0.404
+os tau_N 200: memory 0.9970, frac Off 0.411
+os tau_N 250: memory 0.9989, frac Off 0.431
+os tau_N 300: memory 0.9995, frac Off 0.461
+os tau_N 400: memory 0.9999, frac Off 0.523
+os tau_N 500: memory 1.0000, frac Off 0.569
+os tau_N 750: memory 1.0000, frac Off 0.631
+os tau_N 1000: memory 0.9983, frac Off 0.665
+os tau_N 1500: memory 0.8797, frac Off 0.694

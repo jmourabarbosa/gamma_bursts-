@@ -1,0 +1,4 @@
+findfont: Font family ['cursive'] not found. Falling back to DejaVu Sans.
+findfont: Generic family 'cursive' not found because none of the following families were found: Apple Chancery, Textile, Zapf Chancery, Sand, Script MT, Felipa, Comic Neue, Comic Sans MS, cursive
+best tau_N 110 ms, p0 0.894, LL gain over constant 57.0; bootstrap median 110 ms, 95% CI 90-172
+profile: 20:-4314.9 29:-3674.9 41:-2254.3 59:-658.8 85:-64.8 122:-6.1 174:-32.4 250:-52.6 359:-56.5 515:-57.0 739:-57.3 1061:-52.1

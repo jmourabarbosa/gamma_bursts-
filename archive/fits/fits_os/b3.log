@@ -1,0 +1,8 @@
+os tau_N 20: memory 0.3782, frac Off 0.618
+os tau_N 30: memory 0.4321, frac Off 0.558
+os tau_N 40: memory 0.5534, frac Off 0.493
+os tau_N 50: memory 0.6718, frac Off 0.456
+os tau_N 60: memory 0.7653, frac Off 0.436
+os tau_N 80: memory 0.8837, frac Off 0.418
+os tau_N 100: memory 0.9401, frac Off 0.411
+os tau_N 120: memory 0.9669, frac Off 0.408
