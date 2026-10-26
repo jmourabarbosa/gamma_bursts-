@@ -67,8 +67,8 @@ Abbreviations: C00 = Compte et al. 2000; W99 = Wang 1999; JS90 = Jahr & Stevens 
 | parameter | symbol | value | source |
 |---|---|---|---|
 | applied to | | external Poisson rate of all E cells (× m_eff) | instructions §5 |
-| dip onsets | | Poisson, rate **(see NOTE.md, final value in run.TUNED)** | rate model fit: 10.2/s |
-| dip lengths | | gamma, shape 8.7, mean **(see NOTE.md)** | rate model fit: 90 ms, shape 8.7 |
+| dip onsets | | Poisson, **7 per s** (gap after a dip exponential) | **tuned** (rate model fit: 10.2/s) |
+| dip lengths | | gamma, shape 8.7, mean **150 ms** | **tuned** (rate model fit: 90 ms, shape 8.7); 90 ms dips are bridged by the 100 ms windows |
 | dip depth | | **0.5** of the drive | rate model fit: 0.60; tuned here (0.6 loses the memory more often) |
 | ramps | | 10 ms at both edges | rate model |
 | kick | A (m − m̄) | A = **1.0**, m̄ recovers with τ_kick = **150 ms** | **this work**; rate model: A ≈ 0.8, τ = 15 ms. A short kick of A ≥ 1 makes every E cell fire, saturates their NMDA gating and erases the memory |
@@ -87,7 +87,7 @@ Abbreviations: C00 = Compte et al. 2000; W99 = Wang 1999; JS90 = Jahr & Stevens 
 | parameter | value | source |
 |---|---|---|
 | recorded cells per session | 330 (264 E + 66 I), random over the ring | data: ~329 units per session |
-| sessions × trials | see NOTE.md | |
+| sessions × trials | 12 × 480 (60 per cue); no-dip control 6 × 480 | |
 | windows | 100 ms, step 10 ms | data |
 | decoder | L2 logistic, λ = 10,000, intercept as a penalised feature of value 1, cue vs opposite cue, correct trials | data note |
 | leave-one-out | exact for the second-order expansion of the loss (checked against Newton + Rad–Maleki ALO and exact refits) | this work |

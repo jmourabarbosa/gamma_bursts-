@@ -42,3 +42,9 @@ dip  550 ms: held 0.53 (rate 0.53, NMDA 0.53), wrong place 0.47
 dip  600 ms: held 0.47 (rate 0.47, NMDA 0.47), wrong place 0.44
 dip  650 ms: held 0.19 (rate 0.16, NMDA 0.19), wrong place 0.59
 dip  700 ms: held 0.22 (rate 0.19, NMDA 0.22), wrong place 0.41
+session 0: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 13.19  (422 s)
+session 1: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 12.44  (422 s)
+session 2: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 9.74  (422 s)
+session 3: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 8.67  (424 s)
+session 4: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 11.49  (424 s)
+session 5: memory 1.000  all: Off 0.00/tr nan ms frac 0.00 | On 1.00/tr 1410 ms frac 1.00 mu_on 9.58  (422 s)
