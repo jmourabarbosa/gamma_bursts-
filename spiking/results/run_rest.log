@@ -104,3 +104,4 @@ brian2 trial 2 done
   a.plot(x + 0.28, [np.nanmean(s) for s in c], 'x', ms=3.5, color=C_CTRL, mew=0.8, label='No dips')
 /home/user/gamma_bursts-/spiking/figures.py:277: RuntimeWarning: Mean of empty slice
   lines.append(f'| {lab} | ' + ' | '.join(f'{np.nanmean(ctrl[lab][mk]):.{d}f}' for _, mk, _, d in cols) + ' |')
+ALL_DONE

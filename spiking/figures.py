@@ -65,7 +65,7 @@ def fig_unit_sets(model, ctrl, data):
               ('frac_on', 'frac_on', 'Fraction of delay On', C_ON, 1))
     x = np.arange(len(ORDER))
     fig, axs = plt.subplots(2, 3, figsize=(6.6, 4.2), gridspec_kw=dict(hspace=0.75, wspace=0.6, left=0.1, right=0.98,
-                                                                       top=0.93, bottom=0.13))
+                                                                       top=0.9, bottom=0.13))
     for k, (a, (dk, mk, name, col, top)) in enumerate(zip(axs.ravel(), panels)):
         v = [data[lab][dk] for lab in ORDER]
         a.errorbar(x - 0.2, [s.mean() for s in v], yerr=[2 * s.std(ddof=1) / np.sqrt(len(s)) for s in v], fmt='o',
@@ -82,8 +82,8 @@ def fig_unit_sets(model, ctrl, data):
         a.set_ylim(0, top or np.ceil(a.get_ylim()[1]))
         a.set_ylabel(name)
         letter(a, 'abcdef'[k], x=-0.45)
-        if k in (0, 3):
-            a.legend(loc='upper right' if k == 3 else 'lower right', handletextpad=0.1, borderaxespad=0.1)
+    h, l = axs[0, 0].get_legend_handles_labels()
+    fig.legend(h, l, loc='upper center', ncol=3, handletextpad=0.1, fontsize=7, bbox_to_anchor=(0.5, 1.0))
     save(fig, 'fig_unit_sets')
 
 

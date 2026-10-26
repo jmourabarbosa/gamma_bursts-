@@ -38,7 +38,7 @@
   - a **response probe**: 300 ms after the delay with the input at 1, asking whether the bump restarts at the cue;
   - restarts at the wrong place.
 
-(Results, tuning steps and model-vs-data table: below, filled from `results/`.)
+Results, tuning steps and the model-vs-data table are below; the numbers come from `results/`.
 
 ## How to run
 ```
@@ -104,6 +104,32 @@ Model, with the data in brackets (mean over sessions; lengths in ms):
 - drift about 1° per second;
 - 15/16 held; one bump formed 27° from the cue.
 
+**No-dip control** (6 sessions × 480 trials, same read-out; `results/sessions_nodips.json`, purple crosses in
+`fig_unit_sets`):
+- memory 100%;
+- all units, top 20 and top 50: no Off states, On for the whole 1.4 s (μ_on 11–13);
+- read-out noise alone gives Off states only for the weakest decoders: random 5, 1.07 Off per trial (34% of the
+  delay); random 20, 0.17 per trial.
+
+  This is the instructions' control, and it shows the same as in the rate model: the dips, not read-out noise, make
+  the Off states of the strong decoders.
+
+**Brian2 cross-check** (`validate_brian2.py`, `results/validate_brian2.json`). The same equations in Brian2 (explicit
+all-to-all synapses, cython) against the numba simulator, on a reduced ring (512 E + 128 I, conductances × 4, no
+heterogeneity, no dips):
+
+| | numba (8 trials) | Brian2 (3 trials) |
+|---|---|---|
+| E spontaneous | 16.4 Hz | 18.1 Hz |
+| I spontaneous | 9.9 Hz | 9.8 Hz |
+| E, delay | 24.4 Hz | 26.2 Hz |
+| I, delay | 12.9 Hz | 12.9 Hz |
+| bump peak | 108 Hz | 112 Hz |
+
+The two agree to about 10%; the reduced ring without heterogeneity is not bistable at these settings in either
+simulator (it forms a bump before the cue). A check of the full-size network in Brian2 was not run (about 4 million
+synapses; too slow here).
+
 **Single dip** (`results/single_dip.json`, `fig_single_dip`):
 - memory held 100% up to 400 ms, 91% at 450 ms, 53% at 550 ms, about 20% at 650–700 ms;
 - lost memories are mostly restarts at the wrong place.
@@ -132,10 +158,13 @@ Model, with the data in brackets (mean over sessions; lengths in ms):
 2. **Top vs random inverted:** top-unit decoders have more Off and fewer On states than random or all-unit
    decoders; in the data it is the reverse.
    - The top cells of a cue pair (split-half ANOVA) all prefer the same one of the two cues (`fig_tuning` c).
-   - On trials of the other cue they are silent. With a penalised intercept the decoder cannot use silence, so z ≈ 0
-     and those trials are Off throughout (`fig_populations`, red).
+   - On trials of the other cue they are silent. Without dips that silence is informative: the top-unit decoders are
+     On 94–100% of the delay in the no-dip control.
+   - With dips, the preferred cue's trials are silent half of the time too, so silence no longer identifies the cue.
+     Trials of the non-preferred cue then sit at z ≈ 0, Off throughout (`fig_populations`, red).
    - Random 5 cells, by contrast, usually include a cell near either cue.
-   - In PFC, cells have baselines of several Hz, so suppression is informative.
+   - In PFC, cells have baselines of several Hz, so a drop below baseline stays informative even when the bump is
+     silent elsewhere.
 3. **Memory 83%**, below the target of about 90%. More Off time costs more memory than in the rate model, and
    failures are often restarts at the wrong place (about 10% of trials), which the rate model never shows.
 4. **Behaviour relation too steep:** memory falls from 95% to about 0 over 0–0.8 s of Off time, against 0.88 → 0.78
