@@ -445,3 +445,85 @@ if __name__ == '__main__':
         for r in summarise(a.sessions):
             if r['session'] == a.sessions[0] or len(a.sessions) == 1:
                 print(r)
+
+
+def procrustes_panel(sessions, n_shuf=50, ex=0):
+    """Shape similarity between the configuration of the 8 per-cue centroids (On moments, Off moments, pre-cue) and
+    the ring of cue means: 1 - Procrustes disparity (translation, rotation, scaling allowed; scipy.spatial.procrustes).
+    Cross-validated: the centroids of the trials of one half are compared with the cue means of the other half (the
+    half the trials were projected with); the two halves are averaged. Chance: the same with cue labels shuffled within
+    trial half. Independent-units version."""
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from scipy.spatial import procrustes as sp_procrustes
+    from scipy.stats import ttest_rel
+    rng = np.random.default_rng(0)
+    INK, MUTED, GRID = '#1f1f1e', '#6b6a64', '#d8d7d2'
+    res = {p: [] for p in ('on', 'off', 'pre')}
+    shuf = {p: [] for p in res}
+
+    def sim(P, cue, half, cms):
+        v = []
+        for h in (0, 1):
+            m = half == h
+            cen = np.array([P[m & (cue == c)].mean(0) if (m & (cue == c)).any() else [np.nan, np.nan] for c in range(8)])
+            ok = ~np.isnan(cen).any(1)
+            if ok.sum() >= 4:
+                v.append(1 - sp_procrustes(cms[h][ok], cen[ok])[2])
+        return np.mean(v)
+    for s in sessions:
+        d = np.load(os.path.join(OUT, f'session_{s}.npz'))
+        proj, half, cms, st, cue, pre = (d['split_proj'], d['split_half'], d['split_cmeans'], d['split_state'], d['cue'],
+                                         d['split_preproj'])
+        for p in res:
+            tri, P = [], []
+            for i in range(len(cue)):
+                m = np.ones(1, bool) if p == 'pre' else (st[i] == (1 if p == 'on' else -1))
+                if p == 'pre':
+                    tri.append(i); P.append(pre[i].mean(0))
+                elif m.any():
+                    tri.append(i); P.append(proj[i][m].mean(0))
+            tri, P = np.array(tri), np.array(P)
+            res[p].append(sim(P, cue[tri], half[tri], cms))
+            sh = []
+            for _ in range(n_shuf):
+                c2 = cue[tri].copy()
+                for hh in (0, 1):
+                    mm = half[tri] == hh
+                    c2[mm] = rng.permutation(c2[mm])
+                sh.append(sim(P, c2, half[tri], cms))
+            shuf[p].append(np.mean(sh))
+    res = {p: np.array(v) for p, v in res.items()}
+    shuf = {p: np.array(v) for p, v in shuf.items()}
+    stats = dict(n_sessions=len(sessions), **{f'{p}_mean': float(res[p].mean()) for p in res},
+                 **{f'{p}_sem': float(res[p].std(ddof=1) / np.sqrt(len(sessions))) for p in res},
+                 **{f'{p}_shuffle_mean': float(shuf[p].mean()) for p in res},
+                 p_on_vs_off=float(ttest_rel(res['on'], res['off']).pvalue),
+                 p_off_vs_pre=float(ttest_rel(res['off'], res['pre']).pvalue),
+                 p_off_vs_shuffle=float(ttest_rel(res['off'], shuf['off']).pvalue),
+                 p_pre_vs_shuffle=float(ttest_rel(res['pre'], shuf['pre']).pvalue))
+    json.dump(dict(stats=stats, per_session={p: res[p].tolist() for p in res},
+                   shuffle={p: shuf[p].tolist() for p in shuf}), open(os.path.join(OUT, 'procrustes.json'), 'w'), indent=1)
+    plt.rcParams.update({'font.size': 7, 'axes.linewidth': 0.6, 'svg.fonttype': 'none', 'axes.edgecolor': MUTED,
+                         'xtick.color': MUTED, 'ytick.color': MUTED, 'axes.spines.top': False, 'axes.spines.right': False})
+    fig, b = plt.subplots(figsize=(2.6, 2.4), constrained_layout=True)
+    x = {'on': 0, 'off': 1, 'pre': 2.3}
+    for k in range(len(sessions)):
+        b.plot([0, 1], [res['on'][k], res['off'][k]], color=MUTED, lw=0.6, alpha=0.55, marker='o', ms=2, mew=0)
+        b.plot([2.3], [res['pre'][k]], color=MUTED, alpha=0.55, marker='o', ms=2, mew=0)
+    m = {p: res[p].mean() for p in res}
+    se = {p: res[p].std(ddof=1) / np.sqrt(len(sessions)) for p in res}
+    b.errorbar([0, 1], [m['on'], m['off']], [se['on'], se['off']], color=INK, lw=1.8, marker='o', ms=4, capsize=0, zorder=5)
+    b.errorbar([2.3], [m['pre']], [se['pre']], color=INK, marker='o', ms=4, capsize=0, zorder=5)
+    for p in res:
+        b.plot([x[p] - 0.25, x[p] + 0.25], [shuf[p].mean()] * 2, color='#d62728', lw=1, ls=(0, (2, 1.5)))
+    b.plot([], [], color='#d62728', lw=1, ls=(0, (2, 1.5)), label='shuffled cues')
+    b.set_xticks([0, 1, 2.3], ['On', 'Off', 'pre-cue\n(null)']); b.set_xlim(-0.4, 2.7); b.set_ylim(0, 1.02)
+    b.set_ylabel('shape similarity to the cue ring\n(1 − Procrustes disparity)')
+    b.legend(frameon=False, fontsize=6, loc='lower left')
+    b.set_title(f'Spiking network, {len(sessions)} sessions', fontsize=7, color=MUTED)
+    for ext in ('png', 'svg', 'pdf'):
+        fig.savefig(os.path.join(FIG, f'fig_pca_procrustes.{ext}'), dpi=300)
+    plt.close(fig)
+    print(json.dumps(stats, indent=1))
